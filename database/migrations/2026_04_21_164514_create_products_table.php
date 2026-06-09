@@ -42,8 +42,9 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index(['category_id', 'is_active']);
-            $table->index(['barcode']);
-            $table->fullText(['name', 'description', 'brand'], 'products_search');
+            if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+                $table->fullText(['name', 'description', 'brand'], 'products_search');
+            }
         });
     }
 
