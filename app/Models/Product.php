@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
@@ -45,6 +46,14 @@ class Product extends Model
         'sort_order'   => 'integer',
     ];
 
+    protected $appends = [
+        'current_stock',
+        'alert_stock',
+        'min_price',
+        'max_price',
+        'savings_gap',
+    ];
+
     // ─── Relaciones ────────────────────────────────────────
 
     public function category(): BelongsTo
@@ -65,6 +74,28 @@ class Product extends Model
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class);
+    }
+
+    public function providerPrices(): HasMany
+    {
+        return $this->hasMany(ProductProviderPrice::class);
+    }
+
+    public function providers(): BelongsToMany
+    {
+        return $this->belongsToMany(Provider::class, 'product_provider_prices')
+                    ->withPivot('price')
+                    ->withTimestamps();
+    }
+
+    public function saleItems(): HasMany
+    {
+        return $this->hasMany(SaleItem::class);
+    }
+
+    public function creditInvoiceItems(): HasMany
+    {
+        return $this->hasMany(CreditInvoiceItem::class);
     }
 
     // ─── Scopes ────────────────────────────────────────────
@@ -126,5 +157,52 @@ class Product extends Model
     public function getIsLowStockAttribute(): bool
     {
         return $this->effective_stock <= $this->min_stock;
+    }
+
+    /** Accessors/mutators mapping current_stock to stock */
+    public function getCurrentStockAttribute(): int
+    {
+        return $this->stock;
+    }
+
+    public function setCurrentStockAttribute($value): void
+    {
+        $this->attributes['stock'] = $value;
+    }
+
+    /** Accessors/mutators mapping alert_stock to min_stock */
+    public function getAlertStockAttribute(): int
+    {
+        return $this->min_stock ?? 0;
+    }
+
+    public function setAlertStockAttribute($value): void
+    {
+        $this->attributes['min_stock'] = $value;
+    }
+
+    /** Supplier cost matrix: minPrice = MIN(supplier_costs) */
+    public function getMinPriceAttribute(): int
+    {
+        return $this->providerPrices()->min('price') ?? $this->cost_price;
+    }
+
+    /** Supplier cost matrix: maxPrice = MAX(supplier_costs) */
+    public function getMaxPriceAttribute(): int
+    {
+        return $this->providerPrices()->max('price') ?? $this->cost_price;
+    }
+
+    /** Supplier cost matrix: suggestedSupplier = Provider associated with minPrice */
+    public function getSuggestedSupplierAttribute(): ?Provider
+    {
+        $minPriceEntry = $this->providerPrices()->orderBy('price', 'asc')->first();
+        return $minPriceEntry ? $minPriceEntry->provider : null;
+    }
+
+    /** Supplier cost matrix: savingsGap = maxPrice - minPrice */
+    public function getSavingsGapAttribute(): int
+    {
+        return max(0, $this->max_price - $this->min_price);
     }
 }

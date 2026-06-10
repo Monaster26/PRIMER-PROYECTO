@@ -3,11 +3,14 @@
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CouponController;
+use App\Http\Controllers\CreditInvoiceController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProviderController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -85,6 +88,33 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ── Analítica y Reportes ──────────────────────────────────────────
     Route::prefix('analytics')->name('analytics.')->group(function () {
         Route::get('/dashboard', [AnalyticsController::class, 'dashboard'])->name('dashboard');
+    });
+
+    // ── Gastos (Egresos) ──────────────────────────────────────────────
+    Route::prefix('expenses')->name('expenses.')->group(function () {
+        Route::get('/',           [ExpenseController::class, 'index'])->name('index');
+        Route::post('/',          [ExpenseController::class, 'store'])->name('store');
+        Route::put('/{expense}',  [ExpenseController::class, 'update'])->name('update');
+        Route::delete('/{expense}', [ExpenseController::class, 'destroy'])->name('destroy');
+    });
+
+    // ── Proveedores ───────────────────────────────────────────────────
+    Route::prefix('providers')->name('providers.')->group(function () {
+        Route::get('/',                       [ProviderController::class, 'index'])->name('index');
+        Route::post('/',                      [ProviderController::class, 'store'])->name('store');
+        Route::put('/{provider}',             [ProviderController::class, 'update'])->name('update');
+        Route::delete('/{provider}',          [ProviderController::class, 'destroy'])->name('destroy');
+        Route::get('/price-matrix',           [ProviderController::class, 'priceMatrix'])->name('price-matrix');
+        Route::post('/price-matrix/upsert',   [ProviderController::class, 'upsertPrice'])->name('price-matrix.upsert');
+        Route::delete('/price-matrix/{price}',[ProviderController::class, 'deletePrice'])->name('price-matrix.delete');
+    });
+
+    // ── Créditos (Cuentas por Cobrar) ─────────────────────────────────
+    Route::prefix('credit-invoices')->name('credit-invoices.')->group(function () {
+        Route::get('/',                          [CreditInvoiceController::class, 'index'])->name('index');
+        Route::post('/',                         [CreditInvoiceController::class, 'store'])->name('store');
+        Route::patch('/{invoice}/mark-paid',     [CreditInvoiceController::class, 'markPaid'])->name('mark-paid');
+        Route::delete('/{invoice}',              [CreditInvoiceController::class, 'destroy'])->name('destroy');
     });
 });
 
