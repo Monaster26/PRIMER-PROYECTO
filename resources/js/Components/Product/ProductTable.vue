@@ -200,7 +200,7 @@ function formatPrice(price: number) {
                                         <span v-else class="text-[10px] text-content-muted italic">Sin sub-categoría</span>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <span class="text-sm font-black text-primary-500">{{ formatPrice(product.price) }}</span>
+                                        <span class="text-sm font-black text-primary-500">{{ formatPrice(product.price / 100) }}</span>
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="flex flex-col items-center">

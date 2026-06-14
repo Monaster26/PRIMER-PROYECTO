@@ -14,6 +14,7 @@ class Product extends Model
 
     protected $fillable = [
         'category_id',
+        'category_slug',
         'name',
         'slug',
         'description',
@@ -184,13 +185,13 @@ class Product extends Model
     /** Supplier cost matrix: minPrice = MIN(supplier_costs) */
     public function getMinPriceAttribute(): int
     {
-        return $this->providerPrices()->min('price') ?? $this->cost_price;
+        return (int) ($this->providerPrices()->min('price') ?? $this->cost_price ?? 0);
     }
 
     /** Supplier cost matrix: maxPrice = MAX(supplier_costs) */
     public function getMaxPriceAttribute(): int
     {
-        return $this->providerPrices()->max('price') ?? $this->cost_price;
+        return (int) ($this->providerPrices()->max('price') ?? $this->cost_price ?? 0);
     }
 
     /** Supplier cost matrix: suggestedSupplier = Provider associated with minPrice */

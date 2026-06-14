@@ -1,12 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { 
     Bell, ChevronDown, LogOut, Users, Sun, Moon, Search, Menu
 } from 'lucide-vue-next';
 
 defineProps<{ isDark: boolean; }>();
 const emit = defineEmits(['toggleSidebar', 'toggleDark']);
+
+const user = computed(() => (usePage().props.auth as any)?.user ?? null);
+
+const initials = computed(() => {
+    if (!user.value?.name) return 'AD';
+    const parts = (user.value.name as string).split(' ');
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return parts[0].substring(0, 2).toUpperCase();
+});
 
 const profileDropdownOpen = ref(false);
 const profileRef = ref<HTMLElement | null>(null);
@@ -59,11 +68,11 @@ function logout() {
                     class="flex items-center gap-3 p-1.5 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
                 >
                     <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-400 to-secondary-400 flex items-center justify-center text-white font-bold text-xs shadow-sm">
-                        AD
+                        {{ initials }}
                     </div>
                     <div class="hidden sm:block text-left">
-                        <p class="text-xs font-black text-content-primary dark:text-white leading-none">Admin</p>
-                        <p class="text-[10px] text-content-muted mt-1">Súper Usuario</p>
+                        <p class="text-xs font-black text-content-primary dark:text-white leading-none">{{ user?.name || 'Admin' }}</p>
+                        <p class="text-[10px] text-content-muted mt-1">{{ user?.email || 'Usuario' }}</p>
                     </div>
                     <ChevronDown class="w-4 h-4 text-content-muted transition-transform" :class="{ 'rotate-180': profileDropdownOpen }" />
                 </button>

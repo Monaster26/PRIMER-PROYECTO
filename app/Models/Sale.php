@@ -12,46 +12,34 @@ class Sale extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
-        'type',
-        'cash_amount',
-        'card_amount',
-        'transfer_amount',
-        'total',
+        'date',
+        'cashier_id',
+        'payment_method',
     ];
 
     protected $casts = [
-        'cash_amount' => 'integer',
-        'card_amount' => 'integer',
-        'transfer_amount' => 'integer',
-        'total' => 'integer',
+        'date' => 'date',
     ];
 
-    /**
-     * Automatic calculation rule: totalSales = cash + card + transfer.
-     */
-    protected static function boot()
-    {
-        parent::boot();
+    protected $appends = ['total'];
 
-        static::saving(function ($sale) {
-            $sale->total = (int)$sale->cash_amount + (int)$sale->card_amount + (int)$sale->transfer_amount;
-        });
+    public function getTotalAttribute(): int
+    {
+        return (int) round($this->items->sum('subtotal') * 100);
     }
 
-    /**
-     * Get the user/cashier who registered this sale.
-     */
-    public function user(): BelongsTo
+    public function cashier(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'cashier_id');
     }
 
-    /**
-     * Get the individual items purchased in this sale.
-     */
     public function items(): HasMany
     {
         return $this->hasMany(SaleItem::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(SalePayment::class);
     }
 }

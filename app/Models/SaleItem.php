@@ -14,39 +14,23 @@ class SaleItem extends Model
         'sale_id',
         'product_id',
         'quantity',
-        'price',
-        'total_line',
+        'unit_price',
+        'cost_price',
+        'subtotal',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
-        'price' => 'integer',
-        'total_line' => 'integer',
+        'unit_price' => 'decimal:2',
+        'cost_price' => 'decimal:2',
+        'subtotal' => 'decimal:2',
     ];
 
-    /**
-     * Automatic calculation rule: total_line = quantity * price.
-     */
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::saving(function ($item) {
-            $item->total_line = (int)$item->quantity * (int)$item->price;
-        });
-    }
-
-    /**
-     * Get the parent sale.
-     */
     public function sale(): BelongsTo
     {
         return $this->belongsTo(Sale::class);
     }
 
-    /**
-     * Get the product details of this sale item.
-     */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
