@@ -14,13 +14,17 @@ return new class extends Migration
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('parent_id')->nullable()->constrained('categories')->onDelete('restrict');
             $table->string('name');
             $table->string('slug')->unique();
-            $table->string('icon')->nullable();
-            $table->string('emoji')->nullable();
-            $table->boolean('active')->default(true);
-            $table->json('subcategories')->nullable();
+            $table->text('description')->nullable();
+            $table->string('icon')->nullable()->comment('Nombre de icono o emoji para la UI');
+            $table->string('image_path')->nullable();
+            $table->unsignedTinyInteger('sort_order')->default(0)->comment('Orden de visualización');
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
+
+            $table->index(['is_active', 'sort_order']);
         });
     }
 

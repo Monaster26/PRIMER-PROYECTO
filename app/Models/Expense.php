@@ -11,38 +11,20 @@ class Expense extends Model
     use HasFactory;
 
     protected $fillable = [
-        'provider_id',
-        'category',
-        'cash_spent',
-        'transfer_spent',
-        'total_expense',
         'date',
+        'supplier_id',
+        'payment_method',
+        'amount',
+        'concept',
     ];
 
     protected $casts = [
-        'cash_spent' => 'integer',
-        'transfer_spent' => 'integer',
-        'total_expense' => 'integer',
         'date' => 'date',
+        'amount' => 'decimal:2',
     ];
 
-    /**
-     * Automatic calculation rule: totalExpense = cash_spent + transfer_spent.
-     */
-    protected static function boot()
+    public function supplier(): BelongsTo
     {
-        parent::boot();
-
-        static::saving(function ($expense) {
-            $expense->total_expense = (int)$expense->cash_spent + (int)$expense->transfer_spent;
-        });
-    }
-
-    /**
-     * Get the supplier (provider) associated with this expense.
-     */
-    public function provider(): BelongsTo
-    {
-        return $this->belongsTo(Provider::class);
+        return $this->belongsTo(Supplier::class);
     }
 }

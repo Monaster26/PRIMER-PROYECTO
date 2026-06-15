@@ -57,8 +57,8 @@ watch(() => props.show, (isShowing) => {
             form.description = props.product.description || '';
             form.sku = props.product.sku;
             form.barcode = props.product.barcode || '';
-            form.price = props.product.price;
-            form.cost_price = props.product.cost_price || 0;
+            form.price = props.product.price / 100;
+            form.cost_price = (props.product.cost_price || 0) / 100;
             form.stock = props.product.stock;
             form.min_stock = props.product.min_stock || 5;
             form.category_id = props.product.category_id.toString();

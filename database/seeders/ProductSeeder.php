@@ -15,16 +15,6 @@ class ProductSeeder extends Seeder
         // Obtener categorías por slug
         $cats = Category::pluck('id', 'slug');
 
-        // Mapeo de slugs viejos a slugs nuevos para mantener compatibilidad
-        $slugMapping = [
-            'lacteos-y-huevos'      => 'lacteos',
-            'snacks-y-dulces'       => 'snacks',
-            'aseo-del-hogar'        => 'limpieza',
-            'cuidado-personal'      => 'perfumeria',
-            'granos-y-cereales'     => 'abarrotes',
-            'enlatados-y-conservas' => 'abarrotes',
-        ];
-
         $products = [
             // ── Lácteos ──────────────────────────────────────────────
             ['category' => 'lacteos-y-huevos', 'name' => 'Leche Entera Alpina 1L',        'sku' => 'LAC-001', 'barcode' => '7702080005012', 'brand' => 'Alpina',   'unit' => 'und', 'cost' => 350000,  'price' => 480000,  'stock' => 80,  'tax' => 0],
@@ -74,10 +64,9 @@ class ProductSeeder extends Seeder
         ];
 
         foreach ($products as $p) {
-            $mappedSlug = $slugMapping[$p['category']] ?? $p['category'];
-            $catId = $cats[$mappedSlug] ?? null;
+            $catId = $cats[$p['category']] ?? null;
             if (!$catId) {
-                $this->command->warn("⚠️  Categoría no encontrada: {$p['category']} (mapeada a {$mappedSlug})");
+                $this->command->warn("⚠️  Categoría no encontrada: {$p['category']}");
                 continue;
             }
 

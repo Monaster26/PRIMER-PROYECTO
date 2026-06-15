@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call([
+            RoleSeeder::class,       // 0. Roles admin, cashier, web_client
             CategorySeeder::class,   // 1. Categorías (sin FK externas)
             ProductSeeder::class,    // 2. Productos (depende de categorías)
             EmployeeSeeder::class,   // 3. Empleados POS

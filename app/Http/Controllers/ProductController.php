@@ -56,8 +56,8 @@ class ProductController extends Controller
             'barcode'      => 'nullable|string|max:30|unique:products,barcode',
             'brand'        => 'nullable|string|max:100',
             'unit'         => 'required|in:und,kg,lt,ml,g,lb',
-            'cost_price'   => 'required|integer|min:0',
-            'price'        => 'required|integer|min:1',
+            'cost_price'   => 'nullable|numeric|min:0',
+            'price'        => 'required|numeric|min:0',
             'tax_rate'     => 'required|in:0,5,19',
             'stock'        => 'required|integer|min:0',
             'min_stock'    => 'required|integer|min:0',
@@ -73,6 +73,8 @@ class ProductController extends Controller
             $validated['image_path'] = $path;
         }
 
+        $validated['cost_price'] = $validated['cost_price'] ? (int) (round((float) $validated['cost_price'], 2) * 100) : 0;
+        $validated['price'] = (int) (round((float) $validated['price'], 2) * 100);
         $validated['slug'] = Str::slug($validated['name']) . '-' . Str::random(4);
 
         $product = Product::create($validated);
@@ -122,8 +124,8 @@ class ProductController extends Controller
             'barcode'      => "nullable|string|max:30|unique:products,barcode,{$product->id}",
             'brand'        => 'nullable|string|max:100',
             'unit'         => 'required|in:und,kg,lt,ml,g,lb',
-            'cost_price'   => 'required|integer|min:0',
-            'price'        => 'required|integer|min:1',
+            'cost_price'   => 'nullable|numeric|min:0',
+            'price'        => 'required|numeric|min:0',
             'tax_rate'     => 'required|in:0,5,19',
             'min_stock'    => 'required|integer|min:0',
             'max_discount' => 'required|integer|min:0|max:100',
@@ -142,6 +144,9 @@ class ProductController extends Controller
             $path = $request->file('image')->store('products', 'public');
             $validated['image_path'] = $path;
         }
+
+        $validated['cost_price'] = $validated['cost_price'] ? (int) (round((float) $validated['cost_price'], 2) * 100) : 0;
+        $validated['price'] = (int) (round((float) $validated['price'], 2) * 100);
 
         $product->update($validated);
 

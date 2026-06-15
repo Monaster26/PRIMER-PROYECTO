@@ -9,20 +9,32 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Category extends Model
 {
     protected $fillable = [
+        'parent_id',
         'name',
         'slug',
+        'description',
         'icon',
-        'emoji',
-        'active',
-        'subcategories',
+        'image_path',
+        'sort_order',
+        'is_active',
     ];
 
     protected $casts = [
-        'active' => 'boolean',
-        'subcategories' => 'array',
+        'is_active' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
     // ─── Relaciones ────────────────────────────────────────
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Category::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(Category::class, 'parent_id')->orderBy('sort_order');
+    }
 
     public function products(): HasMany
     {
@@ -33,12 +45,17 @@ class Category extends Model
 
     public function scopeActive($query)
     {
-        return $query->where('active', true);
+        return $query->where('is_active', true);
+    }
+
+    public function scopeRoots($query)
+    {
+        return $query->whereNull('parent_id');
     }
 
     public function scopeOrdered($query)
     {
-        return $query->orderBy('name');
+        return $query->orderBy('sort_order')->orderBy('name');
     }
 
     // ─── Helpers ───────────────────────────────────────────

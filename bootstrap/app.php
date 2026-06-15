@@ -24,6 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             // POS: autenticación por session token
             'pos.auth' => \App\Http\Middleware\PosAuthentication::class,
+            // Roles: verificación de roles (admin, cashier, etc.)
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
 
         // ── Rate limiting para la API ────────────────────────────────

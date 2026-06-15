@@ -24,19 +24,15 @@ Route::get('/', function () {
     return Inertia::render('Home');
 })->name('home');
 
-// Ruta API para obtener categorías dinámicas
-Route::get('/api/categories', [CategoryController::class, 'index']);
+// Ruta de prueba para el detalle de producto
+Route::get('/product-test', function () {
+    return Inertia::render('ProductDetail');
+})->name('product.test');
 
-// Rutas de prueba para desarrollo (solo accesibles en entorno local)
-if (app()->environment('local')) {
-    Route::get('/product-test', function () {
-        return Inertia::render('ProductDetail');
-    })->name('product.test');
-
-    Route::get('/pos-test', function () {
-        return Inertia::render('POS/Dashboard');
-    })->name('pos.test');
-}
+// Ruta de prueba para el POS (sin middleware para facilitar visualización inicial)
+Route::get('/pos-test', function () {
+    return Inertia::render('POS/Dashboard');
+})->name('pos.test');
 
 /*
 |--------------------------------------------------------------------------
@@ -123,3 +119,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__ . '/auth.php';
+require __DIR__ . '/admin.php';
