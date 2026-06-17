@@ -43,7 +43,7 @@ interface Product {
 
 interface PaymentEntry {
     method: 'cash' | 'card' | 'transfer' | 'mercadopago';
-    amount: number;
+    amount: number | null;
 }
 
 const props = defineProps<{
@@ -52,6 +52,7 @@ const props = defineProps<{
 
 const scannerInput = ref('');
 const scannerRef = ref<HTMLInputElement | null>(null);
+const searchRef = ref<HTMLInputElement | null>(null);
 const searchQuery = ref('');
 const showSearchDropdown = ref(false);
 const searchFocused = ref(false);
@@ -63,7 +64,11 @@ const scannedProductIndex = ref<number | null>(null);
 
 const cart = ref<CartItem[]>([]);
 
-const payments = ref<PaymentEntry[]>([{ method: 'cash', amount: 0 }]);
+const payments = ref<PaymentEntry[]>([
+    { method: 'cash', amount: null },
+    { method: 'card', amount: null },
+    { method: 'transfer', amount: null },
+]);
 
 // ─── Escáner global: captura teclado SIN importar el foco ──────────
 const scanBuffer = ref('');
@@ -88,11 +93,22 @@ function onGlobalKeydown(e: KeyboardEvent) {
 
     // Caracter imprimible → acumular en buffer
     if (e.key.length === 1) {
+        const isRapidFire = scanTimer !== null;
         scanBuffer.value += e.key;
         if (scanTimer) clearTimeout(scanTimer);
         scanTimer = setTimeout(() => {
             scanBuffer.value = '';
+            scanTimer = null;
         }, SCAN_TIMEOUT);
+
+        // Solo bloquear si son caracteres rápidos (escáner) en inputs que no
+        // son del buscador, para no contaminar campos como el monto de pago
+        if (isRapidFire) {
+            const active = document.activeElement;
+            if (active !== scannerRef.value && active !== searchRef.value) {
+                e.preventDefault();
+            }
+        }
     }
 }
 
@@ -120,6 +136,13 @@ const methodIcons: Record<string, any> = {
     card: CreditCard,
     transfer: Landmark,
     mercadopago: Smartphone,
+};
+
+const methodColors: Record<string, string> = {
+    cash: 'text-emerald-500',
+    card: 'text-amber-500',
+    transfer: 'text-content-muted',
+    mercadopago: 'text-sky-500',
 };
 
 const methodLabels: Record<string, string> = {
@@ -253,19 +276,13 @@ function selectProduct(product: Product) {
     addToCart(product);
 }
 
-function addPaymentRow() {
-    payments.value.push({ method: 'cash', amount: 0 });
-}
-
-function removePaymentRow(index: number) {
-    if (payments.value.length > 1) {
-        payments.value.splice(index, 1);
-    }
-}
-
 function clearCart() {
     cart.value = [];
-    payments.value = [{ method: 'cash', amount: 0 }];
+    payments.value = [
+        { method: 'cash', amount: null },
+        { method: 'card', amount: null },
+        { method: 'transfer', amount: null },
+    ];
     lastSaleId.value = null;
     showSuccess.value = false;
     focusScanner();
@@ -332,7 +349,11 @@ function finalizeSale() {
             lastSaleId.value = data.sale_id;
             showSuccess.value = true;
             cart.value = [];
-            payments.value = [{ method: 'cash', amount: 0 }];
+            payments.value = [
+                { method: 'cash', amount: null },
+                { method: 'card', amount: null },
+                { method: 'transfer', amount: null },
+            ];
             setTimeout(() => {
                 showSuccess.value = false;
                 lastSaleId.value = null;
@@ -429,6 +450,7 @@ const fmtDec = (v: number) =>
                             class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-muted"
                         />
                         <input
+                            ref="searchRef"
                             v-model="searchQuery"
                             @focus="searchFocused = true"
                             @blur="handleBlur()"
@@ -624,16 +646,16 @@ const fmtDec = (v: number) =>
 
             <!-- Right Column: Payment Panel -->
             <div
-                class="flex w-96 flex-shrink-0 flex-col rounded-3xl border border-gray-100 bg-slate-50 p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/50"
+                class="flex w-96 flex-shrink-0 flex-col rounded-3xl border border-gray-100 bg-slate-50 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900/50"
             >
                 <h3
-                    class="mb-3 text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                    class="mb-2 text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
                 >
                     Resumen
                 </h3>
 
                 <!-- Total -->
-                <div class="mb-6">
+                <div class="mb-4">
                     <p
                         class="mb-1 text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
                     >
@@ -648,7 +670,7 @@ const fmtDec = (v: number) =>
 
                 <!-- Items Count -->
                 <div
-                    class="mb-6 flex items-center gap-2 text-sm text-content-muted"
+                    class="mb-4 flex items-center gap-2 text-sm text-content-muted"
                 >
                     <ShoppingCart class="h-4 w-4" />
                     <span
@@ -657,31 +679,26 @@ const fmtDec = (v: number) =>
                     >
                 </div>
 
-                <hr class="mb-4 border-gray-200 dark:border-gray-700" />
+                <hr class="mb-3 border-gray-200 dark:border-gray-700" />
 
                 <!-- Payment Methods -->
                 <h4
-                    class="mb-3 text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                    class="mb-2 text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
                 >
                     Métodos de Pago
                 </h4>
 
-                <div class="flex-1 space-y-3 overflow-y-auto">
+                <div class="space-y-2">
                     <div
                         v-for="(payment, i) in payments"
                         :key="i"
                         class="flex items-center gap-2"
                     >
-                        <select
-                            v-model="payment.method"
-                            class="flex-1 rounded-xl border border-gray-200 bg-white px-2.5 py-2 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                        >
-                            <option value="cash">Efectivo</option>
-                            <option value="card">Tarjeta</option>
-                            <option value="transfer">Transferencia</option>
-                            <option value="mercadopago">Mercado Pago</option>
-                        </select>
-                        <div class="relative flex-1">
+                        <div class="flex w-36 items-center gap-2 text-content-primary dark:text-white">
+                            <component :is="methodIcons[payment.method]" :class="['h-5 w-5', methodColors[payment.method]]" />
+                            <span class="text-sm font-medium">{{ methodLabels[payment.method] }}</span>
+                        </div>
+                        <div class="relative flex-[2]">
                             <span
                                 class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-content-muted"
                                 >$</span
@@ -694,21 +711,7 @@ const fmtDec = (v: number) =>
                                 class="w-full rounded-xl border border-gray-200 bg-white py-2 pl-7 pr-3 text-right text-sm font-bold text-content-primary dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                             />
                         </div>
-                        <button
-                            v-if="payments.length > 1"
-                            @click="removePaymentRow(i)"
-                            class="flex-shrink-0 rounded-lg p-1.5 text-danger/60 transition-colors hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/20"
-                        >
-                            <X class="h-4 w-4" />
-                        </button>
                     </div>
-
-                    <button
-                        @click="addPaymentRow"
-                        class="flex items-center gap-1.5 text-xs font-bold text-primary-500 transition-colors hover:text-primary-600"
-                    >
-                        <Plus class="h-3.5 w-3.5" /> Agregar otro método de pago
-                    </button>
                 </div>
 
                 <!-- Balance Indicator -->
