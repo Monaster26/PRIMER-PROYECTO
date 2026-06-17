@@ -88,7 +88,6 @@ const methodLabels: Record<string, string> = {
     cash: 'Efectivo',
     card: 'Tarjeta',
     transfer: 'Transferencia',
-    mercadopago: 'Mercado Pago',
 };
 
 function addPaymentRow() {
@@ -692,9 +691,6 @@ const fmt = (v: number) =>
                                             </option>
                                             <option value="transfer">
                                                 Transferencia
-                                            </option>
-                                            <option value="mercadopago">
-                                                Mercado Pago
                                             </option>
                                         </select>
                                         <div class="relative flex-1">

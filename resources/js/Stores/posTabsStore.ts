@@ -43,7 +43,7 @@ export interface CartItem {
 }
 
 export interface PaymentEntry {
-    method: 'cash' | 'card' | 'transfer' | 'mercadopago';
+    method: 'cash' | 'card' | 'transfer';
     amount: number | null;
 }
 

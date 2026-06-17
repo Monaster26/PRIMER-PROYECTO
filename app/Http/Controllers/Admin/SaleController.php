@@ -61,7 +61,7 @@ class SaleController extends Controller
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
             'payments' => 'required|array|min:1',
-            'payments.*.method' => 'required|in:cash,card,transfer,mercadopago',
+            'payments.*.method' => 'required|in:cash,card,transfer',
             'payments.*.amount' => 'required|numeric|min:0',
         ]);
 
@@ -74,7 +74,7 @@ class SaleController extends Controller
             match ($payment['method']) {
                 'cash' => $cashAmount += $amountCents,
                 'card' => $cardAmount += $amountCents,
-                'transfer', 'mercadopago' => $transferAmount += $amountCents,
+                'transfer' => $transferAmount += $amountCents,
             };
         }
 

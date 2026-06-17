@@ -27,7 +27,6 @@ const methodLabel: Record<string, string> = {
     card: 'Tarjeta',
     transfer: 'Transferencia',
     mixed: 'Mixto',
-    mercadopago: 'Mercado Pago',
 };
 </script>
 

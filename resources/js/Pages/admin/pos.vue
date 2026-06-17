@@ -13,7 +13,6 @@ import {
     Plus,
     Search,
     ShoppingCart,
-    Smartphone,
     Trash2,
     X,
 } from 'lucide-vue-next';
@@ -139,21 +138,18 @@ const methodIcons: Record<string, any> = {
     cash: Banknote,
     card: CreditCard,
     transfer: Landmark,
-    mercadopago: Smartphone,
 };
 
 const methodColors: Record<string, string> = {
     cash: 'text-emerald-500',
     card: 'text-amber-500',
     transfer: 'text-content-muted',
-    mercadopago: 'text-sky-500',
 };
 
 const methodLabels: Record<string, string> = {
     cash: 'Efectivo',
     card: 'Tarjeta',
     transfer: 'Transferencia',
-    mercadopago: 'Mercado Pago',
 };
 
 const filteredProducts = computed(() => {
