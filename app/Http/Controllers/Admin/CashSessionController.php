@@ -1,14 +1,15 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
-use Inertia\Inertia;
 
 use App\Http\Controllers\Controller;
+use App\Models\CashMovement;
 use App\Models\CashSession;
 use App\Models\User;
 use App\Models\ZetaReport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class CashSessionController extends Controller
 {
@@ -23,9 +24,19 @@ class CashSessionController extends Controller
         $sessions = $query->orderBy('opened_at', 'desc')->paginate(30);
         $cashiers = User::role('cashier')->get();
 
+        // Cash movements summary for today
+        $today = now()->toDateString();
+        $movementsQuery = CashMovement::whereDate('created_at', $today);
+        $cashMovementsSummary = [
+            'total_ingresos' => (int) (clone $movementsQuery)->where('type', 'ingreso')->sum('amount'),
+            'total_retiros' => (int) (clone $movementsQuery)->where('type', 'retiro')->sum('amount'),
+            'count' => (clone $movementsQuery)->count(),
+        ];
+
         return Inertia::render('admin/arqueo-caja', [
             'sessions' => $sessions,
             'cashiers' => $cashiers,
+            'cashMovements' => $cashMovementsSummary,
         ]);
     }
 
@@ -46,6 +57,7 @@ class CashSessionController extends Controller
             'total_red_compra' => 'nullable|integer|min:0',
             'total_transferencia' => 'nullable|integer|min:0',
             'total_retiros' => 'nullable|integer|min:0',
+            'total_ingresos' => 'nullable|integer|min:0',
         ]);
 
         $validated['cant_20k_apertura'] ??= 0;
@@ -60,6 +72,7 @@ class CashSessionController extends Controller
         $validated['total_red_compra'] ??= 0;
         $validated['total_transferencia'] ??= 0;
         $validated['total_retiros'] ??= 0;
+        $validated['total_ingresos'] ??= 0;
 
         CashSession::create($validated);
 
@@ -82,6 +95,7 @@ class CashSessionController extends Controller
             'total_red_compra' => 'nullable|integer|min:0',
             'total_transferencia' => 'nullable|integer|min:0',
             'total_retiros' => 'nullable|integer|min:0',
+            'total_ingresos' => 'nullable|integer|min:0',
             'observations' => 'nullable|string|max:255',
         ]);
 
@@ -99,6 +113,7 @@ class CashSessionController extends Controller
             'total_red_compra' => $validated['total_red_compra'] ?? 0,
             'total_transferencia' => $validated['total_transferencia'] ?? 0,
             'total_retiros' => $validated['total_retiros'] ?? 0,
+            'total_ingresos' => $validated['total_ingresos'] ?? 0,
         ]);
 
         $date = $cashSession->date ?? \Carbon\Carbon::parse($cashSession->opened_at)->toDateString();

@@ -15,6 +15,11 @@ const props = defineProps<{
         next_page_url: string | null;
     };
     cashiers: { id: number; name: string }[];
+    cashMovements?: {
+        total_ingresos: number;
+        total_retiros: number;
+        count: number;
+    };
 }>();
 
 const denominations = [
@@ -61,6 +66,7 @@ const emptyForm = {
     total_red_compra: 0,
     total_transferencia: 0,
     total_retiros: 0,
+    total_ingresos: 0,
     // Observaciones
     observations: '',
 };
@@ -95,6 +101,7 @@ function openNew() {
         total_red_compra: 0,
         total_transferencia: 0,
         total_retiros: 0,
+        total_ingresos: 0,
         observations: '',
     });
     showForm.value = true;
@@ -130,6 +137,7 @@ function openClose(session: any) {
     form.total_red_compra = 0;
     form.total_transferencia = 0;
     form.total_retiros = 0;
+    form.total_ingresos = 0;
     form.observations = '';
     showForm.value = true;
 }
@@ -187,7 +195,8 @@ const totalCajaEsperado = computed(() => {
     return (
         totalCierre.value +
         (form.total_red_compra || 0) +
-        (form.total_transferencia || 0) -
+        (form.total_transferencia || 0) +
+        (form.total_ingresos || 0) -
         (form.total_retiros || 0)
     );
 });
@@ -869,6 +878,39 @@ const fmtCLP = (v: number) => '$' + Math.round(v).toLocaleString('es-CL');
                                             </p>
                                         </div>
                                     </div>
+                                    <div class="min-w-[120px] flex-1">
+                                        <label
+                                            class="block text-[9px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                                            >Ingresos</label
+                                        >
+                                        <div class="relative">
+                                            <span
+                                                class="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-content-muted"
+                                                >$</span
+                                            >
+                                            <input
+                                                v-model.number="
+                                                    form.total_ingresos
+                                                "
+                                                type="number"
+                                                min="0"
+                                                name="total_ingresos"
+                                                id="total_ingresos"
+                                                :class="[
+                                                    'w-full rounded-lg border bg-white py-1 pl-5 pr-2 text-[11px] text-content-primary transition-shadow dark:bg-gray-800 dark:text-white',
+                                                    form.errors.total_ingresos
+                                                        ? 'border-danger dark:border-danger'
+                                                        : 'border-gray-200 dark:border-gray-700',
+                                                ]"
+                                            />
+                                            <p
+                                                v-if="form.errors.total_ingresos"
+                                                class="mt-0.5 text-[9px] text-danger"
+                                            >
+                                                {{ form.errors.total_ingresos }}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div
@@ -975,6 +1017,26 @@ const fmtCLP = (v: number) => '$' + Math.round(v).toLocaleString('es-CL');
                                                     : '—'
                                             }}
                                         </div>
+                                    </div>
+                                </div>
+
+                                <!-- Cash Movements Reference -->
+                                <div
+                                    v-if="cashMovements && cashMovements.count > 0"
+                                    class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 dark:border-emerald-800 dark:bg-emerald-900/10"
+                                >
+                                    <div
+                                        class="mb-1 text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400"
+                                    >
+                                        Movimientos del día
+                                    </div>
+                                    <div class="flex gap-4 text-[11px]">
+                                        <span class="font-medium text-emerald-600 dark:text-emerald-400">
+                                            +${{ cashMovements.total_ingresos.toLocaleString('es-CL') }} ingresos
+                                        </span>
+                                        <span class="font-medium text-orange-600 dark:text-orange-400">
+                                            -${{ cashMovements.total_retiros.toLocaleString('es-CL') }} retiros
+                                        </span>
                                     </div>
                                 </div>
 

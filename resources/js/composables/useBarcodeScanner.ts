@@ -30,37 +30,44 @@ export function useBarcodeScanner(options: BarcodeScannerOptions) {
     isScanning.value = false
   }
 
+  function processCode(code: string) {
+    const el = document.activeElement
+    if (discardWhen?.(el)) {
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+        el.value = ''
+        el.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+      return
+    }
+    lastCode.value = code
+    onScan(code)
+  }
+
   function onKeydown(e: KeyboardEvent) {
     if (e.ctrlKey || e.altKey || e.metaKey) return
 
-    const now = Date.now()
+    const activeEl = document.activeElement
+    const onAllowed = isAllowed(activeEl)
 
-    // ── Enter finalises a scan ──
+    // ── Enter ──
     if (e.key === 'Enter') {
       if (buffer.length > 0) {
+        // Scanner burst captured → process buffer
         e.preventDefault()
-        if (discardWhen?.(document.activeElement)) {
-          // Clear any leaked characters from the active input
-          const el = document.activeElement
-          if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-            el.value = ''
-            el.dispatchEvent(new Event('input', { bubbles: true }))
-          }
-          clearBuffer()
-          if (flushTimer) {
-            clearTimeout(flushTimer)
-            flushTimer = null
-          }
-          return
-        }
         const code = buffer
         clearBuffer()
         if (flushTimer) {
           clearTimeout(flushTimer)
           flushTimer = null
         }
-        lastCode.value = code
-        onScan(code)
+        processCode(code)
+      } else if (onAllowed && activeEl instanceof HTMLInputElement) {
+        // Manual typing in scanner/search input → read input value directly
+        const val = activeEl.value.trim()
+        if (val) {
+          e.preventDefault()
+          processCode(val)
+        }
       }
       return
     }
@@ -68,10 +75,17 @@ export function useBarcodeScanner(options: BarcodeScannerOptions) {
     // ── Only printable single characters ──
     if (e.key.length !== 1) return
 
+    // ── Allowlisted inputs (scanner / search) ──
+    // Let keystrokes flow naturally into the input.
+    // On Enter we read the input value directly — no timing tracking needed.
+    if (onAllowed) return
+
+    // ── Protected inputs (payment amounts, etc.) ──
+    // Use strict timing to detect scanner bursts and prevent contamination.
+    const now = Date.now()
     const gap = now - lastTime
     lastTime = now
 
-    // Gap too large for a scanner burst → reset buffer
     if (gap > threshold && buffer.length > 0) {
       clearBuffer()
       if (flushTimer) {
@@ -80,16 +94,13 @@ export function useBarcodeScanner(options: BarcodeScannerOptions) {
       }
     }
 
-    // Accumulate character
     buffer += e.key
     isScanning.value = buffer.length > 0
 
-    // Extend the window waiting for the final Enter
     if (flushTimer) clearTimeout(flushTimer)
     flushTimer = setTimeout(clearBuffer, threshold * 15)
 
-    // Prevent scanner keystrokes from reaching protected inputs
-    if (gap <= threshold && !isAllowed(document.activeElement)) {
+    if (gap <= threshold) {
       e.preventDefault()
     }
   }

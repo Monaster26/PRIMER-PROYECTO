@@ -2,10 +2,13 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import {
+    ArrowDownLeft,
+    ArrowUpRight,
     Banknote,
     Check,
     CreditCard,
     Landmark,
+    Menu,
     Minus,
     Plus,
     Search,
@@ -14,7 +17,8 @@ import {
     Trash2,
     X,
 } from 'lucide-vue-next';
-import { computed, nextTick, ref } from 'vue';
+import CashMovementModal from '@/Components/CashMovementModal.vue';
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { useBarcodeScanner } from '@/composables/useBarcodeScanner';
 import { usePosTabsStore } from '@/Stores/posTabsStore';
 import { storeToRefs } from 'pinia';
@@ -35,6 +39,51 @@ const lastSaleId = ref<number | null>(null);
 const showSuccess = ref(false);
 const scannedProductName = ref<string | null>(null);
 const scannedProductIndex = ref<number | null>(null);
+
+// Cash In / Out
+const showCashMovementModal = ref(false);
+const cashMovementType = ref<'ingreso' | 'retiro'>('ingreso');
+
+// Dropdown menu acciones administrativas
+const showMenu = ref(false);
+const menuRef = ref<HTMLElement | null>(null);
+const menuOptions = [
+    { label: 'Entrada de Dinero', action: openCashIngreso, icon: ArrowDownLeft },
+    { label: 'Salida de Dinero', action: openCashRetiro, icon: ArrowUpRight },
+];
+
+function toggleMenu() {
+    showMenu.value = !showMenu.value;
+}
+
+function handleClickOutside(e: MouseEvent) {
+    if (menuRef.value && !menuRef.value.contains(e.target as Node)) {
+        showMenu.value = false;
+    }
+}
+
+function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'F9') {
+        e.preventDefault();
+        if (canCheckout.value) {
+            finalizeSale();
+        }
+    }
+}
+
+const canCheckout = computed(
+    () => !checkoutLoading.value && activeTab.value.cart.length > 0 && remaining.value <= 0,
+);
+
+onMounted(() => {
+    document.addEventListener('click', handleClickOutside);
+    document.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside);
+    document.removeEventListener('keydown', handleKeydown);
+});
 
 const posTabStore = usePosTabsStore()
 const { activeTab, tabs, activeIndex } = storeToRefs(posTabStore)
@@ -63,6 +112,28 @@ const remaining = computed(() => total.value - totalPayments.value);
 const isBalanced = computed(
     () => Math.abs(remaining.value) < 0.01 && total.value > 0,
 );
+
+type BalanceState = 'exacto' | 'faltante' | 'exceso';
+
+const balanceState = computed<BalanceState | null>(() => {
+    if (total.value <= 0) return null;
+    if (isBalanced.value) return 'exacto';
+    if (remaining.value > 0) return 'faltante';
+    return 'exceso';
+});
+
+const balanceClasses = computed(() => {
+    switch (balanceState.value) {
+        case 'exacto':
+            return 'bg-success/10 text-emerald-700 font-bold';
+        case 'faltante':
+            return 'bg-red-50 border border-red-200 text-red-700 font-medium';
+        case 'exceso':
+            return 'bg-blue-50 border border-blue-200 text-blue-800 font-bold';
+        default:
+            return '';
+    }
+});
 
 const methodIcons: Record<string, any> = {
     cash: Banknote,
@@ -239,7 +310,7 @@ function finalizeSale() {
         return;
     }
     if (!validateStock()) return;
-    if (!isBalanced.value) {
+    if (remaining.value > 0) {
         alert(
             'Los pagos no cubren el total. Faltan: $' +
                 remaining.value.toFixed(0),
@@ -306,6 +377,21 @@ function handleBlur() {
         searchFocused.value = false;
         showSearchDropdown.value = false;
     }, 200);
+}
+
+function openCashIngreso() {
+    cashMovementType.value = 'ingreso';
+    showCashMovementModal.value = true;
+}
+
+function openCashRetiro() {
+    cashMovementType.value = 'retiro';
+    showCashMovementModal.value = true;
+}
+
+function onCashMovementSaved() {
+    showCashMovementModal.value = false;
+    focusScanner();
 }
 
 const fmt = (v: number) =>
@@ -430,19 +516,16 @@ const fmtDec = (v: number) =>
                                 v-for="p in filteredProducts"
                                 :key="p.id"
                                 @mousedown="selectProduct(p)"
-                                class="flex w-full items-center gap-3 border-b border-gray-100 px-4 py-2.5 text-left text-sm last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800"
+                                class="flex w-full items-center gap-2 border-b border-gray-100 px-4 py-2.5 text-left text-sm last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800"
                             >
                                 <span
-                                    class="flex-1 truncate font-medium text-content-primary dark:text-white"
+                                    class="min-w-0 flex-1 whitespace-normal break-words font-medium text-content-primary dark:text-white"
                                     >{{ p.name }}</span
                                 >
                                 <span
-                                    class="font-mono text-xs text-content-muted"
-                                    >{{ p.sku }}</span
+                                    class="shrink-0 font-bold text-primary-500"
+                                    >{{ fmt(p.price / 100) }}</span
                                 >
-                                <span class="font-bold text-primary-500">{{
-                                    fmt(p.price / 100)
-                                }}</span>
                             </button>
                         </div>
                     </div>
@@ -611,11 +694,53 @@ const fmtDec = (v: number) =>
             <div
                 class="flex w-96 flex-shrink-0 flex-col rounded-3xl border border-gray-100 bg-slate-50 p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900/50"
             >
-                <h3
-                    class="mb-2 text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
-                >
-                    Resumen
-                </h3>
+                <div class="relative mb-2 flex items-center justify-between">
+                    <h3
+                        class="text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                    >
+                        Resumen
+                    </h3>
+                    <button
+                        @click.stop="toggleMenu"
+                        class="flex h-7 w-7 items-center justify-center rounded-xl bg-primary-50 text-primary-500 transition-colors hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50"
+                        title="Acciones"
+                    >
+                        <Menu class="h-4 w-4" />
+                    </button>
+
+                    <Transition
+                        enter-active-class="transition duration-150 ease-out"
+                        enter-from-class="scale-95 opacity-0"
+                        enter-to-class="scale-100 opacity-100"
+                        leave-active-class="transition duration-100 ease-in"
+                        leave-from-class="scale-100 opacity-100"
+                        leave-to-class="scale-95 opacity-0"
+                    >
+                        <div
+                            v-if="showMenu"
+                            ref="menuRef"
+                            class="absolute right-0 top-full z-50 mt-1 w-56 origin-top-right overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-surface-dark"
+                        >
+                            <button
+                                v-for="opt in menuOptions"
+                                :key="opt.label"
+                                @click="opt.action; showMenu = false"
+                                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-content-primary transition-colors hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800"
+                            >
+                                <component
+                                    :is="opt.icon"
+                                    :class="[
+                                        'h-4 w-4 shrink-0',
+                                        opt.label === 'Entrada de Dinero'
+                                            ? 'text-emerald-500'
+                                            : 'text-orange-500',
+                                    ]"
+                                />
+                                {{ opt.label }}
+                            </button>
+                        </div>
+                    </Transition>
+                </div>
 
                 <!-- Total -->
                 <div class="mb-4">
@@ -679,31 +804,26 @@ const fmtDec = (v: number) =>
 
                 <!-- Balance Indicator -->
                 <div
-                    v-if="total > 0"
-                    class="mt-4 rounded-2xl px-3 py-2.5 text-center text-sm font-bold"
-                    :class="
-                        isBalanced
-                            ? 'bg-success/10 text-success'
-                            : remaining > 0
-                              ? 'bg-warning/10 text-warning'
-                              : 'bg-danger/10 text-danger'
-                    "
+                    v-if="balanceState"
+                    :class="['mt-4 rounded-lg p-3 text-center transition-all', balanceClasses]"
                 >
-                    <template v-if="isBalanced">✓ Pagos completos</template>
-                    <template v-else-if="remaining > 0"
-                        >Faltan {{ fmtDec(remaining) }}</template
-                    >
-                    <template v-else
-                        >Sobran {{ fmtDec(Math.abs(remaining)) }}</template
-                    >
+                    <template v-if="balanceState === 'exacto'">
+                        <span>✓ Pago Exacto</span>
+                    </template>
+                    <template v-else-if="balanceState === 'faltante'">
+                        <span class="font-medium">Faltan</span>
+                        <span class="ml-1 font-bold text-xl">{{ fmtDec(remaining) }}</span>
+                    </template>
+                    <template v-else>
+                        <span>Vuelto:</span>
+                        <span class="ml-1 font-bold text-xl">{{ fmtDec(Math.abs(remaining)) }}</span>
+                    </template>
                 </div>
 
                 <!-- Checkout Button -->
                 <button
                     @click="finalizeSale"
-                    :disabled="
-                        checkoutLoading || activeTab.cart.length === 0 || !isBalanced
-                    "
+                    :disabled="!canCheckout"
                     class="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-700"
                 >
                     <template v-if="checkoutLoading">
@@ -714,10 +834,17 @@ const fmtDec = (v: number) =>
                     </template>
                     <template v-else>
                         <Check class="h-5 w-5" />
-                        Finalizar Venta
+                        Finalizar Venta <span class="ml-1 opacity-60">(F9)</span>
                     </template>
                 </button>
             </div>
         </div>
+
+        <CashMovementModal
+            :show="showCashMovementModal"
+            :type="cashMovementType"
+            @close="showCashMovementModal = false; focusScanner()"
+            @saved="onCashMovementSaved"
+        />
     </AdminLayout>
 </template>

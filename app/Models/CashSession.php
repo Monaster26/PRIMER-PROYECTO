@@ -42,6 +42,7 @@ class CashSession extends Model
         'total_red_compra',
         'total_transferencia',
         'total_retiros',
+        'total_ingresos',
         // Resumen
         'total_caja_esperado',
         'diferencia_descuadre',
@@ -78,6 +79,7 @@ class CashSession extends Model
             'total_red_compra' => 'integer',
             'total_transferencia' => 'integer',
             'total_retiros' => 'integer',
+            'total_ingresos' => 'integer',
             'total_caja_esperado' => 'integer',
             'diferencia_descuadre' => 'integer',
         ];
@@ -125,7 +127,8 @@ class CashSession extends Model
                 $session->total_caja_esperado =
                     $session->total_efectivo_cierre +
                     $session->total_red_compra +
-                    $session->total_transferencia -
+                    $session->total_transferencia +
+                    $session->total_ingresos -
                     $session->total_retiros;
 
                 $session->diferencia_descuadre =
