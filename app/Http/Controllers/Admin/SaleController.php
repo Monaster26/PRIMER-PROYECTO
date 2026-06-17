@@ -16,14 +16,18 @@ class SaleController extends Controller
 {
     public function index()
     {
-        $month = (int) (request('month') ?? now()->month);
-        $year = (int) (request('year') ?? now()->year);
+        $from = request('from');
+        $to = request('to');
 
-        $sales = Sale::with('cashier', 'items.product', 'payments')
-            ->whereMonth('created_at', $month)
-            ->whereYear('created_at', $year)
-            ->orderBy('created_at', 'desc')
-            ->paginate(30);
+        $query = Sale::with('cashier', 'items.product', 'payments');
+
+        if ($from && $to) {
+            $query->whereBetween('created_at', [$from, $to . ' 23:59:59']);
+        } elseif ($from) {
+            $query->whereDate('created_at', $from);
+        }
+
+        $sales = $query->orderBy('created_at', 'desc')->paginate(30);
 
         $products = Product::orderBy('name')
             ->where('stock', '>', 0)
@@ -31,25 +35,16 @@ class SaleController extends Controller
 
         $cashiers = User::role('cashier')->get();
 
-        $saleIds = Sale::whereMonth('created_at', $month)->whereYear('created_at', $year)->pluck('id');
-        $summary = [
-            'total' => (int) Sale::whereIn('id', $saleIds)->sum('total'),
-            'count' => $saleIds->count(),
-        ];
-
-        $months = [
-            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-        ];
-
         return Inertia::render('admin/ventas', [
             'sales' => $sales,
             'products' => $products,
             'cashiers' => $cashiers,
-            'month' => $month,
-            'year' => $year,
-            'month_name' => $months[$month - 1],
-            'summary' => $summary,
+            'from' => $from,
+            'to' => $to,
+            'summary' => [
+                'total' => (int) (clone $query)->sum('total'),
+                'count' => $sales->total(),
+            ],
         ]);
     }
 

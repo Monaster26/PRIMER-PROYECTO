@@ -25,9 +25,8 @@ const props = defineProps<{
     };
     products: any[];
     cashiers: any[];
-    month: number;
-    year: number;
-    month_name: string;
+    from: string | null;
+    to: string | null;
     summary: { total: number; count: number };
 }>();
 
@@ -43,19 +42,19 @@ const payments = ref<{ method: string; amount: number }[]>([
 ]);
 const showDetail = ref(false);
 const detailSale = ref<any>(null);
-const selectedMonth = ref(props.month);
-const selectedYear = ref(props.year);
+const filterFrom = ref(props.from ?? '');
+const filterTo = ref(props.to ?? '');
 
 function loadMonth() {
     router.get(
         route('admin.ventas.index'),
         {
-            month: selectedMonth.value,
-            year: selectedYear.value,
+            from: filterFrom.value || null,
+            to: filterTo.value || null,
         },
         { preserveState: true, preserveScroll: true },
     );
-}
+} 
 
 function viewDetail(sale: any) {
     detailSale.value = sale;
@@ -238,49 +237,39 @@ const fmt = (v: number) =>
                 <h2 class="font-bold text-content-primary dark:text-white">
                     Período
                 </h2>
-                <select
-                    v-model="selectedMonth"
-                    @change="loadMonth"
-                    class="rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                >
-                    <option
-                        v-for="(m, i) in [
-                            'Enero',
-                            'Febrero',
-                            'Marzo',
-                            'Abril',
-                            'Mayo',
-                            'Junio',
-                            'Julio',
-                            'Agosto',
-                            'Septiembre',
-                            'Octubre',
-                            'Noviembre',
-                            'Diciembre',
-                        ]"
-                        :key="i"
-                        :value="i + 1"
-                    >
-                        {{ m }}
-                    </option>
-                </select>
-                <select
-                    v-model="selectedYear"
-                    @change="loadMonth"
-                    class="rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                >
-                    <option
-                        v-for="y in [year - 1, year, year + 1]"
-                        :key="y"
-                        :value="y"
-                    >
-                        {{ y }}
-                    </option>
-                </select>
+
                 <span
-                    class="text-sm font-bold text-content-primary dark:text-white"
-                    >{{ month_name }} {{ year }}</span
+                    class="h-6 w-px bg-gray-200 dark:bg-gray-700"
+                ></span>
+
+                <label class="flex items-center gap-1 text-xs text-content-muted">
+                    Desde
+                    <input
+                        v-model="filterFrom"
+                        type="date"
+                        class="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                    />
+                </label>
+                <label class="flex items-center gap-1 text-xs text-content-muted">
+                    Hasta
+                    <input
+                        v-model="filterTo"
+                        type="date"
+                        class="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                    />
+                </label>
+                <button
+                    @click="loadMonth"
+                    class="rounded-xl bg-primary-500 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-primary-600"
                 >
+                    Filtrar
+                </button>
+                <button
+                    @click="filterFrom = ''; filterTo = ''; loadMonth()"
+                    class="rounded-xl border border-gray-200 px-3 py-1.5 text-xs font-bold text-content-muted transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+                >
+                    Limpiar
+                </button>
             </div>
         </div>
 
@@ -423,11 +412,21 @@ const fmt = (v: number) =>
                                 {{ sale.cashier?.name || '—' }}
                             </td>
                             <td class="px-6 py-4">
-                                <span
-                                    class="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-bold capitalize text-content-secondary dark:bg-gray-800"
-                                >
-                                    {{ sale.payment_method || '—' }}
-                                </span>
+                                <div class="flex flex-wrap gap-1">
+                                    <span
+                                        v-for="p in sale.payments"
+                                        :key="p.id"
+                                        class="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-bold capitalize text-content-secondary dark:bg-gray-800"
+                                    >
+                                        {{ methodLabels[p.method] || p.method }}
+                                    </span>
+                                    <span
+                                        v-if="!sale.payments?.length"
+                                        class="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-bold text-content-secondary dark:bg-gray-800"
+                                    >
+                                        —
+                                    </span>
+                                </div>
                             </td>
                             <td
                                 class="px-6 py-4 text-right text-sm text-content-secondary"
@@ -830,10 +829,21 @@ const fmt = (v: number) =>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-content-muted">Método Pago</span>
-                            <span
-                                class="font-medium capitalize text-content-primary dark:text-white"
-                                >{{ detailSale.payment_method || '—' }}</span
-                            >
+                            <div class="flex flex-wrap gap-1">
+                                <span
+                                    v-for="p in detailSale.payments"
+                                    :key="p.id"
+                                    class="rounded-lg bg-gray-100 px-2 py-0.5 text-xs font-bold capitalize dark:bg-gray-800"
+                                >
+                                    {{ methodLabels[p.method] || p.method }}
+                                </span>
+                                <span
+                                    v-if="!detailSale.payments?.length"
+                                    class="font-medium text-content-primary dark:text-white"
+                                >
+                                    —
+                                </span>
+                            </div>
                         </div>
 
                         <hr class="border-gray-100 dark:border-gray-800" />
@@ -858,7 +868,7 @@ const fmt = (v: number) =>
                                 <span
                                     class="font-medium text-content-primary dark:text-white"
                                     >{{
-                                        fmt(Math.round(item.subtotal * 100))
+                                        fmt(item.total_line)
                                     }}</span
                                 >
                             </div>
@@ -879,14 +889,9 @@ const fmt = (v: number) =>
                                 :key="p.id"
                                 class="flex justify-between"
                             >
-                                <span
-                                    class="capitalize text-content-secondary"
-                                    >{{
-                                        p.method === 'mercadopago'
-                                            ? 'Mercado Pago'
-                                            : p.method
-                                    }}</span
-                                >
+                                <span class="capitalize text-content-secondary">
+                                    {{ methodLabels[p.method] || p.method }}
+                                </span>
                                 <span
                                     class="font-medium text-content-primary dark:text-white"
                                     >{{ fmt(Math.round(p.amount * 100)) }}</span

@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import CashMovementModal from '@/Components/CashMovementModal.vue';
+import { useBarcodeScanner } from '@/composables/useBarcodeScanner';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import type { Product } from '@/Stores/posTabsStore';
+import { usePosTabsStore } from '@/Stores/posTabsStore';
 import { Head } from '@inertiajs/vue3';
 import {
     ArrowDownLeft,
@@ -16,12 +20,8 @@ import {
     Trash2,
     X,
 } from 'lucide-vue-next';
-import CashMovementModal from '@/Components/CashMovementModal.vue';
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
-import { useBarcodeScanner } from '@/composables/useBarcodeScanner';
-import { usePosTabsStore } from '@/Stores/posTabsStore';
 import { storeToRefs } from 'pinia';
-import type { CartItem, Product, PaymentEntry } from '@/Stores/posTabsStore';
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 
 const props = defineProps<{
     products: Product[];
@@ -47,7 +47,11 @@ const cashMovementType = ref<'ingreso' | 'retiro'>('ingreso');
 const showMenu = ref(false);
 const menuRef = ref<HTMLElement | null>(null);
 const menuOptions = [
-    { label: 'Entrada de Dinero', action: openCashIngreso, icon: ArrowDownLeft },
+    {
+        label: 'Entrada de Dinero',
+        action: openCashIngreso,
+        icon: ArrowDownLeft,
+    },
     { label: 'Salida de Dinero', action: openCashRetiro, icon: ArrowUpRight },
 ];
 
@@ -71,7 +75,10 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 const canCheckout = computed(
-    () => !checkoutLoading.value && activeTab.value.cart.length > 0 && remaining.value <= 0,
+    () =>
+        !checkoutLoading.value &&
+        activeTab.value.cart.length > 0 &&
+        remaining.value <= 0,
 );
 
 onMounted(() => {
@@ -84,9 +91,9 @@ onUnmounted(() => {
     document.removeEventListener('keydown', handleKeydown);
 });
 
-const posTabStore = usePosTabsStore()
-const { activeTab, tabs, activeIndex } = storeToRefs(posTabStore)
-const { addTab, removeTab, switchTab } = posTabStore
+const posTabStore = usePosTabsStore();
+const { activeTab, tabs, activeIndex } = storeToRefs(posTabStore);
+const { addTab, removeTab, switchTab } = posTabStore;
 
 // ─── Escáner global: captura ráfagas del lector de código de barras ──
 useBarcodeScanner({
@@ -104,7 +111,10 @@ const total = computed(() =>
 );
 
 const totalPayments = computed(() =>
-    activeTab.value.payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0),
+    activeTab.value.payments.reduce(
+        (sum, p) => sum + (Number(p.amount) || 0),
+        0,
+    ),
 );
 
 const remaining = computed(() => total.value - totalPayments.value);
@@ -246,7 +256,9 @@ function addProductByCode(code: string) {
 }
 
 function addToCart(product: Product) {
-    const existing = activeTab.value.cart.find((item) => item.product.id === product.id);
+    const existing = activeTab.value.cart.find(
+        (item) => item.product.id === product.id,
+    );
     if (existing) {
         existing.quantity++;
     } else {
@@ -257,7 +269,10 @@ function addToCart(product: Product) {
 }
 
 function incrementQty(index: number) {
-    if (activeTab.value.cart[index].quantity < activeTab.value.cart[index].product.stock) {
+    if (
+        activeTab.value.cart[index].quantity <
+        activeTab.value.cart[index].product.stock
+    ) {
         activeTab.value.cart[index].quantity++;
     }
 }
@@ -330,6 +345,7 @@ function finalizeSale() {
     fetch(route('admin.pos.checkout'), {
         method: 'POST',
         headers: {
+            Accept: 'application/json',
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN':
                 document
@@ -417,7 +433,7 @@ const fmtDec = (v: number) =>
                 v-for="(tab, i) in tabs"
                 :key="tab.id"
                 @click="switchTab(i)"
-                class="flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-bold whitespace-nowrap transition-colors"
+                class="flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-bold transition-colors"
                 :class="
                     activeIndex === i
                         ? 'bg-primary-500 text-white shadow-sm'
@@ -720,7 +736,10 @@ const fmtDec = (v: number) =>
                             <button
                                 v-for="opt in menuOptions"
                                 :key="opt.label"
-                                @click="opt.action; showMenu = false"
+                                @click="
+                                    opt.action;
+                                    showMenu = false;
+                                "
                                 class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-content-primary transition-colors hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800"
                             >
                                 <component
@@ -758,8 +777,10 @@ const fmtDec = (v: number) =>
                 >
                     <ShoppingCart class="h-4 w-4" />
                     <span
-                        >{{ activeTab.cart.reduce((s, i) => s + i.quantity, 0) }} unidades
-                        / {{ activeTab.cart.length }} productos</span
+                        >{{
+                            activeTab.cart.reduce((s, i) => s + i.quantity, 0)
+                        }}
+                        unidades / {{ activeTab.cart.length }} productos</span
                     >
                 </div>
 
@@ -778,9 +799,19 @@ const fmtDec = (v: number) =>
                         :key="i"
                         class="flex items-center gap-2"
                     >
-                        <div class="flex w-36 items-center gap-2 text-content-primary dark:text-white">
-                            <component :is="methodIcons[payment.method]" :class="['h-5 w-5', methodColors[payment.method]]" />
-                            <span class="text-sm font-medium">{{ methodLabels[payment.method] }}</span>
+                        <div
+                            class="flex w-36 items-center gap-2 text-content-primary dark:text-white"
+                        >
+                            <component
+                                :is="methodIcons[payment.method]"
+                                :class="[
+                                    'h-5 w-5',
+                                    methodColors[payment.method],
+                                ]"
+                            />
+                            <span class="text-sm font-medium">{{
+                                methodLabels[payment.method]
+                            }}</span>
                         </div>
                         <div class="relative flex-[2]">
                             <span
@@ -801,18 +832,25 @@ const fmtDec = (v: number) =>
                 <!-- Balance Indicator -->
                 <div
                     v-if="balanceState"
-                    :class="['mt-4 rounded-lg p-3 text-center transition-all', balanceClasses]"
+                    :class="[
+                        'mt-4 rounded-lg p-3 text-center transition-all',
+                        balanceClasses,
+                    ]"
                 >
                     <template v-if="balanceState === 'exacto'">
                         <span>✓ Pago Exacto</span>
                     </template>
                     <template v-else-if="balanceState === 'faltante'">
                         <span class="font-medium">Faltan</span>
-                        <span class="ml-1 font-bold text-xl">{{ fmtDec(remaining) }}</span>
+                        <span class="ml-1 text-xl font-bold">{{
+                            fmtDec(remaining)
+                        }}</span>
                     </template>
                     <template v-else>
                         <span>Vuelto:</span>
-                        <span class="ml-1 font-bold text-xl">{{ fmtDec(Math.abs(remaining)) }}</span>
+                        <span class="ml-1 text-xl font-bold">{{
+                            fmtDec(Math.abs(remaining))
+                        }}</span>
                     </template>
                 </div>
 
@@ -830,7 +868,8 @@ const fmtDec = (v: number) =>
                     </template>
                     <template v-else>
                         <Check class="h-5 w-5" />
-                        Finalizar Venta <span class="ml-1 opacity-60">(F9)</span>
+                        Finalizar Venta
+                        <span class="ml-1 opacity-60">(F9)</span>
                     </template>
                 </button>
             </div>
@@ -839,7 +878,10 @@ const fmtDec = (v: number) =>
         <CashMovementModal
             :show="showCashMovementModal"
             :type="cashMovementType"
-            @close="showCashMovementModal = false; focusScanner()"
+            @close="
+                showCashMovementModal = false;
+                focusScanner();
+            "
             @saved="onCashMovementSaved"
         />
     </AdminLayout>
