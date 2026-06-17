@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { computed, ref } from 'vue';
 
 export interface Product {
     id: number;
@@ -23,15 +23,24 @@ export interface CartItem {
 
 export const useCartStore = defineStore('cart', () => {
     const items = ref<CartItem[]>([]);
-    
+
     // In a real app, you'd load from localStorage or API here
-    
-    const cartCount = computed(() => items.value.reduce((total, item) => total + item.quantity, 0));
-    
-    const subtotal = computed(() => items.value.reduce((total, item) => total + (item.product.price * item.quantity), 0));
+
+    const cartCount = computed(() =>
+        items.value.reduce((total, item) => total + item.quantity, 0),
+    );
+
+    const subtotal = computed(() =>
+        items.value.reduce(
+            (total, item) => total + item.product.price * item.quantity,
+            0,
+        ),
+    );
 
     function addToCart(product: Product, quantity = 1) {
-        const existingItem = items.value.find(item => item.product.id === product.id);
+        const existingItem = items.value.find(
+            (item) => item.product.id === product.id,
+        );
         if (existingItem) {
             existingItem.quantity += quantity;
         } else {
@@ -40,11 +49,13 @@ export const useCartStore = defineStore('cart', () => {
     }
 
     function removeFromCart(productId: number) {
-        items.value = items.value.filter(item => item.product.id !== productId);
+        items.value = items.value.filter(
+            (item) => item.product.id !== productId,
+        );
     }
-    
+
     function updateQuantity(productId: number, quantity: number) {
-        const item = items.value.find(item => item.product.id === productId);
+        const item = items.value.find((item) => item.product.id === productId);
         if (item) {
             item.quantity = quantity;
             if (item.quantity <= 0) {
@@ -64,6 +75,6 @@ export const useCartStore = defineStore('cart', () => {
         addToCart,
         removeFromCart,
         updateQuantity,
-        clearCart
+        clearCart,
     };
 });

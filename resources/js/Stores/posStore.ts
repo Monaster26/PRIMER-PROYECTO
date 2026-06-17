@@ -4,7 +4,7 @@ import { useCartStore } from './cartStore';
 
 export const usePosStore = defineStore('pos', () => {
     const cartStore = useCartStore();
-    
+
     const cashierId = ref<string | null>(null);
     const barcodeInput = ref('');
     const posModeActive = ref(false);
@@ -40,6 +40,6 @@ export const usePosStore = defineStore('pos', () => {
         posModeActive,
         login,
         processBarcode,
-        checkout
+        checkout,
     };
 });

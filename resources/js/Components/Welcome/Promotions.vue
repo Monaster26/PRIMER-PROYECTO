@@ -1,53 +1,81 @@
-<script setup lang="ts">
-</script>
+<script setup lang="ts"></script>
 
 <template>
-    <section class="py-24 bg-white dark:bg-zinc-950 transition-colors overflow-hidden">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            
-            <div class="grid lg:grid-cols-2 gap-8">
+    <section
+        class="overflow-hidden bg-white py-24 transition-colors dark:bg-zinc-950"
+    >
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="grid gap-8 lg:grid-cols-2">
                 <!-- Promo 1: TODO A LUK -->
-                <div class="relative rounded-[3rem] bg-gradient-to-br from-primario to-acento overflow-hidden group p-10 flex flex-col justify-center min-h-[350px]">
-                    <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+                <div
+                    class="from-primario to-acento group relative flex min-h-[350px] flex-col justify-center overflow-hidden rounded-[3rem] bg-gradient-to-br p-10"
+                >
+                    <div
+                        class="absolute right-0 top-0 h-64 w-64 rounded-full bg-white/10 blur-3xl transition-transform duration-700 group-hover:scale-150"
+                    ></div>
                     <div class="relative z-10 w-[70%]">
-                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-white/20 text-white text-xs font-black uppercase rounded-lg mb-4 backdrop-blur-md">
-                            <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span> Lo más llevado
+                        <span
+                            class="mb-4 inline-flex items-center gap-1 rounded-lg bg-white/20 px-3 py-1 text-xs font-black uppercase text-white backdrop-blur-md"
+                        >
+                            <span
+                                class="h-2 w-2 animate-pulse rounded-full bg-white"
+                            ></span>
+                            Lo más llevado
                         </span>
-                        <h3 class="text-5xl lg:text-6xl font-display font-black text-white leading-none mb-3 drop-shadow-sm">
+                        <h3
+                            class="mb-3 font-display text-5xl font-black leading-none text-white drop-shadow-sm lg:text-6xl"
+                        >
                             TODO A <span class="text-secundario">LUK</span>
                         </h3>
-                        <p class="text-white/90 font-bold mb-6 text-lg">
-                            Lleva cualquier producto de esta sección por $1.000 o menos.
+                        <p class="mb-6 text-lg font-bold text-white/90">
+                            Lleva cualquier producto de esta sección por $1.000
+                            o menos.
                         </p>
-                        <button class="bg-secundario text-zinc-900 px-6 py-3 rounded-xl font-bold font-sans hover:bg-white hover:shadow-xl transition-all active:scale-95 shadow-lg shadow-secundario/30">
+                        <button
+                            class="bg-secundario shadow-secundario/30 rounded-xl px-6 py-3 font-sans font-bold text-zinc-900 shadow-lg transition-all hover:bg-white hover:shadow-xl active:scale-95"
+                        >
                             Ver catálogo a luka
                         </button>
                     </div>
                     <!-- Promo image mock -->
-                    <div class="absolute -bottom-8 -right-8 text-[14rem] drop-shadow-2xl group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-500">
+                    <div
+                        class="absolute -bottom-8 -right-8 text-[14rem] drop-shadow-2xl transition-transform duration-500 group-hover:-rotate-12 group-hover:scale-110"
+                    >
                         🤑
                     </div>
                 </div>
 
                 <!-- Promo 2 -->
-                <div class="relative rounded-[3rem] bg-zinc-900 dark:bg-zinc-900 border border-transparent dark:border-zinc-800 overflow-hidden group p-10 flex flex-col justify-center min-h-[350px]">
-                    <div class="absolute -bottom-10 -left-10 w-64 h-64 bg-secundario/20 rounded-full blur-3xl group-hover:bg-secundario/30 transition-colors duration-700"></div>
+                <div
+                    class="group relative flex min-h-[350px] flex-col justify-center overflow-hidden rounded-[3rem] border border-transparent bg-zinc-900 p-10 dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                    <div
+                        class="bg-secundario/20 group-hover:bg-secundario/30 absolute -bottom-10 -left-10 h-64 w-64 rounded-full blur-3xl transition-colors duration-700"
+                    ></div>
                     <div class="relative z-10 w-2/3">
-                        <span class="inline-block px-3 py-1 bg-secundario text-zinc-900 text-xs font-black uppercase rounded-lg mb-4">Mundo Bebé</span>
-                        <h3 class="text-4xl font-black text-white leading-tight mb-4 text-balance">
+                        <span
+                            class="bg-secundario mb-4 inline-block rounded-lg px-3 py-1 text-xs font-black uppercase text-zinc-900"
+                            >Mundo Bebé</span
+                        >
+                        <h3
+                            class="mb-4 text-balance text-4xl font-black leading-tight text-white"
+                        >
                             Todo para el cuidado de los más pequeños
                         </h3>
-                        <button class="bg-secundario text-zinc-900 px-6 py-3 rounded-xl font-bold shadow-lg shadow-secundario/20 hover:bg-white transition-colors active:scale-95">
+                        <button
+                            class="bg-secundario shadow-secundario/20 rounded-xl px-6 py-3 font-bold text-zinc-900 shadow-lg transition-colors hover:bg-white active:scale-95"
+                        >
                             Ver Sección
                         </button>
                     </div>
                     <!-- Promo image mock -->
-                    <div class="absolute top-10 -right-4 text-[10rem] drop-shadow-2xl group-hover:scale-110 transition-transform duration-500">
+                    <div
+                        class="absolute -right-4 top-10 text-[10rem] drop-shadow-2xl transition-transform duration-500 group-hover:scale-110"
+                    >
                         👶
                     </div>
                 </div>
             </div>
-
         </div>
     </section>
 </template>

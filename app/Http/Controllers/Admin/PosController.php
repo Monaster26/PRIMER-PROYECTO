@@ -51,10 +51,28 @@ class PosController extends Controller
             'payments.*.amount' => 'required|numeric|min:0',
         ]);
 
+        $cashAmount = 0;
+        $cardAmount = 0;
+        $transferAmount = 0;
+
+        foreach ($validated['payments'] as $payment) {
+            $amountCents = (int) round($payment['amount'] * 100);
+            match ($payment['method']) {
+                'cash' => $cashAmount += $amountCents,
+                'card' => $cardAmount += $amountCents,
+                'transfer', 'mercadopago' => $transferAmount += $amountCents,
+            };
+        }
+
+        $totalCents = 0;
+
         $sale = Sale::create([
-            'date' => now()->toDateString(),
-            'cashier_id' => auth()->id(),
-            'payment_method' => 'mixed',
+            'user_id' => auth()->id(),
+            'type' => 'pos',
+            'cash_amount' => $cashAmount,
+            'card_amount' => $cardAmount,
+            'transfer_amount' => $transferAmount,
+            'total' => 0,
         ]);
 
         foreach ($validated['items'] as $item) {
@@ -66,20 +84,21 @@ class PosController extends Controller
                 ], 422);
             }
 
-            $unitPrice = $product->price / 100;
-            $costPrice = ($product->cost_price ?? 0) / 100;
+            $lineTotal = $product->price * $item['quantity'];
 
             SaleItem::create([
                 'sale_id' => $sale->id,
                 'product_id' => $product->id,
                 'quantity' => $item['quantity'],
-                'unit_price' => $unitPrice,
-                'cost_price' => $costPrice,
-                'subtotal' => $unitPrice * $item['quantity'],
+                'price' => $product->price,
+                'total_line' => $lineTotal,
             ]);
 
             $product->decrement('stock', $item['quantity']);
+            $totalCents += $lineTotal;
         }
+
+        $sale->update(['total' => $totalCents]);
 
         foreach ($validated['payments'] as $payment) {
             SalePayment::create([

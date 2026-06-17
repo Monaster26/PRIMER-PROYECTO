@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import AdminLayout from '@/Layouts/AdminLayout.vue';
 import ProductTable from '@/Components/Product/ProductTable.vue';
+import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { Head } from '@inertiajs/vue3';
 
 defineProps<{
     products: any;
@@ -15,14 +15,18 @@ defineProps<{
 
     <AdminLayout>
         <template #title>
-            <h1 class="text-xl font-display font-bold text-content-primary dark:text-white">Gestión de Inventario</h1>
+            <h1
+                class="font-display text-xl font-bold text-content-primary dark:text-white"
+            >
+                Gestión de Inventario
+            </h1>
         </template>
 
         <div class="space-y-6">
-            <ProductTable 
-                :products="products" 
-                :categories="categories" 
-                :filters="filters" 
+            <ProductTable
+                :products="products"
+                :categories="categories"
+                :filters="filters"
             />
         </div>
     </AdminLayout>

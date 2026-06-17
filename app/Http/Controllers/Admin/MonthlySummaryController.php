@@ -28,7 +28,7 @@ class MonthlySummaryController extends Controller
 
         $totalGastos = (float) Expense::whereYear('date', $year)
             ->whereMonth('date', $month)
-            ->sum('amount');
+            ->sum('total_expense');
 
         $totalPerdidas = (float) Loss::whereYear('date', $year)
             ->whereMonth('date', $month)

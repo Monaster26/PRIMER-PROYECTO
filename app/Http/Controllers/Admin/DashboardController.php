@@ -27,13 +27,11 @@ class DashboardController extends Controller
         $month = now()->month;
         $year = now()->year;
 
-        $monthSales = Sale::whereMonth('date', $month)
-            ->whereYear('date', $year)
-            ->with('items')
-            ->get();
+        $monthSales = Sale::whereMonth('created_at', $month)
+            ->whereYear('created_at', $year);
 
-        $totalSales = (int) round($monthSales->sum(fn($s) => $s->items->sum('subtotal')) * 100);
-        $salesCount = $monthSales->count();
+        $totalSales = (int) $monthSales->sum('total');
+        $salesCount = (clone $monthSales)->count();
 
         $totalProducts = Product::count();
         $activeCategories = Category::count();
@@ -71,20 +69,18 @@ class DashboardController extends Controller
     {
         $today = now()->toDateString();
 
-        $todaySales = Sale::whereDate('date', $today)
-            ->where('cashier_id', $user->id)
-            ->with('items')
-            ->get();
+        $todaySales = Sale::whereDate('created_at', $today)
+            ->where('user_id', $user->id);
 
-        $todayTotal = (int) round($todaySales->sum(fn($s) => $s->items->sum('subtotal')) * 100);
-        $todayCount = $todaySales->count();
+        $todayTotal = (int) $todaySales->sum('total');
+        $todayCount = (clone $todaySales)->count();
 
         $openSession = CashSession::where('user_id', $user->id)
             ->whereNull('closed_at')
             ->first();
 
         $recentSales = Sale::with('items.product')
-            ->where('cashier_id', $user->id)
+            ->where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();

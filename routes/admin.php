@@ -44,6 +44,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
             ->except(['show', 'create', 'edit']);
         Route::post('codigos/{product}/add-stock', [AdminProductController::class, 'addStock'])
             ->name('codigos.add-stock');
+        Route::post('codigos/importar', [AdminProductController::class, 'import'])
+            ->name('codigos.import');
 
         // Ventas
         Route::resource('ventas', SaleController::class)
@@ -51,6 +53,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 
         // Proveedores
         Route::resource('proveedores', SupplierController::class)
+            ->parameters(['proveedores' => 'supplier'])
             ->except(['show', 'create', 'edit']);
 
         // Comparativa de precios
@@ -67,6 +70,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 
         // Facturas pendientes
         Route::resource('facturas-pendientes', PendingInvoiceController::class)
+            ->parameters(['facturas-pendientes' => 'pendingInvoice'])
             ->except(['show', 'create', 'edit']);
 
         // Pérdidas

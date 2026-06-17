@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Imports\ProductsImport;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\StockMovement;
 use Illuminate\Http\RedirectResponse;
@@ -11,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ProductController extends Controller
 {
@@ -39,11 +42,17 @@ class ProductController extends Controller
             'price'         => 'required|numeric|min:0',
             'tax_rate'      => 'nullable|integer|min:0|max:100',
             'stock'         => 'required|integer|min:0',
+            'min_stock'     => 'nullable|integer|min:0',
             'is_active'     => 'boolean',
             'sort_order'    => 'nullable|integer|min:0',
             'description'   => 'nullable|string',
             'image'         => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
+
+        if (!empty($validated['category_slug'])) {
+            $category = Category::where('slug', $validated['category_slug'])->first();
+            $validated['category_id'] = $category?->id;
+        }
 
         $validated['slug'] = Str::slug($validated['name']) . '-' . Str::random(6);
         $validated['is_active'] = $request->boolean('is_active');
@@ -51,6 +60,7 @@ class ProductController extends Controller
         $validated['price'] = (int) (round((float) $validated['price'], 2) * 100);
         $validated['tax_rate'] = $validated['tax_rate'] ?? 0;
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
+        $validated['min_stock'] = $validated['min_stock'] ?? 5;
 
         if ($request->hasFile('image')) {
             $validated['image_path'] = $request->file('image')->store('products', 'public');
@@ -74,17 +84,24 @@ class ProductController extends Controller
             'price'         => 'required|numeric|min:0',
             'tax_rate'      => 'nullable|integer|min:0|max:100',
             'stock'         => 'required|integer|min:0',
+            'min_stock'     => 'nullable|integer|min:0',
             'is_active'     => 'boolean',
             'sort_order'    => 'nullable|integer|min:0',
             'description'   => 'nullable|string',
             'image'         => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
+        if (!empty($validated['category_slug'])) {
+            $category = Category::where('slug', $validated['category_slug'])->first();
+            $validated['category_id'] = $category?->id;
+        }
+
         $validated['is_active'] = $request->boolean('is_active');
         $validated['cost_price'] = $validated['cost_price'] ? (int) (round((float) $validated['cost_price'], 2) * 100) : 0;
         $validated['price'] = (int) (round((float) $validated['price'], 2) * 100);
         $validated['tax_rate'] = $validated['tax_rate'] ?? 0;
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
+        $validated['min_stock'] = $validated['min_stock'] ?? 5;
 
         if ($request->hasFile('image')) {
             if ($product->image_path) {
@@ -106,6 +123,29 @@ class ProductController extends Controller
         $product->delete();
 
         return redirect()->route('admin.codigos.index')->with('success', 'Producto eliminado.');
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv',
+        ]);
+
+        $import = new ProductsImport();
+        Excel::import($import, $request->file('file'));
+
+        $message = 'Importación completada: ';
+        $message .= "{$import->created} creados, {$import->updated} actualizados.";
+
+        if (count($import->failures) > 0) {
+            $message .= ' Fallos: ' . implode(' | ', array_slice($import->failures, 0, 10));
+            if (count($import->failures) > 10) {
+                $message .= ' (+' . (count($import->failures) - 10) . ' más)';
+            }
+        }
+
+        return redirect()->route('admin.codigos.index')
+            ->with('success', $message);
     }
 
     public function addStock(Request $request, Product $product): RedirectResponse

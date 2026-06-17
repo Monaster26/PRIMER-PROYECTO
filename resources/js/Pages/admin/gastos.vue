@@ -55,9 +55,9 @@ const editingId = ref<number | null>(null);
 const form = useForm({
     date: new Date().toISOString().split('T')[0],
     supplier_id: null as number | null,
-    payment_method: 'cash_box',
-    amount: 0,
-    concept: '',
+    category: '',
+    cash_spent: 0,
+    transfer_spent: 0,
 });
 
 function loadMonth() {
@@ -80,9 +80,9 @@ function openNew() {
 function openEdit(e: any) {
     form.date = e.date;
     form.supplier_id = e.supplier_id;
-    form.payment_method = e.payment_method;
-    form.amount = e.amount;
-    form.concept = e.concept;
+    form.category = e.category;
+    form.cash_spent = e.cash_spent ?? 0;
+    form.transfer_spent = e.transfer_spent ?? 0;
     editingId.value = e.id;
     showForm.value = true;
 }
@@ -259,11 +259,14 @@ const fmt = (v: number) =>
                     >
                         <tr>
                             <th class="px-6 py-3 font-bold">Fecha</th>
-                            <th class="px-6 py-3 font-bold">Concepto</th>
+                            <th class="px-6 py-3 font-bold">Categoría</th>
                             <th class="px-6 py-3 font-bold">Proveedor</th>
-                            <th class="px-6 py-3 font-bold">Método</th>
+                            <th class="px-6 py-3 text-right font-bold">Caja</th>
                             <th class="px-6 py-3 text-right font-bold">
-                                Monto
+                                Transferencia
+                            </th>
+                            <th class="px-6 py-3 text-right font-bold">
+                                Total
                             </th>
                             <th class="px-6 py-3 text-right font-bold">
                                 Acciones
@@ -275,7 +278,7 @@ const fmt = (v: number) =>
                     >
                         <tr v-if="!expenses.data?.length">
                             <td
-                                colspan="6"
+                                colspan="7"
                                 class="px-6 py-12 text-center text-sm text-content-muted dark:text-gray-500"
                             >
                                 No hay gastos registrados en {{ month_name }}
@@ -293,30 +296,33 @@ const fmt = (v: number) =>
                                 {{ formatDate(e.date) }}
                             </td>
                             <td
-                                class="px-6 py-4 text-sm font-medium text-content-primary dark:text-white"
+                                class="px-6 py-4 text-sm text-content-secondary"
                             >
-                                {{ e.concept }}
+                                {{ e.category }}
                             </td>
                             <td
                                 class="px-6 py-4 text-sm text-content-secondary"
                             >
                                 {{ e.supplier?.company_name || '—' }}
                             </td>
-                            <td class="px-6 py-4">
-                                <span
-                                    class="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-bold capitalize text-content-secondary dark:bg-gray-800"
-                                >
-                                    {{
-                                        e.payment_method === 'cash_box'
-                                            ? 'Caja'
-                                            : 'Transferencia'
-                                    }}
-                                </span>
-                            </td>
                             <td
                                 class="px-6 py-4 text-right text-sm font-bold text-danger"
                             >
-                                {{ fmt(e.amount) }}
+                                {{ e.cash_spent ? fmt(e.cash_spent) : '—' }}
+                            </td>
+                            <td
+                                class="px-6 py-4 text-right text-sm font-bold text-content-secondary"
+                            >
+                                {{
+                                    e.transfer_spent
+                                        ? fmt(e.transfer_spent)
+                                        : '—'
+                                }}
+                            </td>
+                            <td
+                                class="px-6 py-4 text-right text-sm font-bold text-content-primary"
+                            >
+                                {{ fmt(e.total_expense) }}
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <div
@@ -411,16 +417,19 @@ const fmt = (v: number) =>
                             <div>
                                 <label
                                     class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
-                                    >Método Pago</label
+                                    >Proveedor</label
                                 >
                                 <select
-                                    v-model="form.payment_method"
-                                    required
+                                    v-model="form.supplier_id"
                                     class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                 >
-                                    <option value="cash_box">Caja</option>
-                                    <option value="bank_transfer">
-                                        Transferencia
+                                    <option :value="null">Sin proveedor</option>
+                                    <option
+                                        v-for="s in suppliers"
+                                        :key="s.id"
+                                        :value="s.id"
+                                    >
+                                        {{ s.company_name }}
                                     </option>
                                 </select>
                             </div>
@@ -428,46 +437,40 @@ const fmt = (v: number) =>
                         <div>
                             <label
                                 class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
-                                >Concepto</label
+                                >Categoría</label
                             >
                             <input
-                                v-model="form.concept"
+                                v-model="form.category"
                                 type="text"
                                 required
                                 class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             />
                         </div>
-                        <div>
-                            <label
-                                class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
-                                >Proveedor</label
-                            >
-                            <select
-                                v-model="form.supplier_id"
-                                class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                            >
-                                <option :value="null">Sin proveedor</option>
-                                <option
-                                    v-for="s in suppliers"
-                                    :key="s.id"
-                                    :value="s.id"
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label
+                                    class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                                    >Caja ($)</label
                                 >
-                                    {{ s.company_name }}
-                                </option>
-                            </select>
-                        </div>
-                        <div>
-                            <label
-                                class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
-                                >Monto ($)</label
-                            >
-                            <input
-                                v-model.number="form.amount"
-                                type="number"
-                                min="0"
-                                required
-                                class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                            />
+                                <input
+                                    v-model.number="form.cash_spent"
+                                    type="number"
+                                    min="0"
+                                    class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                                    >Transferencia ($)</label
+                                >
+                                <input
+                                    v-model.number="form.transfer_spent"
+                                    type="number"
+                                    min="0"
+                                    class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                />
+                            </div>
                         </div>
                         <div class="flex gap-3 pt-2">
                             <button

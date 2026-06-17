@@ -10,12 +10,28 @@ use Inertia\Inertia;
 
 class SupplierController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $suppliers = Supplier::orderBy('company_name')->paginate(30);
+        $search = $request->get('search');
+
+        $query = Supplier::orderByRaw("CASE WHEN visit_day IS NULL THEN 1 ELSE 0 END")
+            ->orderByRaw("FIELD(visit_day, 'Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo','Todos los días')")
+            ->orderBy('company_name');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('company_name', 'like', "%{$search}%")
+                  ->orWhere('contact_name', 'like', "%{$search}%")
+                  ->orWhere('category', 'like', "%{$search}%")
+                  ->orWhere('visit_day', 'like', "%{$search}%");
+            });
+        }
+
+        $suppliers = $query->paginate(30);
 
         return Inertia::render('admin/proveedores', [
             'suppliers' => $suppliers,
+            'search' => $search,
         ]);
     }
 
@@ -25,7 +41,7 @@ class SupplierController extends Controller
             'company_name' => 'required|string|max:255|unique:suppliers,company_name',
             'category' => 'nullable|string|max:255',
             'contact_name' => 'nullable|string|max:255',
-            'visit_day' => 'nullable|in:Lunes,Martes,Miércoles,Jueves,Viernes,Sábado,Domingo',
+            'visit_day' => 'nullable|in:Lunes,Martes,Miércoles,Jueves,Viernes,Sábado,Domingo,Todos los días',
             'delivery_time_hours' => 'required|integer|min:1',
             'minimum_order_amount' => 'required|numeric|min:0',
         ]);
@@ -41,7 +57,7 @@ class SupplierController extends Controller
             'company_name' => 'required|string|max:255|unique:suppliers,company_name,' . $supplier->id,
             'category' => 'nullable|string|max:255',
             'contact_name' => 'nullable|string|max:255',
-            'visit_day' => 'nullable|in:Lunes,Martes,Miércoles,Jueves,Viernes,Sábado,Domingo',
+            'visit_day' => 'nullable|in:Lunes,Martes,Miércoles,Jueves,Viernes,Sábado,Domingo,Todos los días',
             'delivery_time_hours' => 'required|integer|min:1',
             'minimum_order_amount' => 'required|numeric|min:0',
         ]);

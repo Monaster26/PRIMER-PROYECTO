@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { ref, onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 
 // Import Custom Components
-import Navbar from '@/Components/Welcome/Navbar.vue';
-import Hero from '@/Components/Welcome/Hero.vue';
-import CategoryGrid from '@/Components/Welcome/CategoryGrid.vue';
-import Promotions from '@/Components/Welcome/Promotions.vue';
-import FeaturedProducts from '@/Components/Welcome/FeaturedProducts.vue';
 import Benefits from '@/Components/Welcome/Benefits.vue';
-import Location from '@/Components/Welcome/Location.vue';
-import Footer from '@/Components/Welcome/Footer.vue';
+import CategoryGrid from '@/Components/Welcome/CategoryGrid.vue';
+import FeaturedProducts from '@/Components/Welcome/FeaturedProducts.vue';
 import FloatWhatsapp from '@/Components/Welcome/FloatWhatsapp.vue';
+import Footer from '@/Components/Welcome/Footer.vue';
+import Hero from '@/Components/Welcome/Hero.vue';
+import Location from '@/Components/Welcome/Location.vue';
+import Navbar from '@/Components/Welcome/Navbar.vue';
+import Promotions from '@/Components/Welcome/Promotions.vue';
 
 defineProps<{
     canLogin?: boolean;
@@ -21,7 +21,9 @@ defineProps<{
 const showSoundPrompt = ref(false);
 
 const handleSoundToggle = (isMuted: boolean) => {
-    const audio = document.getElementById('startup-sound') as HTMLAudioElement | null;
+    const audio = document.getElementById(
+        'startup-sound',
+    ) as HTMLAudioElement | null;
     if (audio) {
         audio.muted = isMuted;
     }
@@ -36,9 +38,13 @@ onMounted(() => {
 
 const startExperience = () => {
     showSoundPrompt.value = false;
-    const audio = document.getElementById('startup-sound') as HTMLAudioElement | null;
+    const audio = document.getElementById(
+        'startup-sound',
+    ) as HTMLAudioElement | null;
     if (audio) {
-        audio.play().catch(e => console.log('Interacción requerida para audio'));
+        audio
+            .play()
+            .catch((e) => console.log('Interacción requerida para audio'));
         localStorage.setItem('monasterios_sound_played', 'true');
     }
 };
@@ -47,23 +53,58 @@ const startExperience = () => {
 <template>
     <Head title="Monasterios Market - Tu Mini Market Pro" />
 
-    <div class="min-h-screen bg-white dark:bg-zinc-950 font-sans selection:bg-primario selection:text-white">
-        
+    <div
+        class="selection:bg-primario min-h-screen bg-white font-sans selection:text-white dark:bg-zinc-950"
+    >
         <!-- Audio Element -->
-        <audio id="startup-sound" src="/sounds/startup.mp3" preload="auto"></audio>
+        <audio
+            id="startup-sound"
+            src="/sounds/startup.mp3"
+            preload="auto"
+        ></audio>
 
         <!-- Sound Prompt Overlay -->
         <transition name="fade">
-            <div v-if="showSoundPrompt" class="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm p-4">
-                <div class="bg-white dark:bg-zinc-900 p-8 rounded-[2rem] shadow-2xl max-w-sm w-full text-center border border-zinc-100 dark:border-zinc-800">
-                    <div class="w-20 h-20 bg-primario/10 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">🏪</div>
-                    <h2 class="text-2xl font-display font-black mb-2 text-zinc-900 dark:text-white">¡Bienvenido a Monasterios Market!</h2>
-                    <p class="text-zinc-500 dark:text-zinc-400 mb-8 font-medium">¿Deseas activar el sonido de bienvenida para una mejor experiencia?</p>
-                    <div class="flex flex-col sm:flex-row gap-3">
-                        <button @click="startExperience" class="flex-1 bg-primario text-white font-bold py-3.5 rounded-xl transition-all shadow-lg hover:shadow-primario/30 active:scale-95">
+            <div
+                v-if="showSoundPrompt"
+                class="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/80 p-4 backdrop-blur-sm"
+            >
+                <div
+                    class="w-full max-w-sm rounded-[2rem] border border-zinc-100 bg-white p-8 text-center shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                    <div
+                        class="bg-primario/10 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full text-4xl"
+                    >
+                        🏪
+                    </div>
+                    <h2
+                        class="mb-2 font-display text-2xl font-black text-zinc-900 dark:text-white"
+                    >
+                        ¡Bienvenido a Monasterios Market!
+                    </h2>
+                    <p
+                        class="mb-8 font-medium text-zinc-500 dark:text-zinc-400"
+                    >
+                        ¿Deseas activar el sonido de bienvenida para una mejor
+                        experiencia?
+                    </p>
+                    <div class="flex flex-col gap-3 sm:flex-row">
+                        <button
+                            @click="startExperience"
+                            class="bg-primario hover:shadow-primario/30 flex-1 rounded-xl py-3.5 font-bold text-white shadow-lg transition-all active:scale-95"
+                        >
                             Sí, ¡claro!
                         </button>
-                        <button @click="showSoundPrompt = false; localStorage.setItem('monasterios_sound_played', 'true')" class="flex-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold py-3.5 rounded-xl transition-all hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95">
+                        <button
+                            @click="
+                                showSoundPrompt = false;
+                                localStorage.setItem(
+                                    'monasterios_sound_played',
+                                    'true',
+                                );
+                            "
+                            class="flex-1 rounded-xl bg-zinc-100 py-3.5 font-bold text-zinc-700 transition-all hover:bg-zinc-200 active:scale-95 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                        >
                             No, gracias
                         </button>
                     </div>
@@ -72,8 +113,12 @@ const startExperience = () => {
         </transition>
 
         <!-- Layout Sections -->
-        <Navbar :can-login="canLogin" :can-register="canRegister" @toggle-sound="handleSoundToggle" />
-        
+        <Navbar
+            :can-login="canLogin"
+            :can-register="canRegister"
+            @toggle-sound="handleSoundToggle"
+        />
+
         <main>
             <Hero />
             <CategoryGrid />
@@ -85,7 +130,6 @@ const startExperience = () => {
 
         <Footer />
         <FloatWhatsapp />
-        
     </div>
 </template>
 
@@ -93,37 +137,38 @@ const startExperience = () => {
 /* Global custom utility classes */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.5s ease;
+    transition: opacity 0.5s ease;
 }
 
 .fade-enter-from,
 .fade-leave-to {
-  opacity: 0;
+    opacity: 0;
 }
 
 /* Scrollbar personalizado */
 ::-webkit-scrollbar {
-  width: 10px;
+    width: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #FFF5F8; 
+    background: #fff5f8;
 }
 .dark ::-webkit-scrollbar-track {
-  background: #18181b; 
+    background: #18181b;
 }
 ::-webkit-scrollbar-thumb {
-  background: #FF92B7; 
-  border-radius: 10px;
+    background: #ff92b7;
+    border-radius: 10px;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: #3f3f46; 
+    background: #3f3f46;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #FF2E7A; 
+    background: #ff2e7a;
 }
 
 /* Base override to ensure fonts apply correctly globally where needed */
-html, body {
-  font-family: 'Nunito', sans-serif;
+html,
+body {
+    font-family: 'Nunito', sans-serif;
 }
 </style>

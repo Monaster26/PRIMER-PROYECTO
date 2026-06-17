@@ -20,9 +20,9 @@ class SaleController extends Controller
         $year = (int) (request('year') ?? now()->year);
 
         $sales = Sale::with('cashier', 'items.product', 'payments')
-            ->whereMonth('date', $month)
-            ->whereYear('date', $year)
-            ->orderBy('date', 'desc')
+            ->whereMonth('created_at', $month)
+            ->whereYear('created_at', $year)
+            ->orderBy('created_at', 'desc')
             ->paginate(30);
 
         $products = Product::orderBy('name')
@@ -31,9 +31,9 @@ class SaleController extends Controller
 
         $cashiers = User::role('cashier')->get();
 
-        $saleIds = Sale::whereMonth('date', $month)->whereYear('date', $year)->pluck('id');
+        $saleIds = Sale::whereMonth('created_at', $month)->whereYear('created_at', $year)->pluck('id');
         $summary = [
-            'total' => (int) round(SaleItem::whereIn('sale_id', $saleIds)->sum('subtotal') * 100),
+            'total' => (int) Sale::whereIn('id', $saleIds)->sum('total'),
             'count' => $saleIds->count(),
         ];
 
@@ -56,9 +56,7 @@ class SaleController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'date' => 'required|date',
             'cashier_id' => 'required|exists:users,id',
-            'payment_method' => 'required|in:cash,card,transfer,mixed',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
@@ -67,26 +65,47 @@ class SaleController extends Controller
             'payments.*.amount' => 'required|numeric|min:0',
         ]);
 
+        $cashAmount = 0;
+        $cardAmount = 0;
+        $transferAmount = 0;
+
+        foreach ($validated['payments'] as $payment) {
+            $amountCents = (int) round($payment['amount'] * 100);
+            match ($payment['method']) {
+                'cash' => $cashAmount += $amountCents,
+                'card' => $cardAmount += $amountCents,
+                'transfer', 'mercadopago' => $transferAmount += $amountCents,
+            };
+        }
+
+        $totalCents = 0;
+
         $sale = Sale::create([
-            'date' => $validated['date'],
-            'cashier_id' => $validated['cashier_id'],
-            'payment_method' => $validated['payment_method'],
+            'user_id' => $validated['cashier_id'],
+            'type' => 'pos',
+            'cash_amount' => $cashAmount,
+            'card_amount' => $cardAmount,
+            'transfer_amount' => $transferAmount,
+            'total' => 0,
         ]);
 
         foreach ($validated['items'] as $item) {
             $product = Product::findOrFail($item['product_id']);
-            $unitPrice = $product->price / 100;
-            $costPrice = ($product->cost_price ?? 0) / 100;
+            $lineTotal = $product->price * $item['quantity'];
 
             SaleItem::create([
                 'sale_id' => $sale->id,
                 'product_id' => $product->id,
                 'quantity' => $item['quantity'],
-                'unit_price' => $unitPrice,
-                'cost_price' => $costPrice,
-                'subtotal' => $unitPrice * $item['quantity'],
+                'price' => $product->price,
+                'total_line' => $lineTotal,
             ]);
+
+            $product->decrement('stock', $item['quantity']);
+            $totalCents += $lineTotal;
         }
+
+        $sale->update(['total' => $totalCents]);
 
         foreach ($validated['payments'] as $payment) {
             SalePayment::create([
@@ -95,8 +114,6 @@ class SaleController extends Controller
                 'amount' => $payment['amount'],
             ]);
         }
-
-        $sale->refresh();
 
         return redirect()->route('admin.ventas.index')
             ->with('success', "Venta #{$sale->id} registrada.");

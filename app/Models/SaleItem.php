@@ -14,16 +14,14 @@ class SaleItem extends Model
         'sale_id',
         'product_id',
         'quantity',
-        'unit_price',
-        'cost_price',
-        'subtotal',
+        'price',
+        'total_line',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
-        'unit_price' => 'decimal:2',
-        'cost_price' => 'decimal:2',
-        'subtotal' => 'decimal:2',
+        'price' => 'integer',
+        'total_line' => 'integer',
     ];
 
     public function sale(): BelongsTo

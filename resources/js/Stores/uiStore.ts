@@ -13,7 +13,7 @@ export const useUiStore = defineStore('ui', () => {
             document.documentElement.classList.remove('dark');
         }
     }
-    
+
     function toggleCart() {
         isCartOpen.value = !isCartOpen.value;
     }
@@ -22,7 +22,6 @@ export const useUiStore = defineStore('ui', () => {
         isDark,
         isCartOpen,
         toggleDarkMode,
-        toggleCart
+        toggleCart,
     };
 });
-

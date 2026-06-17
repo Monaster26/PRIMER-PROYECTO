@@ -3,7 +3,9 @@
 </script>
 
 <template>
-    <div class="h-screen w-screen overflow-hidden bg-bg-light dark:bg-bg-dark text-content-primary dark:text-content-inverted transition-colors duration-300 flex">
+    <div
+        class="flex h-screen w-screen overflow-hidden bg-bg-light text-content-primary transition-colors duration-300 dark:bg-bg-dark dark:text-content-inverted"
+    >
         <slot />
     </div>
 </template>

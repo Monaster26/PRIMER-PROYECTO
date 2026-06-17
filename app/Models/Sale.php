@@ -12,25 +12,17 @@ class Sale extends Model
     use HasFactory;
 
     protected $fillable = [
-        'date',
-        'cashier_id',
-        'payment_method',
+        'user_id',
+        'type',
+        'cash_amount',
+        'card_amount',
+        'transfer_amount',
+        'total',
     ];
-
-    protected $casts = [
-        'date' => 'date',
-    ];
-
-    protected $appends = ['total'];
-
-    public function getTotalAttribute(): int
-    {
-        return (int) round($this->items->sum('subtotal') * 100);
-    }
 
     public function cashier(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'cashier_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function items(): HasMany

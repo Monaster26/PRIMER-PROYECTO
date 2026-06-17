@@ -24,11 +24,13 @@ class ExpenseController extends Controller
 
         $suppliers = Supplier::orderBy('company_name')->get();
 
+        $baseQuery = Expense::whereMonth('date', $month)->whereYear('date', $year);
+
         $summary = [
-            'total' => (float) Expense::whereMonth('date', $month)->whereYear('date', $year)->sum('amount'),
-            'cash'  => (float) Expense::whereMonth('date', $month)->whereYear('date', $year)->where('payment_method', 'cash_box')->sum('amount'),
-            'transfer' => (float) Expense::whereMonth('date', $month)->whereYear('date', $year)->where('payment_method', 'bank_transfer')->sum('amount'),
-            'count' => Expense::whereMonth('date', $month)->whereYear('date', $year)->count(),
+            'total'    => (float) $baseQuery->sum('total_expense'),
+            'cash'     => (float) (clone $baseQuery)->sum('cash_spent'),
+            'transfer' => (float) (clone $baseQuery)->sum('transfer_spent'),
+            'count'    => (clone $baseQuery)->count(),
         ];
 
         $months = [
@@ -49,12 +51,16 @@ class ExpenseController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'date'           => 'required|date',
-            'supplier_id'    => 'nullable|exists:suppliers,id',
-            'payment_method' => 'required|in:cash_box,bank_transfer',
-            'amount'         => 'required|numeric|min:0',
-            'concept'        => 'required|string|max:255',
+            'date'            => 'required|date',
+            'supplier_id'     => 'nullable|exists:suppliers,id',
+            'category'        => 'required|string|max:255',
+            'cash_spent'      => 'nullable|integer|min:0',
+            'transfer_spent'  => 'nullable|integer|min:0',
+            'concept'         => 'nullable|string|max:255',
         ]);
+
+        $validated['cash_spent'] ??= 0;
+        $validated['transfer_spent'] ??= 0;
 
         Expense::create($validated);
 
@@ -67,12 +73,16 @@ class ExpenseController extends Controller
     public function update(Request $request, Expense $expense): RedirectResponse
     {
         $validated = $request->validate([
-            'date'           => 'required|date',
-            'supplier_id'    => 'nullable|exists:suppliers,id',
-            'payment_method' => 'required|in:cash_box,bank_transfer',
-            'amount'         => 'required|numeric|min:0',
-            'concept'        => 'required|string|max:255',
+            'date'            => 'required|date',
+            'supplier_id'     => 'nullable|exists:suppliers,id',
+            'category'        => 'required|string|max:255',
+            'cash_spent'      => 'nullable|integer|min:0',
+            'transfer_spent'  => 'nullable|integer|min:0',
+            'concept'         => 'nullable|string|max:255',
         ]);
+
+        $validated['cash_spent'] ??= 0;
+        $validated['transfer_spent'] ??= 0;
 
         $expense->update($validated);
 

@@ -50,6 +50,6 @@ class User extends Authenticatable
 
     public function sales(): HasMany
     {
-        return $this->hasMany(Sale::class, 'cashier_id');
+        return $this->hasMany(Sale::class, 'user_id');
     }
 }

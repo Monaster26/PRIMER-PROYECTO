@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { ShoppingCart, Search, User, Sun, Moon } from 'lucide-vue-next';
+import { Moon, Search, ShoppingCart, Sun, User } from 'lucide-vue-next';
 import { useCartStore } from '../../Stores/cartStore';
 import { useUiStore } from '../../Stores/uiStore';
 import CategoryMenu from './CategoryMenu.vue';
@@ -10,16 +10,25 @@ const uiStore = useUiStore();
 </script>
 
 <template>
-    <nav class="sticky top-0 z-50 w-full bg-gradient-to-b from-secondary-50 via-white to-white dark:from-secondary-950 dark:via-bg-dark dark:to-bg-dark backdrop-blur-md border-b border-gray-100 dark:border-gray-800 transition-colors duration-300 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16 gap-4">
-
+    <nav
+        class="dark:from-secondary-950 sticky top-0 z-50 w-full border-b border-gray-100 bg-gradient-to-b from-secondary-50 via-white to-white shadow-sm backdrop-blur-md transition-colors duration-300 dark:border-gray-800 dark:via-bg-dark dark:to-bg-dark"
+    >
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="flex h-16 items-center justify-between gap-4">
                 <!-- Logo -->
-                <div class="flex-shrink-0 flex items-center">
-                    <Link href="/" class="flex items-center gap-3 group">
-                        <img src="/images/logo.png" alt="Logo" class="h-20 w-auto object-contain group-hover:rotate-12 transition-transform duration-300" />
-                        <span class="text-xl font-display font-bold text-primary-500">
-                            Monasterios<span class="text-accent-500">Market</span>
+                <div class="flex flex-shrink-0 items-center">
+                    <Link href="/" class="group flex items-center gap-3">
+                        <img
+                            src="/images/logo.png"
+                            alt="Logo"
+                            class="h-20 w-auto object-contain transition-transform duration-300 group-hover:rotate-12"
+                        />
+                        <span
+                            class="font-display text-xl font-bold text-primary-500"
+                        >
+                            Monasterios<span class="text-accent-500"
+                                >Market</span
+                            >
                         </span>
                     </Link>
                 </div>
@@ -28,38 +37,51 @@ const uiStore = useUiStore();
                 <CategoryMenu />
 
                 <!-- Search Bar -->
-                <div class="hidden sm:flex flex-1 max-w-lg">
+                <div class="hidden max-w-lg flex-1 sm:flex">
                     <div class="relative w-full">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <div
+                            class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+                        >
                             <Search class="h-5 w-5 text-content-muted" />
                         </div>
                         <input
                             type="text"
                             placeholder="Buscar productos, categorías..."
-                            class="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-full leading-5 bg-bg-light dark:bg-bg-dark text-content-primary dark:text-content-inverted placeholder-content-muted focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-colors duration-300"
+                            class="block w-full rounded-full border border-gray-300 bg-bg-light py-2 pl-10 pr-3 leading-5 text-content-primary placeholder-content-muted transition-colors duration-300 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-700 dark:bg-bg-dark dark:text-content-inverted sm:text-sm"
                         />
                     </div>
                 </div>
 
                 <!-- Navigation Icons -->
                 <div class="flex items-center space-x-4 sm:space-x-5">
-                    <button @click="uiStore.toggleDarkMode()" class="text-content-secondary hover:text-primary-500 transition-colors">
+                    <button
+                        @click="uiStore.toggleDarkMode()"
+                        class="text-content-secondary transition-colors hover:text-primary-500"
+                    >
                         <Sun v-if="uiStore.isDark" class="h-5 w-5" />
                         <Moon v-else class="h-5 w-5" />
                     </button>
 
-                    <Link href="/login" class="hidden sm:flex text-content-secondary hover:text-primary-500 transition-colors">
+                    <Link
+                        href="/login"
+                        class="hidden text-content-secondary transition-colors hover:text-primary-500 sm:flex"
+                    >
                         <User class="h-6 w-6" />
                     </Link>
 
-                    <button @click="uiStore.toggleCart()" class="relative text-content-secondary hover:text-primary-500 transition-colors">
+                    <button
+                        @click="uiStore.toggleCart()"
+                        class="relative text-content-secondary transition-colors hover:text-primary-500"
+                    >
                         <ShoppingCart class="h-6 w-6" />
-                        <span v-if="cartStore.cartCount > 0" class="absolute -top-2 -right-2 bg-accent-500 text-surface-dark text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pop-in">
+                        <span
+                            v-if="cartStore.cartCount > 0"
+                            class="absolute -right-2 -top-2 flex h-5 w-5 animate-pop-in items-center justify-center rounded-full bg-accent-500 text-xs font-bold text-surface-dark"
+                        >
                             {{ cartStore.cartCount }}
                         </span>
                     </button>
                 </div>
-
             </div>
         </div>
     </nav>

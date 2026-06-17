@@ -13,15 +13,26 @@ class Expense extends Model
     protected $fillable = [
         'date',
         'supplier_id',
-        'payment_method',
-        'amount',
+        'category',
+        'cash_spent',
+        'transfer_spent',
+        'total_expense',
         'concept',
     ];
 
     protected $casts = [
         'date' => 'date',
-        'amount' => 'decimal:2',
+        'cash_spent' => 'integer',
+        'transfer_spent' => 'integer',
+        'total_expense' => 'integer',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Expense $expense) {
+            $expense->total_expense = ($expense->cash_spent ?? 0) + ($expense->transfer_spent ?? 0);
+        });
+    }
 
     public function supplier(): BelongsTo
     {
