@@ -48,6 +48,11 @@ const startExperience = () => {
         localStorage.setItem('monasterios_sound_played', 'true');
     }
 };
+
+const dismissSoundPrompt = () => {
+    showSoundPrompt.value = false;
+    localStorage.setItem('monasterios_sound_played', 'true');
+};
 </script>
 
 <template>
@@ -96,13 +101,7 @@ const startExperience = () => {
                             Sí, ¡claro!
                         </button>
                         <button
-                            @click="
-                                showSoundPrompt = false;
-                                localStorage.setItem(
-                                    'monasterios_sound_played',
-                                    'true',
-                                );
-                            "
+                            @click="dismissSoundPrompt"
                             class="flex-1 rounded-xl bg-zinc-100 py-3.5 font-bold text-zinc-700 transition-all hover:bg-zinc-200 active:scale-95 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
                         >
                             No, gracias

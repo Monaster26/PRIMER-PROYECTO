@@ -15,6 +15,9 @@ importers:
         specifier: ^3.0.4
         version: 3.0.4(typescript@5.9.3)(vue@3.5.38(typescript@5.9.3))
     devDependencies:
+      '@inertiajs/core':
+        specifier: ^2.3.26
+        version: 2.3.26
       '@inertiajs/vue3':
         specifier: ^2.0.0
         version: 2.3.26(vue@3.5.38(typescript@5.9.3))

@@ -14,37 +14,11 @@ import {
     Trash2,
     X,
 } from 'lucide-vue-next';
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
-
-interface CartItem {
-    product: {
-        id: number;
-        name: string;
-        sku: string;
-        barcode: string | null;
-        price: number;
-        stock: number;
-        unit: string;
-        image_path: string | null;
-    };
-    quantity: number;
-}
-
-interface Product {
-    id: number;
-    name: string;
-    sku: string;
-    barcode: string | null;
-    price: number;
-    stock: number;
-    unit: string;
-    image_path: string | null;
-}
-
-interface PaymentEntry {
-    method: 'cash' | 'card' | 'transfer' | 'mercadopago';
-    amount: number | null;
-}
+import { computed, nextTick, ref } from 'vue';
+import { useBarcodeScanner } from '@/composables/useBarcodeScanner';
+import { usePosTabsStore } from '@/Stores/posTabsStore';
+import { storeToRefs } from 'pinia';
+import type { CartItem, Product, PaymentEntry } from '@/Stores/posTabsStore';
 
 const props = defineProps<{
     products: Product[];
@@ -62,68 +36,27 @@ const showSuccess = ref(false);
 const scannedProductName = ref<string | null>(null);
 const scannedProductIndex = ref<number | null>(null);
 
-const cart = ref<CartItem[]>([]);
+const posTabStore = usePosTabsStore()
+const { activeTab, tabs, activeIndex } = storeToRefs(posTabStore)
+const { addTab, removeTab, switchTab } = posTabStore
 
-const payments = ref<PaymentEntry[]>([
-    { method: 'cash', amount: null },
-    { method: 'card', amount: null },
-    { method: 'transfer', amount: null },
-]);
-
-// ─── Escáner global: captura teclado SIN importar el foco ──────────
-const scanBuffer = ref('');
-let scanTimer: ReturnType<typeof setTimeout> | null = null;
-const SCAN_TIMEOUT = 80; // ms entre caracteres (escáner = ~10ms, tipeo manual = >150ms)
-
-function onGlobalKeydown(e: KeyboardEvent) {
-    // Si es Enter y hay datos en el buffer → escaneo completado
-    if (e.key === 'Enter' && scanBuffer.value.length > 0) {
-        e.preventDefault();
-        addProductByCode(scanBuffer.value);
-        scanBuffer.value = '';
-        if (scanTimer) {
-            clearTimeout(scanTimer);
-            scanTimer = null;
-        }
-        return;
-    }
-
-    // Ignocar teclas de control
-    if (e.ctrlKey || e.altKey || e.metaKey || e.key === 'Enter') return;
-
-    // Caracter imprimible → acumular en buffer
-    if (e.key.length === 1) {
-        const isRapidFire = scanTimer !== null;
-        scanBuffer.value += e.key;
-        if (scanTimer) clearTimeout(scanTimer);
-        scanTimer = setTimeout(() => {
-            scanBuffer.value = '';
-            scanTimer = null;
-        }, SCAN_TIMEOUT);
-
-        // Solo bloquear si son caracteres rápidos (escáner) en inputs que no
-        // son del buscador, para no contaminar campos como el monto de pago
-        if (isRapidFire) {
-            const active = document.activeElement;
-            if (active !== scannerRef.value && active !== searchRef.value) {
-                e.preventDefault();
-            }
-        }
-    }
-}
-
-onMounted(() => document.addEventListener('keydown', onGlobalKeydown));
-onUnmounted(() => document.removeEventListener('keydown', onGlobalKeydown));
+// ─── Escáner global: captura ráfagas del lector de código de barras ──
+useBarcodeScanner({
+    onScan: addProductByCode,
+    allowlist: [scannerRef, searchRef],
+    discardWhen: (el) =>
+        el instanceof HTMLInputElement && el.getAttribute('step') === '100',
+});
 
 const total = computed(() =>
-    cart.value.reduce(
+    activeTab.value.cart.reduce(
         (sum, item) => sum + (item.product.price / 100) * item.quantity,
         0,
     ),
 );
 
 const totalPayments = computed(() =>
-    payments.value.reduce((sum, p) => sum + (Number(p.amount) || 0), 0),
+    activeTab.value.payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0),
 );
 
 const remaining = computed(() => total.value - totalPayments.value);
@@ -183,13 +116,13 @@ function addProductByCode(code: string) {
     if (!trimmed) return;
 
     // 1. Buscar en el carrito (coincide por barcode o sku)
-    const cartIdx = cart.value.findIndex(
+    const cartIdx = activeTab.value.cart.findIndex(
         (item) =>
             item.product.barcode === trimmed || item.product.sku === trimmed,
     );
     if (cartIdx !== -1) {
-        cart.value[cartIdx].quantity++;
-        flashScanFeedback(cart.value[cartIdx].product.name, cartIdx);
+        activeTab.value.cart[cartIdx].quantity++;
+        flashScanFeedback(activeTab.value.cart[cartIdx].product.name, cartIdx);
         scannerInput.value = '';
         focusScanner();
         return;
@@ -200,15 +133,15 @@ function addProductByCode(code: string) {
         (p) => p.barcode === trimmed || p.sku === trimmed,
     );
     if (product) {
-        const existingIdx = cart.value.findIndex(
+        const existingIdx = activeTab.value.cart.findIndex(
             (item) => item.product.id === product.id,
         );
         if (existingIdx !== -1) {
-            cart.value[existingIdx].quantity++;
+            activeTab.value.cart[existingIdx].quantity++;
             flashScanFeedback(product.name, existingIdx);
         } else {
-            cart.value.push({ product, quantity: 1 });
-            flashScanFeedback(product.name, cart.value.length - 1);
+            activeTab.value.cart.push({ product, quantity: 1 });
+            flashScanFeedback(product.name, activeTab.value.cart.length - 1);
         }
         scannerInput.value = '';
         focusScanner();
@@ -223,15 +156,15 @@ function addProductByCode(code: string) {
         })
         .then((data) => {
             const p = data.product as Product;
-            const existingIdx = cart.value.findIndex(
+            const existingIdx = activeTab.value.cart.findIndex(
                 (item) => item.product.id === p.id,
             );
             if (existingIdx !== -1) {
-                cart.value[existingIdx].quantity++;
+                activeTab.value.cart[existingIdx].quantity++;
                 flashScanFeedback(p.name, existingIdx);
             } else {
-                cart.value.push({ product: p, quantity: 1 });
-                flashScanFeedback(p.name, cart.value.length - 1);
+                activeTab.value.cart.push({ product: p, quantity: 1 });
+                flashScanFeedback(p.name, activeTab.value.cart.length - 1);
             }
             searchQuery.value = '';
             showSearchDropdown.value = false;
@@ -246,30 +179,30 @@ function addProductByCode(code: string) {
 }
 
 function addToCart(product: Product) {
-    const existing = cart.value.find((item) => item.product.id === product.id);
+    const existing = activeTab.value.cart.find((item) => item.product.id === product.id);
     if (existing) {
         existing.quantity++;
     } else {
-        cart.value.push({ product, quantity: 1 });
+        activeTab.value.cart.push({ product, quantity: 1 });
     }
     searchQuery.value = '';
     showSearchDropdown.value = false;
 }
 
 function incrementQty(index: number) {
-    if (cart.value[index].quantity < cart.value[index].product.stock) {
-        cart.value[index].quantity++;
+    if (activeTab.value.cart[index].quantity < activeTab.value.cart[index].product.stock) {
+        activeTab.value.cart[index].quantity++;
     }
 }
 
 function decrementQty(index: number) {
-    if (cart.value[index].quantity > 1) {
-        cart.value[index].quantity--;
+    if (activeTab.value.cart[index].quantity > 1) {
+        activeTab.value.cart[index].quantity--;
     }
 }
 
 function removeItem(index: number) {
-    cart.value.splice(index, 1);
+    activeTab.value.cart.splice(index, 1);
 }
 
 function selectProduct(product: Product) {
@@ -277,8 +210,8 @@ function selectProduct(product: Product) {
 }
 
 function clearCart() {
-    cart.value = [];
-    payments.value = [
+    activeTab.value.cart = [];
+    activeTab.value.payments = [
         { method: 'cash', amount: null },
         { method: 'card', amount: null },
         { method: 'transfer', amount: null },
@@ -289,7 +222,7 @@ function clearCart() {
 }
 
 function validateStock(): boolean {
-    for (const item of cart.value) {
+    for (const item of activeTab.value.cart) {
         if (item.quantity > item.product.stock) {
             alert(
                 `Stock insuficiente para "${item.product.name}".\nDisponible: ${item.product.stock} — Solicitaste: ${item.quantity}`,
@@ -301,7 +234,7 @@ function validateStock(): boolean {
 }
 
 function finalizeSale() {
-    if (cart.value.length === 0) {
+    if (activeTab.value.cart.length === 0) {
         alert('Agrega productos al carrito.');
         return;
     }
@@ -317,11 +250,11 @@ function finalizeSale() {
     checkoutLoading.value = true;
 
     const payload = {
-        items: cart.value.map((item) => ({
+        items: activeTab.value.cart.map((item) => ({
             product_id: item.product.id,
             quantity: item.quantity,
         })),
-        payments: payments.value.map((p) => ({
+        payments: activeTab.value.payments.map((p) => ({
             method: p.method,
             amount: Number(p.amount),
         })),
@@ -348,8 +281,8 @@ function finalizeSale() {
         .then((data) => {
             lastSaleId.value = data.sale_id;
             showSuccess.value = true;
-            cart.value = [];
-            payments.value = [
+            activeTab.value.cart = [];
+            activeTab.value.payments = [
                 { method: 'cash', amount: null },
                 { method: 'card', amount: null },
                 { method: 'transfer', amount: null },
@@ -395,6 +328,36 @@ const fmtDec = (v: number) =>
                 Caja Rápida — POS
             </h1>
         </template>
+
+        <!-- Tab Bar -->
+        <div class="mb-4 flex items-center gap-2 overflow-x-auto">
+            <button
+                v-for="(tab, i) in tabs"
+                :key="tab.id"
+                @click="switchTab(i)"
+                class="flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-bold whitespace-nowrap transition-colors"
+                :class="
+                    activeIndex === i
+                        ? 'bg-primary-500 text-white shadow-sm'
+                        : 'bg-gray-100 text-content-muted hover:bg-gray-200 hover:text-content-primary dark:bg-gray-800 dark:hover:bg-gray-700 dark:hover:text-white'
+                "
+            >
+                {{ tab.name }}
+                <button
+                    v-if="tabs.length > 1"
+                    @click.stop="removeTab(i)"
+                    class="flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold transition-colors hover:bg-white/20"
+                >
+                    <X class="h-3 w-3" />
+                </button>
+            </button>
+            <button
+                @click="addTab"
+                class="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-bold text-content-muted transition-colors hover:bg-gray-100 hover:text-content-primary dark:hover:bg-gray-800 dark:hover:text-white"
+            >
+                <Plus class="h-4 w-4" />
+            </button>
+        </div>
 
         <div
             v-if="showSuccess && lastSaleId"
@@ -498,11 +461,11 @@ const fmtDec = (v: number) =>
                     <span
                         class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-content-muted dark:bg-gray-800"
                     >
-                        {{ cart.length }}
-                        {{ cart.length === 1 ? 'ítem' : 'ítems' }}
+                        {{ activeTab.cart.length }}
+                        {{ activeTab.cart.length === 1 ? 'ítem' : 'ítems' }}
                     </span>
                     <button
-                        v-if="cart.length"
+                        v-if="activeTab.cart.length"
                         @click="clearCart"
                         class="text-xs font-bold text-danger transition-colors hover:text-danger/80"
                     >
@@ -544,7 +507,7 @@ const fmtDec = (v: number) =>
                         <tbody
                             class="divide-y divide-gray-100 dark:divide-gray-800"
                         >
-                            <tr v-if="!cart.length">
+                            <tr v-if="!activeTab.cart.length">
                                 <td
                                     colspan="6"
                                     class="px-4 py-16 text-center text-sm text-content-muted dark:text-gray-500"
@@ -557,7 +520,7 @@ const fmtDec = (v: number) =>
                                 </td>
                             </tr>
                             <tr
-                                v-for="(item, i) in cart"
+                                v-for="(item, i) in activeTab.cart"
                                 :key="item.product.id"
                                 class="transition-all duration-300 hover:bg-gray-50 dark:hover:bg-gray-800/30"
                                 :class="{
@@ -674,8 +637,8 @@ const fmtDec = (v: number) =>
                 >
                     <ShoppingCart class="h-4 w-4" />
                     <span
-                        >{{ cart.reduce((s, i) => s + i.quantity, 0) }} unidades
-                        / {{ cart.length }} productos</span
+                        >{{ activeTab.cart.reduce((s, i) => s + i.quantity, 0) }} unidades
+                        / {{ activeTab.cart.length }} productos</span
                     >
                 </div>
 
@@ -690,7 +653,7 @@ const fmtDec = (v: number) =>
 
                 <div class="space-y-2">
                     <div
-                        v-for="(payment, i) in payments"
+                        v-for="(payment, i) in activeTab.payments"
                         :key="i"
                         class="flex items-center gap-2"
                     >
@@ -739,7 +702,7 @@ const fmtDec = (v: number) =>
                 <button
                     @click="finalizeSale"
                     :disabled="
-                        checkoutLoading || cart.length === 0 || !isBalanced
+                        checkoutLoading || activeTab.cart.length === 0 || !isBalanced
                     "
                     class="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-700"
                 >

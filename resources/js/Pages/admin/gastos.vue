@@ -93,8 +93,11 @@ function closeForm() {
 }
 function submitForm() {
     if (editingId.value) {
-        form.put(route('admin.gastos.update', editingId.value), {
-            data: { month: selectedMonth.value, year: selectedYear.value },
+        form.put(route('admin.gastos.update', {
+            expense: editingId.value,
+            month: selectedMonth.value,
+            year: selectedYear.value,
+        }), {
             onSuccess: closeForm,
         });
     } else {
