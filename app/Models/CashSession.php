@@ -54,6 +54,8 @@ class CashSession extends Model
             'date' => 'date',
             'opened_at' => 'datetime',
             'closed_at' => 'datetime',
+            'opening_balance' => 'integer',
+            'real_balance' => 'integer',
             // Cast a integer para cantidades
             'cant_20k_apertura' => 'integer',
             'cant_10k_apertura' => 'integer',

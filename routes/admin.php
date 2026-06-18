@@ -29,6 +29,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::get('pos/lookup/{code}', [PosController::class, 'lookup'])->name('pos.lookup');
         Route::post('pos/checkout', [PosController::class, 'checkout'])->name('pos.checkout');
         Route::post('pos/cash-movement', [CashMovementController::class, 'store'])->name('pos.cash-movement');
+        Route::post('pos/open-session', [PosController::class, 'openSession'])->name('pos.open-session');
 
         // Arqueo de Caja (cashier ve solo sus propias sesiones)
         Route::get('arqueo-caja', [CashSessionController::class, 'index'])->name('arqueo-caja.index');

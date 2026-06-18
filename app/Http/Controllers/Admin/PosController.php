@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CashSession;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -19,8 +20,36 @@ class PosController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'sku', 'barcode', 'price', 'stock', 'unit', 'image_path']);
 
+        $openSession = CashSession::where('user_id', auth()->id())
+            ->whereNull('closed_at')
+            ->latest('opened_at')
+            ->first();
+
         return Inertia::render('admin/pos', [
             'products' => $products,
+            'hasOpenSession' => !is_null($openSession),
+        ]);
+    }
+
+    public function openSession(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'opening_balance' => 'required|integer|min:0',
+        ]);
+
+        $session = CashSession::create([
+            'user_id' => $request->user()->id,
+            'opened_at' => now(),
+            'opening_balance' => $validated['opening_balance'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'session' => [
+                'id' => $session->id,
+                'opening_balance' => $session->opening_balance,
+                'opened_at' => $session->opened_at,
+            ],
         ]);
     }
 

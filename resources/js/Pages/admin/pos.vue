@@ -18,6 +18,7 @@ import {
     Search,
     ShoppingCart,
     Trash2,
+    Wallet,
     X,
 } from 'lucide-vue-next';
 import { storeToRefs } from 'pinia';
@@ -25,6 +26,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 
 const props = defineProps<{
     products: Product[];
+    hasOpenSession: boolean;
 }>();
 
 const scannerInput = ref('');
@@ -35,6 +37,12 @@ const showSearchDropdown = ref(false);
 const searchFocused = ref(false);
 const checkoutLoading = ref(false);
 const lastSaleId = ref<number | null>(null);
+
+// Apertura de caja obligatoria
+const sessionOpened = ref(props.hasOpenSession);
+const sessionOpening = ref(false);
+const sessionOpenBalance = ref<number | null>(null);
+const sessionOpenError = ref('');
 const showSuccess = ref(false);
 const scannedProductName = ref<string | null>(null);
 const scannedProductIndex = ref<number | null>(null);
@@ -406,6 +414,45 @@ function onCashMovementSaved() {
     focusScanner();
 }
 
+function submitOpenSession() {
+    if (!sessionOpenBalance.value || sessionOpenBalance.value < 0) {
+        sessionOpenError.value = 'Ingresa un monto válido (puede ser $0).';
+        return;
+    }
+
+    sessionOpening.value = true;
+    sessionOpenError.value = '';
+
+    fetch(route('admin.pos.open-session'), {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN':
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute('content') || '',
+        },
+        body: JSON.stringify({
+            opening_balance: sessionOpenBalance.value,
+        }),
+    })
+        .then((res) => {
+            if (!res.ok) return res.json().then((err) => { throw new Error(err.message || 'Error al abrir caja'); });
+            return res.json();
+        })
+        .then(() => {
+            sessionOpened.value = true;
+            nextTick(() => focusScanner());
+        })
+        .catch((err) => {
+            sessionOpenError.value = err.message;
+        })
+        .finally(() => {
+            sessionOpening.value = false;
+        });
+}
+
 const fmt = (v: number) =>
     '$' + v.toLocaleString('es-CO', { minimumFractionDigits: 0 });
 const fmtDec = (v: number) =>
@@ -427,6 +474,88 @@ const fmtDec = (v: number) =>
             </h1>
         </template>
 
+        <!-- Opening overlay (bloqueante) -->
+        <div
+            v-if="!sessionOpened"
+            class="flex min-h-[60vh] items-center justify-center"
+        >
+            <div class="w-full max-w-md">
+                <div
+                    class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-surface-dark"
+                >
+                    <div
+                        class="flex items-center gap-2 border-b border-gray-100 px-5 py-3 dark:border-gray-800"
+                    >
+                        <Wallet class="h-5 w-5 text-primary-500" />
+                        <h2
+                            class="font-display text-sm font-bold text-content-primary dark:text-white"
+                        >
+                            Apertura de Caja
+                        </h2>
+                    </div>
+
+                    <form @submit.prevent="submitOpenSession" class="space-y-4 p-5">
+                        <p class="text-xs leading-relaxed text-content-muted">
+                            Para comenzar a facturar debes registrar el monto
+                            inicial de efectivo en caja. Si no tienes dinero
+                            inicial, ingresa <strong>$0</strong>.
+                        </p>
+
+                        <div>
+                            <label
+                                class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                            >
+                                Monto Inicial
+                            </label>
+                            <div class="relative">
+                                <span
+                                    class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-content-muted"
+                                >
+                                    $
+                                </span>
+                                <input
+                                    v-model.number="sessionOpenBalance"
+                                    type="number"
+                                    min="0"
+                                    step="100"
+                                    autofocus
+                                    required
+                                    placeholder="0"
+                                    class="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-8 pr-4 text-right text-lg font-bold text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                />
+                            </div>
+                        </div>
+
+                        <p
+                            v-if="sessionOpenError"
+                            class="rounded-xl bg-danger/10 px-3 py-2 text-xs font-bold text-danger"
+                        >
+                            {{ sessionOpenError }}
+                        </p>
+
+                        <button
+                            type="submit"
+                            :disabled="sessionOpening"
+                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-500 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-600 disabled:opacity-50"
+                        >
+                            <template v-if="sessionOpening">
+                                <span
+                                    class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+                                ></span>
+                                Abriendo caja...
+                            </template>
+                            <template v-else>
+                                <Wallet class="h-4 w-4" />
+                                Abrir Caja
+                            </template>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- POS content (visible solo si caja abierta) -->
+        <div v-if="sessionOpened">
         <!-- Tab Bar -->
         <div class="mb-4 flex items-center gap-2 overflow-x-auto">
             <button
@@ -873,6 +1002,7 @@ const fmtDec = (v: number) =>
                     </template>
                 </button>
             </div>
+        </div>
         </div>
 
         <CashMovementModal
