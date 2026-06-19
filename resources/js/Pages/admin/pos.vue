@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import CashMovementModal from '@/Components/CashMovementModal.vue';
+import SessionCloseModal from '@/Components/SessionCloseModal.vue';
 import { useBarcodeScanner } from '@/composables/useBarcodeScanner';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import type { Product } from '@/Stores/posTabsStore';
 import { usePosTabsStore } from '@/Stores/posTabsStore';
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import {
     ArrowDownLeft,
     ArrowUpRight,
     Banknote,
     Check,
     CreditCard,
+    FileText,
     Landmark,
     Menu,
     Minus,
@@ -22,7 +24,15 @@ import {
     X,
 } from 'lucide-vue-next';
 import { storeToRefs } from 'pinia';
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue';
+
+function csrfToken(): string {
+    // ponytail: Inertia-shared token from server, always current; meta tag can be stale after login
+    const token = (usePage().props.csrf_token as string) || '';
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]');
+    if (meta && token) meta.content = token;
+    return token;
+}
 
 const props = defineProps<{
     products: Product[];
@@ -38,11 +48,48 @@ const searchFocused = ref(false);
 const checkoutLoading = ref(false);
 const lastSaleId = ref<number | null>(null);
 
-// Apertura de caja obligatoria
-const sessionOpened = ref(props.hasOpenSession);
+// Apertura de caja obligatoria — persiste en localStorage (no en sessionStorage) para
+// sobrevivir cierres accidentales de pestaña/navegador. Se limpia solo al cerrar caja o logout.
+const storedOpen = localStorage.getItem('pos_session_opened');
+if (storedOpen === 'true' && !props.hasOpenSession) {
+    // La sesión fue cerrada externamente (cierre de caja, otro cajero, etc.)
+    localStorage.removeItem('pos_session_opened');
+}
+const sessionOpened = ref(localStorage.getItem('pos_session_opened') === 'true' || props.hasOpenSession);
 const sessionOpening = ref(false);
-const sessionOpenBalance = ref<number | null>(null);
 const sessionOpenError = ref('');
+
+const denominations = [
+    { key: '20k', label: '$20.000', value: 20000, directInput: false },
+    { key: '10k', label: '$10.000', value: 10000, directInput: false },
+    { key: '5k', label: '$5.000', value: 5000, directInput: false },
+    { key: '2k', label: '$2.000', value: 2000, directInput: false },
+    { key: '1k', label: '$1.000', value: 1000, directInput: false },
+    { key: '500', label: '$500', value: 500, directInput: true },
+    { key: '100', label: '$100', value: 100, directInput: true },
+    { key: '50', label: '$50', value: 50, directInput: true },
+    { key: '10', label: '$10', value: 10, directInput: true },
+] as const;
+
+const billQtys = reactive<Record<string, number>>({
+    '20k': 0, '10k': 0, '5k': 0, '2k': 0, '1k': 0,
+});
+
+const coinAmounts = reactive<Record<string, number>>({
+    '500': 0, '100': 0, '50': 0, '10': 0,
+});
+
+const totalOpening = computed(() => {
+    let t = 0;
+    for (const d of denominations) {
+        if (d.directInput) {
+            t += Number(coinAmounts[d.key] || 0);
+        } else {
+            t += (Number(billQtys[d.key]) || 0) * d.value;
+        }
+    }
+    return t;
+});
 const showSuccess = ref(false);
 const scannedProductName = ref<string | null>(null);
 const scannedProductIndex = ref<number | null>(null);
@@ -50,6 +97,7 @@ const scannedProductIndex = ref<number | null>(null);
 // Cash In / Out
 const showCashMovementModal = ref(false);
 const cashMovementType = ref<'ingreso' | 'retiro'>('ingreso');
+const showCloseSessionModal = ref(false);
 
 // Dropdown menu acciones administrativas
 const showMenu = ref(false);
@@ -61,6 +109,7 @@ const menuOptions = [
         icon: ArrowDownLeft,
     },
     { label: 'Salida de Dinero', action: openCashRetiro, icon: ArrowUpRight },
+    { label: 'Cerrar Caja', action: openCloseSession, icon: FileText },
 ];
 
 function toggleMenu() {
@@ -108,7 +157,8 @@ useBarcodeScanner({
     onScan: addProductByCode,
     allowlist: [scannerRef, searchRef],
     discardWhen: (el) =>
-        el instanceof HTMLInputElement && el.getAttribute('step') === '100',
+        el instanceof HTMLInputElement &&
+        (el.getAttribute('step') === '100' || !sessionOpened.value),
 });
 
 const total = computed(() =>
@@ -409,33 +459,39 @@ function openCashRetiro() {
     showCashMovementModal.value = true;
 }
 
+function openCloseSession() {
+    showCloseSessionModal.value = true;
+    showMenu.value = false;
+}
+
 function onCashMovementSaved() {
     showCashMovementModal.value = false;
     focusScanner();
 }
 
 function submitOpenSession() {
-    if (!sessionOpenBalance.value || sessionOpenBalance.value < 0) {
-        sessionOpenError.value = 'Ingresa un monto válido (puede ser $0).';
-        return;
-    }
-
     sessionOpening.value = true;
     sessionOpenError.value = '';
+
+    const body: Record<string, any> = {};
+    for (const d of denominations) {
+        if (d.directInput) {
+            // ponytail: coin amounts are divided by denomination to get quantity, rounding may slightly alter exact values
+            const amount = Number(coinAmounts[d.key]) || 0;
+            body[`cant_${d.key}_apertura`] = Math.round(amount / d.value);
+        } else {
+            body[`cant_${d.key}_apertura`] = Number(billQtys[d.key]) || 0;
+        }
+    }
 
     fetch(route('admin.pos.open-session'), {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN':
-                document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute('content') || '',
+            'X-CSRF-TOKEN': csrfToken(),
         },
-        body: JSON.stringify({
-            opening_balance: sessionOpenBalance.value,
-        }),
+        body: JSON.stringify(body),
     })
         .then((res) => {
             if (!res.ok) return res.json().then((err) => { throw new Error(err.message || 'Error al abrir caja'); });
@@ -443,6 +499,7 @@ function submitOpenSession() {
         })
         .then(() => {
             sessionOpened.value = true;
+            localStorage.setItem('pos_session_opened', 'true');
             nextTick(() => focusScanner());
         })
         .catch((err) => {
@@ -496,35 +553,97 @@ const fmtDec = (v: number) =>
 
                     <form @submit.prevent="submitOpenSession" class="space-y-4 p-5">
                         <p class="text-xs leading-relaxed text-content-muted">
-                            Para comenzar a facturar debes registrar el monto
-                            inicial de efectivo en caja. Si no tienes dinero
-                            inicial, ingresa <strong>$0</strong>.
+                            Registra el efectivo inicial en caja desglosando
+                            billetes y monedas.
                         </p>
 
-                        <div>
-                            <label
-                                class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
-                            >
-                                Monto Inicial
-                            </label>
-                            <div class="relative">
-                                <span
-                                    class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-content-muted"
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr
+                                    class="text-[10px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
                                 >
-                                    $
-                                </span>
-                                <input
-                                    v-model.number="sessionOpenBalance"
-                                    type="number"
-                                    min="0"
-                                    step="100"
-                                    autofocus
-                                    required
-                                    placeholder="0"
-                                    class="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-8 pr-4 text-right text-lg font-bold text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                                />
-                            </div>
-                        </div>
+                                    <th class="pb-2 font-bold">Denominación</th>
+                                    <th class="pb-2 text-center font-bold">
+                                        Cant.
+                                    </th>
+                                    <th class="pb-2 text-right font-bold">
+                                        Subtotal
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody
+                                class="divide-y divide-gray-100 dark:divide-gray-800"
+                            >
+                                <tr v-for="d in denominations" :key="d.key">
+                                    <td
+                                        class="py-1.5 text-sm font-semibold text-content-primary dark:text-white"
+                                    >
+                                        {{ d.label }}
+                                    </td>
+                                    <td class="py-1.5 text-center">
+                                        <template v-if="!d.directInput">
+                                            <input
+                                                v-model.number="
+                                                    billQtys[d.key]
+                                                "
+                                                type="number"
+                                                min="0"
+                                                :autofocus="d.key === '20k'"
+                                                class="w-16 rounded-lg border border-gray-200 bg-gray-50 px-1 py-1 text-center text-sm text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                            />
+                                        </template>
+                                        <template v-else>
+                                            <span
+                                                class="text-xs text-content-muted"
+                                                >—</span
+                                            >
+                                        </template>
+                                    </td>
+                                    <td class="py-1.5 text-right">
+                                        <template v-if="d.directInput">
+                                            <input
+                                                v-model.number="
+                                                    coinAmounts[d.key]
+                                                "
+                                                type="number"
+                                                min="0"
+                                                step="1"
+                                                placeholder="0"
+                                                class="w-24 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-right text-sm font-bold text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                            />
+                                        </template>
+                                        <template v-else>
+                                            <span
+                                                class="text-sm font-bold text-primary-500"
+                                                >{{
+                                                    fmt(
+                                                        (billQtys[d.key] ||
+                                                            0) * d.value,
+                                                    )
+                                                }}</span
+                                            >
+                                        </template>
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr
+                                    class="border-t-2 border-primary-500 dark:border-primary-400"
+                                >
+                                    <td
+                                        class="pt-2 text-sm font-bold text-content-primary dark:text-white"
+                                    >
+                                        TOTAL
+                                    </td>
+                                    <td></td>
+                                    <td
+                                        class="pt-2 text-right font-mono text-base font-bold text-primary-600 dark:text-primary-400"
+                                    >
+                                        {{ fmt(totalOpening) }}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
 
                         <p
                             v-if="sessionOpenError"
@@ -866,7 +985,7 @@ const fmtDec = (v: number) =>
                                 v-for="opt in menuOptions"
                                 :key="opt.label"
                                 @click="
-                                    opt.action;
+                                    opt.action();
                                     showMenu = false;
                                 "
                                 class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-content-primary transition-colors hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800"
@@ -877,7 +996,9 @@ const fmtDec = (v: number) =>
                                         'h-4 w-4 shrink-0',
                                         opt.label === 'Entrada de Dinero'
                                             ? 'text-emerald-500'
-                                            : 'text-orange-500',
+                                            : opt.label === 'Salida de Dinero'
+                                                ? 'text-orange-500'
+                                                : 'text-primary-500',
                                     ]"
                                 />
                                 {{ opt.label }}
@@ -1013,6 +1134,14 @@ const fmtDec = (v: number) =>
                 focusScanner();
             "
             @saved="onCashMovementSaved"
+        />
+
+        <SessionCloseModal
+            v-if="showCloseSessionModal"
+            @close="
+                showCloseSessionModal = false;
+                focusScanner();
+            "
         />
     </AdminLayout>
 </template>

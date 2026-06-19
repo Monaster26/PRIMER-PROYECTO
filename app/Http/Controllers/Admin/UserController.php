@@ -5,6 +5,7 @@ use Inertia\Inertia;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
@@ -79,6 +80,23 @@ class UserController extends Controller
         $user->update($validated);
 
         return redirect()->route('admin.cajeros')->with('success', 'Cajero actualizado correctamente.');
+    }
+
+    public function destroy(User $user): RedirectResponse
+    {
+        if ($user->cashSessions()->whereNull('closed_at')->exists()) {
+            return redirect()->route('admin.cajeros')
+                ->with('error', 'No se puede eliminar un cajero con caja abierta. Cierra la sesión primero.');
+        }
+
+        try {
+            $user->delete();
+            return redirect()->route('admin.cajeros')
+                ->with('success', 'Cajero eliminado correctamente.');
+        } catch (QueryException) {
+            return redirect()->route('admin.cajeros')
+                ->with('error', 'No se puede eliminar el cajero porque tiene datos históricos asociados.');
+        }
     }
 
     public function clients()

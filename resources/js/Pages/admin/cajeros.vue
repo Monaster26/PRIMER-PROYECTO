@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { formatDate, formatTime } from '@/helpers/format';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import {
     Check,
     CheckCircle,
     Pencil,
     Plus,
+    Trash2,
     UserCog,
     X,
     XCircle,
@@ -70,6 +71,11 @@ function submitForm() {
     } else {
         form.post(route('admin.cajeros.store'), { onSuccess: closeForm });
     }
+}
+
+function deleteCashier(c: any) {
+    if (!confirm(`¿Eliminar al cajero "${c.name}"? Esta acción no se puede deshacer.`)) return;
+    router.delete(route('admin.cajeros.destroy', c.id));
 }
 
 const fmt = (v: number) =>
@@ -199,6 +205,12 @@ const fmt = (v: number) =>
                                         class="rounded-xl p-2 text-blue-500 transition-colors hover:bg-blue-50 dark:hover:bg-blue-900/20"
                                     >
                                         <Pencil class="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        @click="deleteCashier(c)"
+                                        class="rounded-xl p-2 text-danger transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    >
+                                        <Trash2 class="h-4 w-4" />
                                     </button>
                                 </div>
                             </td>

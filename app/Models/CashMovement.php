@@ -12,6 +12,7 @@ class CashMovement extends Model
 
     protected $fillable = [
         'user_id',
+        'sesion_caja_id',
         'type',
         'amount',
         'description',
@@ -27,5 +28,10 @@ class CashMovement extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function cashSession(): BelongsTo
+    {
+        return $this->belongsTo(CashSession::class, 'sesion_caja_id');
     }
 }

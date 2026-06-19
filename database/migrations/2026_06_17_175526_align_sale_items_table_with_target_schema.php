@@ -10,11 +10,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('sale_items', function (Blueprint $table) {
-            $table->unsignedBigInteger('price')->after('quantity')->comment('Unit price in cents');
-            $table->unsignedBigInteger('total_line')->after('price')->comment('Quantity * price in cents');
+            if (!Schema::hasColumn('sale_items', 'price')) {
+                $table->unsignedBigInteger('price')->after('quantity')->comment('Unit price in cents');
+            }
+            if (!Schema::hasColumn('sale_items', 'total_line')) {
+                $table->unsignedBigInteger('total_line')->after('price')->comment('Quantity * price in cents');
+            }
         });
 
-        DB::statement('UPDATE sale_items SET price = unit_price * 100, total_line = subtotal * 100');
+        if (Schema::hasColumn('sale_items', 'subtotal')) {
+            DB::statement('UPDATE sale_items SET price = unit_price * 100, total_line = subtotal * 100');
+        }
     }
 
     public function down(): void

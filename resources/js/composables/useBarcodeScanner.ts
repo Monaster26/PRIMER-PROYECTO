@@ -82,6 +82,8 @@ export function useBarcodeScanner(options: BarcodeScannerOptions) {
 
     // ── Protected inputs (payment amounts, etc.) ──
     // Use strict timing to detect scanner bursts and prevent contamination.
+    // Skip timing detection on type="number" inputs — barcodes never go there.
+    if (activeEl instanceof HTMLInputElement && activeEl.type === 'number') return
     const now = Date.now()
     const gap = now - lastTime
     lastTime = now

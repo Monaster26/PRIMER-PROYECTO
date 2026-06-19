@@ -175,13 +175,13 @@ function submit() {
                         >
                             Descripción (opcional)
                         </label>
-                        <input
+                        <textarea
                             v-model="description"
-                            type="text"
                             placeholder="Ej: Cambio para vueltos, retiro de efectivo..."
-                            maxlength="255"
-                            class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                        />
+                            maxlength="500"
+                            rows="3"
+                            class="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                        ></textarea>
                     </div>
 
                     <!-- Error -->

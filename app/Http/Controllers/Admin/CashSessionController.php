@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CashMovement;
 use App\Models\CashSession;
+use App\Models\Sale;
 use App\Models\User;
 use App\Models\ZetaReport;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -133,6 +136,149 @@ class CashSessionController extends Controller
         );
 
         return redirect()->route('admin.arqueo-caja.index')->with('success', 'Sesión cerrada. Zeta y Control Diario actualizados.');
+    }
+
+    public function closeFromPos(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'cant_20k_cierre' => 'required|integer|min:0',
+                'cant_10k_cierre' => 'required|integer|min:0',
+                'cant_5k_cierre' => 'required|integer|min:0',
+                'cant_2k_cierre' => 'required|integer|min:0',
+                'cant_1k_cierre' => 'required|integer|min:0',
+                'coin_500' => 'required|integer|min:0',
+                'coin_100' => 'required|integer|min:0',
+                'coin_50' => 'required|integer|min:0',
+                'coin_10' => 'required|integer|min:0',
+                'total_red_compra' => 'required|integer|min:0',
+                'total_transferencia' => 'required|integer|min:0',
+            ]);
+
+            $user = $request->user();
+
+            if (!$user) {
+                return response()->json(['error' => 'Usuario no autenticado.'], 401);
+            }
+
+            $session = CashSession::where('user_id', $user->id)
+                ->whereNull('closed_at')
+                ->latest('opened_at')
+                ->first();
+
+            if (!$session) {
+                return response()->json(['error' => 'No hay una sesión abierta para cerrar.'], 404);
+            }
+
+            $validated['coin_500'] ??= 0;
+            $validated['coin_100'] ??= 0;
+            $validated['coin_50'] ??= 0;
+            $validated['coin_10'] ??= 0;
+
+            $date = $session->date ?? now()->toDateString();
+
+            $cashSales = Sale::where('user_id', $user->id)
+                ->whereDate('created_at', $date)
+                ->sum('cash_amount');
+
+            $movementQuery = CashMovement::where('user_id', $user->id)
+                ->whereDate('created_at', $date);
+            $totalIngresos = (int) (clone $movementQuery)->where('type', 'ingreso')->sum('amount');
+            $totalRetiros  = (int) (clone $movementQuery)->where('type', 'retiro')->sum('amount');
+
+            $session->update([
+                'closed_at' => now(),
+                'cant_20k_cierre' => $validated['cant_20k_cierre'],
+                'cant_10k_cierre' => $validated['cant_10k_cierre'],
+                'cant_5k_cierre' => $validated['cant_5k_cierre'],
+                'cant_2k_cierre' => $validated['cant_2k_cierre'],
+                'cant_1k_cierre' => $validated['cant_1k_cierre'],
+                'cant_500_cierre' => (int) round($validated['coin_500'] / 500),
+                'cant_100_cierre' => (int) round($validated['coin_100'] / 100),
+                'cant_50_cierre'  => (int) round($validated['coin_50']  / 50),
+                'cant_10_cierre'  => (int) round($validated['coin_10']  / 10),
+                'total_red_compra' => $validated['total_red_compra'],
+                'total_transferencia' => $validated['total_transferencia'],
+                'total_ingresos' => $totalIngresos,
+                'total_retiros' => $totalRetiros,
+            ]);
+
+            $session->refresh();
+
+            ZetaReport::updateOrCreate(
+                ['date' => $date, 'cashier_id' => $user->id],
+                [
+                    'total_z' => $session->total_caja_esperado ?? 0,
+                    'net_cash' => $session->total_efectivo_cierre ?? 0,
+                    'transfers' => $session->total_transferencia,
+                    'pos_card_total' => $session->total_red_compra,
+                    'status' => 'pending_review',
+                ],
+            );
+
+            $esperado = $session->opening_balance + (int)($cashSales / 100) + $totalIngresos - $totalRetiros;
+            $tz = 'America/Santiago';
+            $pdfData = [
+                'sesion_id'       => $session->id,
+                'cajero'          => $user->name,
+                'apertura'        => $session->opened_at->timezone($tz)->format('d/m/Y H:i'),
+                'cierre'          => now($tz)->format('d/m/Y H:i'),
+                'opening'         => $session->opening_balance,
+                'cash_sales'      => (int)($cashSales / 100),
+                'ingresos'        => $totalIngresos,
+                'retiros'         => $totalRetiros,
+                'esperado'        => $esperado,
+                'efectivo_cierre' => $session->total_efectivo_cierre,
+                'red_compra'      => $session->total_red_compra,
+                'transferencia'   => $session->total_transferencia,
+            ];
+
+            $pdfDir = storage_path('app/public/cierres');
+            if (!is_dir($pdfDir)) {
+                mkdir($pdfDir, 0755, true);
+            }
+
+            $pdf = Pdf::loadView('pdf.cierre-caja', $pdfData);
+            $pdfPath = "cierres/cierre-caja-{$session->id}.pdf";
+            $pdf->save(storage_path("app/public/{$pdfPath}"));
+
+            return response()->json([
+                'success' => true,
+                'session' => [
+                    'id'               => $session->id,
+                    'closed_at'        => $session->closed_at,
+                    'opening_balance'  => $session->opening_balance,
+                    'total_efectivo_cierre' => $session->total_efectivo_cierre,
+                    'total_red_compra' => $session->total_red_compra,
+                    'total_transferencia' => $session->total_transferencia,
+                    'total_ingresos'   => $totalIngresos,
+                    'total_retiros'    => $totalRetiros,
+                    'total_caja_esperado' => $session->total_caja_esperado,
+                    'diferencia_descuadre' => $session->diferencia_descuadre,
+                ],
+                'summary' => [
+                    'cashSales'     => (int)($cashSales / 100),
+                    'ingresos'      => $totalIngresos,
+                    'retiros'       => $totalRetiros,
+                    'esperado'      => $esperado,
+                    'declarado'     => $session->total_efectivo_cierre,
+                    'diferencia'    => $session->total_efectivo_cierre - $esperado,
+                ],
+                'pdf_url' => asset("storage/{$pdfPath}"),
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'error' => 'Datos inválidos.',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error en cierre de caja: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'error' => 'Error interno al cerrar la caja. Intenta nuevamente.',
+            ], 500);
+        }
     }
 
     public function destroy(CashSession $cashSession): RedirectResponse

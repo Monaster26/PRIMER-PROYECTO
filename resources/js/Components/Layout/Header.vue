@@ -39,6 +39,7 @@ onUnmounted(() =>
 );
 
 function logout() {
+    localStorage.removeItem('pos_session_opened');
     router.post(route('logout'));
 }
 </script>

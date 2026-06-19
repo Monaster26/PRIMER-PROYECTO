@@ -20,28 +20,55 @@ class PosController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'sku', 'barcode', 'price', 'stock', 'unit', 'image_path']);
 
-        $openSession = CashSession::where('user_id', auth()->id())
-            ->whereNull('closed_at')
-            ->latest('opened_at')
-            ->first();
+        $user = auth()->user();
+
+        // Admin siempre pasa sin bloqueo; cajero debe tener caja abierta
+        $hasOpenSession = $user->hasRole('admin') ? true :
+            CashSession::where('user_id', $user->id)
+                ->whereNull('closed_at')
+                ->latest('opened_at')
+                ->exists();
 
         return Inertia::render('admin/pos', [
             'products' => $products,
-            'hasOpenSession' => !is_null($openSession),
+            'hasOpenSession' => $hasOpenSession,
         ]);
     }
 
     public function openSession(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'opening_balance' => 'required|integer|min:0',
+            'cant_20k_apertura' => 'required|integer|min:0',
+            'cant_10k_apertura' => 'required|integer|min:0',
+            'cant_5k_apertura' => 'required|integer|min:0',
+            'cant_2k_apertura' => 'required|integer|min:0',
+            'cant_1k_apertura' => 'required|integer|min:0',
+            'cant_500_apertura' => 'required|integer|min:0',
+            'cant_100_apertura' => 'required|integer|min:0',
+            'cant_50_apertura' => 'required|integer|min:0',
+            'cant_10_apertura' => 'required|integer|min:0',
         ]);
+
+        // Calcular total en servidor (seguridad: no confiar en el cliente)
+        $total =
+            ($validated['cant_20k_apertura'] * 20000) +
+            ($validated['cant_10k_apertura'] * 10000) +
+            ($validated['cant_5k_apertura'] * 5000) +
+            ($validated['cant_2k_apertura'] * 2000) +
+            ($validated['cant_1k_apertura'] * 1000) +
+            ($validated['cant_500_apertura'] * 500) +
+            ($validated['cant_100_apertura'] * 100) +
+            ($validated['cant_50_apertura'] * 50) +
+            ($validated['cant_10_apertura'] * 10);
 
         $session = CashSession::create([
             'user_id' => $request->user()->id,
             'opened_at' => now(),
-            'opening_balance' => $validated['opening_balance'],
+            'opening_balance' => $total,
+            ...$validated,
         ]);
+
+        // total_efectivo_apertura se calcula automáticamente en el modelo (saving event)
 
         return response()->json([
             'success' => true,

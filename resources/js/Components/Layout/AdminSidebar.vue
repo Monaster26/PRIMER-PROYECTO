@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import {
+    BarChart3,
     CalendarRange,
     ClipboardList,
     CreditCard,
@@ -39,8 +40,8 @@ const navGroups = computed(() => {
         items: { label: string; name: string; icon: any }[];
     }[] = [];
 
-    // Dashboard — first for everyone
-    if (isCashier.value || isAtLeastAdmin.value) {
+    // Dashboard — admin only
+    if (isAtLeastAdmin.value) {
         groups.push({
             label: 'Panel',
             items: [
@@ -53,21 +54,21 @@ const navGroups = computed(() => {
         });
     }
 
-    // POS — visible to admin and cashier
-    if (isCashier.value || isAtLeastAdmin.value) {
+    // Caja
+    if (isAtLeastAdmin.value) {
         groups.push({
             label: 'Caja',
             items: [
-                {
-                    label: 'Caja Rápida (POS)',
-                    name: 'admin.pos',
-                    icon: ShoppingCart,
-                },
-                {
-                    label: 'Arqueo de Caja',
-                    name: 'admin.arqueo-caja.index',
-                    icon: Wallet,
-                },
+                { label: 'Caja Rápida (POS)', name: 'admin.pos', icon: ShoppingCart },
+                { label: 'Arqueo de Caja', name: 'admin.arqueo-caja.index', icon: Wallet },
+                { label: 'Reporte Diario', name: 'admin.reporte-diario', icon: BarChart3 },
+            ],
+        });
+    } else if (isCashier.value) {
+        groups.push({
+            label: 'Caja',
+            items: [
+                { label: 'Caja Rápida (POS)', name: 'admin.pos', icon: ShoppingCart },
             ],
         });
     }

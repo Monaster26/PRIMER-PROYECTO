@@ -11,10 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('categories', function (Blueprint $table) {
-            $table->string('icon')->nullable()->after('name');
-            $table->string('image_path')->nullable()->after('icon');
-        });
+        if (!Schema::hasColumn('categories', 'icon')) {
+            Schema::table('categories', fn(Blueprint $t) => $t->string('icon')->nullable()->after('name'));
+        }
+        if (!Schema::hasColumn('categories', 'image_path')) {
+            Schema::table('categories', fn(Blueprint $t) => $t->string('image_path')->nullable()->after('name'));
+        }
     }
 
     public function down(): void

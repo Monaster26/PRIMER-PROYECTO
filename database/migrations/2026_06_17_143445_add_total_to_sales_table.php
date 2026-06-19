@@ -12,8 +12,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('sales', 'total')) {
+            return;
+        }
         Schema::table('sales', function (Blueprint $table) {
-            $table->unsignedBigInteger('total')->default(0)->after('payment_method');
+            $table->unsignedBigInteger('total')->default(0)->after('transfer_amount');
         });
 
         DB::statement('UPDATE sales s SET s.total = (SELECT COALESCE(SUM(subtotal * 100), 0) FROM sale_items WHERE sale_id = s.id)');
