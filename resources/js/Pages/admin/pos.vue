@@ -155,7 +155,7 @@ const { addTab, removeTab, switchTab } = posTabStore;
 // ─── Escáner global: captura ráfagas del lector de código de barras ──
 useBarcodeScanner({
     onScan: addProductByCode,
-    allowlist: [scannerRef, searchRef],
+    allowlist: [scannerRef], // ponytail: searchRef no incluido — Enter en buscador usa filteredProducts, no barcode/SKU
     discardWhen: (el) =>
         el instanceof HTMLInputElement &&
         (el.getAttribute('step') === '100' || !sessionOpened.value),
@@ -263,7 +263,7 @@ function addProductByCode(code: string) {
         return;
     }
 
-    // 2. Buscar en productos precargados (props)
+    // 2. Buscar en productos precargados (props) — primero por barcode/SKU exacto
     const product = props.products.find(
         (p) => p.barcode === trimmed || p.sku === trimmed,
     );
@@ -277,6 +277,26 @@ function addProductByCode(code: string) {
         } else {
             activeTab.value.cart.push({ product, quantity: 1 });
             flashScanFeedback(product.name, activeTab.value.cart.length - 1);
+        }
+        scannerInput.value = '';
+        focusScanner();
+        return;
+    }
+
+    // 2b. Si no fue código de barras/SKU, buscar por nombre entre productos precargados
+    const nameMatch = props.products.find(
+        (p) => p.name.toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (nameMatch) {
+        const existingIdx = activeTab.value.cart.findIndex(
+            (item) => item.product.id === nameMatch.id,
+        );
+        if (existingIdx !== -1) {
+            activeTab.value.cart[existingIdx].quantity++;
+            flashScanFeedback(nameMatch.name, existingIdx);
+        } else {
+            activeTab.value.cart.push({ product: nameMatch, quantity: 1 });
+            flashScanFeedback(nameMatch.name, activeTab.value.cart.length - 1);
         }
         scannerInput.value = '';
         focusScanner();
@@ -759,15 +779,20 @@ const fmtDec = (v: number) =>
                             class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-muted"
                         />
                         <input
-                            ref="searchRef"
-                            v-model="searchQuery"
-                            @focus="searchFocused = true"
-                            @blur="handleBlur()"
-                            @input="showSearchDropdown = searchQuery.length > 0"
-                            type="text"
-                            placeholder="Buscar por nombre, SKU o código..."
-                            class="w-full rounded-2xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                        />
+                             ref="searchRef"
+                             v-model="searchQuery"
+                             @focus="searchFocused = true"
+                             @blur="handleBlur()"
+                             @input="showSearchDropdown = searchQuery.length > 0"
+                             @keydown.enter="
+                                 if (filteredProducts.length) {
+                                     selectProduct(filteredProducts[0]);
+                                 }
+                             "
+                             type="text"
+                             placeholder="Buscar por nombre, SKU o código..."
+                             class="w-full rounded-2xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                         />
                         <div
                             v-if="showSearchDropdown && filteredProducts.length"
                             class="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-surface-dark"

@@ -6,6 +6,7 @@ import {
     AlertCircle,
     ArrowDownRight,
     ArrowUpRight,
+    ChevronDown,
     Layers,
     Package,
     TrendingUp,
