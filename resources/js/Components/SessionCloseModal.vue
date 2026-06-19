@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Check, Download, FileText, X } from 'lucide-vue-next';
+import { router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
 const emit = defineEmits<{
@@ -47,6 +48,13 @@ const result = ref<{
 
 const fmt = (v: number) => '$' + v.toLocaleString('es-CO', { minimumFractionDigits: 0 });
 
+function csrfToken(): string {
+    const token = (usePage().props.csrf_token as string) || '';
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]');
+    if (meta && token) meta.content = token;
+    return token;
+}
+
 // ─── Computed properties ──────────────────────────────────────
 const subtotalBilletes = computed(() =>
     bills.reduce((s, d) => s + (billQtys[d.key] || 0) * d.value, 0),
@@ -93,8 +101,7 @@ async function submit() {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN':
-                    document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'X-CSRF-TOKEN': csrfToken(),
             },
             body: JSON.stringify(body),
         });
@@ -109,10 +116,8 @@ async function submit() {
         }
 
         const data = await res.json();
-        result.value = data;
-        step.value = 'done';
-        // Limpiar flag de localStorage para que pida apertura en próximo ingreso
         localStorage.removeItem('pos_session_opened');
+        router.visit(route('admin.pos.close-summary', { cashSession: data.session.id }));
     } catch (err: any) {
         error.value = err.message || 'Error inesperado al cerrar caja';
     } finally {

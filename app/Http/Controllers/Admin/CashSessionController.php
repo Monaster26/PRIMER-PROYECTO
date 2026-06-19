@@ -281,6 +281,43 @@ class CashSessionController extends Controller
         }
     }
 
+    public function showCloseSummary(Request $request, CashSession $cashSession)
+    {
+        if ($cashSession->user_id !== $request->user()->id && !$request->user()->hasRole('admin')) {
+            abort(403);
+        }
+
+        if (!$cashSession->closed_at) {
+            return redirect()->route('admin.pos');
+        }
+
+        $date = $cashSession->date ?? $cashSession->opened_at->toDateString();
+
+        $cashSales = Sale::where('user_id', $cashSession->user_id)
+            ->whereDate('created_at', $date)
+            ->sum('cash_amount');
+
+        $movementQuery = CashMovement::where('user_id', $cashSession->user_id)
+            ->whereDate('created_at', $date);
+        $totalIngresos = (int) (clone $movementQuery)->where('type', 'ingreso')->sum('amount');
+        $totalRetiros  = (int) (clone $movementQuery)->where('type', 'retiro')->sum('amount');
+
+        $esperado = $cashSession->opening_balance + (int)($cashSales / 100) + $totalIngresos - $totalRetiros;
+
+        return Inertia::render('admin/pos-close-summary', [
+            'session' => $cashSession->load('user'),
+            'summary' => [
+                'cashSales'  => (int)($cashSales / 100),
+                'ingresos'   => $totalIngresos,
+                'retiros'    => $totalRetiros,
+                'esperado'   => $esperado,
+                'declarado'  => $cashSession->total_efectivo_cierre,
+                'diferencia' => $cashSession->total_efectivo_cierre - $esperado,
+            ],
+            'pdf_url' => asset("storage/cierres/cierre-caja-{$cashSession->id}.pdf"),
+        ]);
+    }
+
     public function destroy(CashSession $cashSession): RedirectResponse
     {
         $cashSession->delete();

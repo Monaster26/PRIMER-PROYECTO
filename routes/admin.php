@@ -29,6 +29,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::post('pos/cash-movement', [CashMovementController::class, 'store'])->name('pos.cash-movement');
         Route::post('pos/open-session', [PosController::class, 'openSession'])->name('pos.open-session');
         Route::post('pos/close-session', [CashSessionController::class, 'closeFromPos'])->name('pos.close-session');
+        Route::get('pos/close-summary/{cashSession}', [CashSessionController::class, 'showCloseSummary'])
+            ->name('pos.close-summary');
     });
 
     Route::middleware('role:admin')->group(function () {
