@@ -71,13 +71,18 @@ const denominations = [
     { key: '10', label: '$10', value: 10, directInput: true },
 ] as const;
 
-const billQtys = reactive<Record<string, number>>({
-    '20k': 0, '10k': 0, '5k': 0, '2k': 0, '1k': 0,
+const bills = denominations.filter((d) => !d.directInput);
+const coins = denominations.filter((d) => d.directInput);
+
+const billQtys = reactive<Record<string, number | null>>({
+    '20k': null, '10k': null, '5k': null, '2k': null, '1k': null,
 });
 
-const coinAmounts = reactive<Record<string, number>>({
-    '500': 0, '100': 0, '50': 0, '10': 0,
+const coinAmounts = reactive<Record<string, number | null>>({
+    '500': null, '100': null, '50': null, '10': null,
 });
+
+const coinErrors = reactive<Record<string, string | null>>({});
 
 const totalOpening = computed(() => {
     let t = 0;
@@ -91,6 +96,9 @@ const totalOpening = computed(() => {
     return t;
 });
 const showSuccess = ref(false);
+const hasCoinErrors = computed(() =>
+    Object.values(coinErrors).some((v) => v !== null),
+);
 const scannedProductName = ref<string | null>(null);
 const scannedProductIndex = ref<number | null>(null);
 
@@ -98,6 +106,7 @@ const scannedProductIndex = ref<number | null>(null);
 const showCashMovementModal = ref(false);
 const cashMovementType = ref<'ingreso' | 'retiro'>('ingreso');
 const showCloseSessionModal = ref(false);
+const showCartWarning = ref(false);
 
 // Dropdown menu acciones administrativas
 const showMenu = ref(false);
@@ -141,6 +150,7 @@ const canCheckout = computed(
 onMounted(() => {
     document.addEventListener('click', handleClickOutside);
     document.addEventListener('keydown', handleKeydown);
+    nextTick(() => document.getElementById('input-20k')?.focus());
 });
 
 onUnmounted(() => {
@@ -158,7 +168,8 @@ useBarcodeScanner({
     allowlist: [scannerRef], // ponytail: searchRef no incluido — Enter en buscador usa filteredProducts, no barcode/SKU
     discardWhen: (el) =>
         el instanceof HTMLInputElement &&
-        (el.getAttribute('step') === '100' || !sessionOpened.value),
+        (el.getAttribute('step') === '100' || !sessionOpened.value
+         || el.closest('.fixed') !== null),
 });
 
 const total = computed(() =>
@@ -480,8 +491,18 @@ function openCashRetiro() {
 }
 
 function openCloseSession() {
+    if (activeTab.value.cart.length > 0) {
+        showMenu.value = false;
+        showCartWarning.value = true;
+        return;
+    }
     showCloseSessionModal.value = true;
     showMenu.value = false;
+}
+
+function closeCartWarning() {
+    showCartWarning.value = false;
+    focusScanner();
 }
 
 function onCashMovementSaved() {
@@ -532,12 +553,46 @@ function submitOpenSession() {
 
 const fmt = (v: number) =>
     '$' + v.toLocaleString('es-CO', { minimumFractionDigits: 0 });
+
+function focusNext(e: Event) {
+    const form = (e.target as HTMLElement).closest('form');
+    if (!form) return;
+    const inputs = Array.from(form.querySelectorAll<HTMLInputElement>(
+        'input[type="number"], input[inputmode="numeric"]'
+    ));
+    const idx = inputs.indexOf(e.target as HTMLInputElement);
+    if (idx >= 0 && idx < inputs.length - 1) inputs[idx + 1].focus();
+}
 const fmtDec = (v: number) =>
     '$' +
     Number(v).toLocaleString('es-CO', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
     });
+
+function formatCoin(val: number | null): string {
+    if (val === null || val === undefined) return '';
+    return val.toLocaleString('es-CL');
+}
+
+function onCoinInput(e: Event, key: string) {
+    coinErrors[key] = null;
+    const raw = (e.target as HTMLInputElement).value.replace(/\D/g, '');
+    const num = raw ? parseInt(raw, 10) : null;
+    coinAmounts[key] = num;
+    (e.target as HTMLInputElement).value = num ? num.toLocaleString('es-CL') : '';
+}
+
+function validateCoin(key: string) {
+    const d = coins.find((c) => c.key === key);
+    if (!d) return;
+    const val = coinAmounts[key];
+    if (val !== null && val > 0 && val % d.value !== 0) {
+        coinErrors[key] = `Debe ser múltiplo de ${d.label}`;
+    } else {
+        coinErrors[key] = null;
+    }
+}
 </script>
 
 <template>
@@ -556,7 +611,7 @@ const fmtDec = (v: number) =>
             v-if="!sessionOpened"
             class="flex min-h-[60vh] items-center justify-center"
         >
-            <div class="w-full max-w-md">
+            <div class="w-full max-w-2xl">
                 <div
                     class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-surface-dark"
                 >
@@ -577,93 +632,93 @@ const fmtDec = (v: number) =>
                             billetes y monedas.
                         </p>
 
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr
-                                    class="text-[10px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
-                                >
-                                    <th class="pb-2 font-bold">Denominación</th>
-                                    <th class="pb-2 text-center font-bold">
-                                        Cant.
-                                    </th>
-                                    <th class="pb-2 text-right font-bold">
-                                        Subtotal
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody
-                                class="divide-y divide-gray-100 dark:divide-gray-800"
-                            >
-                                <tr v-for="d in denominations" :key="d.key">
-                                    <td
-                                        class="py-1.5 text-sm font-semibold text-content-primary dark:text-white"
-                                    >
-                                        {{ d.label }}
-                                    </td>
-                                    <td class="py-1.5 text-center">
-                                        <template v-if="!d.directInput">
-                                            <input
-                                                v-model.number="
-                                                    billQtys[d.key]
-                                                "
-                                                type="number"
-                                                min="0"
-                                                :autofocus="d.key === '20k'"
-                                                class="w-16 rounded-lg border border-gray-200 bg-gray-50 px-1 py-1 text-center text-sm text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                                            />
-                                        </template>
-                                        <template v-else>
-                                            <span
-                                                class="text-xs text-content-muted"
-                                                >—</span
-                                            >
-                                        </template>
-                                    </td>
-                                    <td class="py-1.5 text-right">
-                                        <template v-if="d.directInput">
-                                            <input
-                                                v-model.number="
-                                                    coinAmounts[d.key]
-                                                "
-                                                type="number"
-                                                min="0"
-                                                step="1"
-                                                placeholder="0"
-                                                class="w-24 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-right text-sm font-bold text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                                            />
-                                        </template>
-                                        <template v-else>
-                                            <span
-                                                class="text-sm font-bold text-primary-500"
-                                                >{{
-                                                    fmt(
-                                                        (billQtys[d.key] ||
-                                                            0) * d.value,
-                                                    )
-                                                }}</span
-                                            >
-                                        </template>
-                                    </td>
-                                </tr>
-                            </tbody>
-                            <tfoot>
-                                <tr
-                                    class="border-t-2 border-primary-500 dark:border-primary-400"
-                                >
-                                    <td
-                                        class="pt-2 text-sm font-bold text-content-primary dark:text-white"
-                                    >
-                                        TOTAL
-                                    </td>
-                                    <td></td>
-                                    <td
-                                        class="pt-2 text-right font-mono text-base font-bold text-primary-600 dark:text-primary-400"
-                                    >
-                                        {{ fmt(totalOpening) }}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                        <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+                            <!-- Left: Bills -->
+                            <div class="rounded-xl bg-blue-50/50 p-3 dark:bg-blue-900/10">
+                                <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-primary">
+                                    Billetes
+                                </label>
+                                <table class="w-full text-left">
+                                    <thead>
+                                        <tr class="text-[10px] font-bold uppercase tracking-wider text-content-muted">
+                                            <th class="pb-1">Denominación</th>
+                                            <th class="pb-1 text-center">Cant.</th>
+                                            <th class="pb-1 text-right">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                        <tr v-for="d in bills" :key="d.key">
+                                            <td class="py-1.5 text-sm font-semibold text-content-primary dark:text-white">{{ d.label }}</td>
+                                            <td class="py-1.5 text-center">
+                                                <input
+                                                    v-model.number="billQtys[d.key]"
+                                                    type="number"
+                                                    min="0"
+                                                    :autofocus="d.key === '20k'"
+                                                    :id="d.key === '20k' ? 'input-20k' : undefined"
+                                                    @keydown.enter.prevent="focusNext"
+                                                    class="w-16 rounded-lg border border-gray-200 bg-gray-50 px-1 py-1 text-center text-sm text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                />
+                                            </td>
+                                            <td class="py-1.5 text-right text-sm font-bold text-content-primary dark:text-white">
+                                                {{ fmt((billQtys[d.key] || 0) * d.value) }}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Right: Coins -->
+                            <div class="rounded-xl bg-amber-50/50 p-3 dark:bg-amber-900/10">
+                                <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-primary">
+                                    Monedas
+                                </label>
+                                <table class="w-full text-left">
+                                    <thead>
+                                        <tr class="text-[10px] font-bold uppercase tracking-wider text-content-muted">
+                                            <th class="pb-1">Denominación</th>
+                                            <th class="pb-1 text-center">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                        <tr v-for="d in coins" :key="d.key">
+                                            <td class="py-1.5 text-sm font-semibold text-content-primary dark:text-white">{{ d.label }}</td>
+                                            <td class="py-1.5 text-center">
+                                                <input
+                                                    :value="formatCoin(coinAmounts[d.key])"
+                                                    @input="onCoinInput($event, d.key)"
+                                                    @blur="validateCoin(d.key)"
+                                                    type="text"
+                                                    inputmode="numeric"
+                                                    placeholder="0"
+                                                    @keydown.enter.prevent="focusNext"
+                                                    :class="[
+                                                        'w-28 rounded-lg px-2 py-1.5 text-center text-sm transition-shadow',
+                                                        coinErrors[d.key]
+                                                            ? 'border-red-500 bg-red-50 focus:ring-red-500/30'
+                                                            : 'border-gray-200 bg-gray-50 focus:border-primary-500 focus:ring-primary-500/30',
+                                                        'dark:bg-gray-900 dark:text-white',
+                                                    ]"
+                                                />
+                                                <p
+                                                    v-if="coinErrors[d.key]"
+                                                    class="mt-1 text-[10px] font-medium text-red-500"
+                                                >
+                                                    {{ coinErrors[d.key] }}
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl bg-primary-50 p-3 text-center dark:bg-primary-900/20">
+                            <span class="text-xs font-bold uppercase tracking-wider text-content-muted">Total Efectivo</span>
+                            <p class="font-mono text-xl font-black text-primary-600 dark:text-primary-400">
+                                {{ fmt(totalOpening) }}
+                            </p>
+                        </div>
 
                         <p
                             v-if="sessionOpenError"
@@ -674,7 +729,7 @@ const fmtDec = (v: number) =>
 
                         <button
                             type="submit"
-                            :disabled="sessionOpening"
+                            :disabled="sessionOpening || hasCoinErrors"
                             class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-500 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-600 disabled:opacity-50"
                         >
                             <template v-if="sessionOpening">
@@ -1168,5 +1223,41 @@ const fmtDec = (v: number) =>
                 focusScanner();
             "
         />
+
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="showCartWarning"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm"
+                @click.self="closeCartWarning"
+            >
+                <div class="w-full max-w-sm rounded-2xl bg-white shadow-xl dark:bg-surface-dark">
+                    <div class="flex items-center justify-between border-b border-gray-100 px-5 py-3 dark:border-gray-800">
+                        <h3 class="font-display text-sm font-bold text-content-primary dark:text-white">
+                            Carrito con Productos
+                        </h3>
+                        <button @click="closeCartWarning"
+                            class="rounded-lg p-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
+                            <X class="h-4 w-4 text-content-muted" />
+                        </button>
+                    </div>
+                    <div class="space-y-4 p-5">
+                        <p class="text-sm text-content-secondary leading-relaxed">
+                            Termina la Venta para Cerrar Caja
+                        </p>
+                        <button @click="closeCartWarning"
+                            class="w-full rounded-xl bg-rose-500 py-2.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-rose-600">
+                            Entendido
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
     </AdminLayout>
 </template>

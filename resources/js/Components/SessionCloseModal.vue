@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Check, Download, FileText, X } from 'lucide-vue-next';
 import { router, usePage } from '@inertiajs/vue3';
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch, nextTick } from 'vue';
 
 const emit = defineEmits<{
     close: [];
@@ -25,17 +25,19 @@ const coins = [
 
 // ─── Estado reactivo ──────────────────────────────────────────
 // Billetes: el cajero ingresa CANTIDAD de piezas
-const billQtys = reactive<Record<string, number>>({
-    '20k': 0, '10k': 0, '5k': 0, '2k': 0, '1k': 0,
+const billQtys = reactive<Record<string, number | null>>({
+    '20k': null, '10k': null, '5k': null, '2k': null, '1k': null,
 });
 
 // Monedas: el cajero ingresa el MONTO TOTAL acumulado en pesos (NO la cantidad de piezas)
-const coinAmounts = reactive<Record<string, number>>({
-    '500': 0, '100': 0, '50': 0, '10': 0,
+const coinAmounts = reactive<Record<string, number | null>>({
+    '500': null, '100': null, '50': null, '10': null,
 });
 
-const redCompra = ref(0);
-const transferencia = ref(0);
+const coinErrors = reactive<Record<string, string | null>>({});
+
+const redCompra = ref<number | null>(null);
+const transferencia = ref<number | null>(null);
 const loading = ref(false);
 const error = ref('');
 
@@ -66,17 +68,54 @@ const totalMonedas = computed(() =>
 
 const totalEfectivo = computed(() => subtotalBilletes.value + totalMonedas.value);
 
+const hasCoinErrors = computed(() =>
+    Object.values(coinErrors).some((v) => v !== null),
+);
+
 // ─── Funciones ────────────────────────────────────────────────
 function subtotalBill(key: string): number {
     return (billQtys[key] || 0) * (bills.find(b => b.key === key)?.value || 0);
 }
 
 function resetForm() {
-    for (const k of Object.keys(billQtys)) billQtys[k] = 0;
-    for (const k of Object.keys(coinAmounts)) coinAmounts[k] = 0;
-    redCompra.value = 0;
-    transferencia.value = 0;
+    for (const k of Object.keys(billQtys)) billQtys[k] = null;
+    for (const k of Object.keys(coinAmounts)) coinAmounts[k] = null;
+    for (const k of Object.keys(coinErrors)) coinErrors[k] = null;
+    redCompra.value = null;
+    transferencia.value = null;
     error.value = '';
+}
+
+function formatCoin(val: number | null): string {
+    if (val === null || val === undefined) return '';
+    return val.toLocaleString('es-CL');
+}
+
+function onCoinInput(e: Event, key: string) {
+    coinErrors[key] = null;
+    const raw = (e.target as HTMLInputElement).value.replace(/\D/g, '');
+    const num = raw ? parseInt(raw, 10) : null;
+    coinAmounts[key] = num;
+    (e.target as HTMLInputElement).value = num ? num.toLocaleString('es-CL') : '';
+}
+
+function validateCoin(key: string) {
+    const d = coins.find((c) => c.key === key);
+    if (!d) return;
+    const val = coinAmounts[key];
+    if (val !== null && val > 0 && val % d.value !== 0) {
+        coinErrors[key] = `Debe ser múltiplo de ${d.label}`;
+    } else {
+        coinErrors[key] = null;
+    }
+}
+
+function onMontoInput(e: Event, field: 'redCompra' | 'transferencia') {
+    const raw = (e.target as HTMLInputElement).value.replace(/\D/g, '');
+    const num = raw ? parseInt(raw, 10) : null;
+    if (field === 'redCompra') redCompra.value = num;
+    else transferencia.value = num;
+    (e.target as HTMLInputElement).value = num ? num.toLocaleString('es-CL') : '';
 }
 
 async function submit() {
@@ -90,8 +129,8 @@ async function submit() {
 
     try {
         const body: Record<string, any> = {
-            total_red_compra: redCompra.value,
-            total_transferencia: transferencia.value,
+            total_red_compra: redCompra.value ?? 0,
+            total_transferencia: transferencia.value ?? 0,
         };
         for (const d of bills) body[`cant_${d.key}_cierre`] = billQtys[d.key] || 0;
         for (const d of coins) body[`coin_${d.key}`] = coinAmounts[d.key] || 0;
@@ -143,6 +182,22 @@ function formatDate(iso: string) {
     const d = new Date(iso);
     return d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
+
+function focusNext(e: Event) {
+    const form = (e.target as HTMLElement).closest('form');
+    if (!form) return;
+    const inputs = Array.from(form.querySelectorAll<HTMLInputElement>(
+        'input[type="number"], input[inputmode="numeric"]'
+    ));
+    const idx = inputs.indexOf(e.target as HTMLInputElement);
+    if (idx >= 0 && idx < inputs.length - 1) inputs[idx + 1].focus();
+}
+
+watch(step, (newStep) => {
+    if (newStep === 'close') {
+        nextTick(() => document.getElementById('input-20k-cerrar')?.focus());
+    }
+}, { immediate: true });
 </script>
 
 <template>
@@ -183,8 +238,8 @@ function formatDate(iso: string) {
                         <!-- Two-column denomination grid -->
                         <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <!-- Left: Bills -->
-                            <div>
-                                <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-muted">
+                            <div class="rounded-xl bg-blue-50/50 p-3 dark:bg-blue-900/10">
+                                <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-primary">
                                     Billetes
                                 </label>
                                 <table class="w-full text-left">
@@ -203,6 +258,9 @@ function formatDate(iso: string) {
                                                     v-model.number="billQtys[d.key]"
                                                     type="number"
                                                     min="0"
+                                                    :autofocus="d.key === '20k'"
+                                                    :id="d.key === '20k' ? 'input-20k-cerrar' : undefined"
+                                                    @keydown.enter.prevent="focusNext"
                                                     class="w-16 rounded-lg border border-gray-200 bg-gray-50 px-1 py-1 text-center text-sm text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                                 />
                                             </td>
@@ -215,8 +273,8 @@ function formatDate(iso: string) {
                             </div>
 
                             <!-- Right: Coins (monto directo digitado en columna Subtotal) -->
-                            <div>
-                                <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-muted">
+                            <div class="rounded-xl bg-amber-50/50 p-3 dark:bg-amber-900/10">
+                                <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-primary">
                                     Monedas
                                 </label>
                                 <table class="w-full text-left">
@@ -233,12 +291,27 @@ function formatDate(iso: string) {
                                             <td class="py-1.5"></td>
                                             <td class="py-1.5 text-center">
                                                 <input
-                                                    v-model.number="coinAmounts[d.key]"
-                                                    type="number"
-                                                    min="0"
+                                                    :value="formatCoin(coinAmounts[d.key])"
+                                                    @input="onCoinInput($event, d.key)"
+                                                    @blur="validateCoin(d.key)"
+                                                    type="text"
+                                                    inputmode="numeric"
                                                     placeholder="0"
-                                                    class="w-28 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-center text-sm text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                    @keydown.enter.prevent="focusNext"
+                                                    :class="[
+                                                        'w-28 rounded-lg px-2 py-1.5 text-center text-sm transition-shadow',
+                                                        coinErrors[d.key]
+                                                            ? 'border-red-500 bg-red-50 focus:ring-red-500/30'
+                                                            : 'border-gray-200 bg-gray-50 focus:border-primary-500 focus:ring-primary-500/30',
+                                                        'dark:bg-gray-900 dark:text-white',
+                                                    ]"
                                                 />
+                                                <p
+                                                    v-if="coinErrors[d.key]"
+                                                    class="mt-1 text-[10px] font-medium text-red-500"
+                                                >
+                                                    {{ coinErrors[d.key] }}
+                                                </p>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -259,20 +332,24 @@ function formatDate(iso: string) {
                             <div>
                                 <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted">Redcompra</label>
                                 <input
-                                    v-model.number="redCompra"
-                                    type="number"
-                                    min="0"
+                                    :value="formatCoin(redCompra)"
+                                    type="text"
+                                    inputmode="numeric"
                                     placeholder="0"
+                                    @input="onMontoInput($event, 'redCompra')"
+                                    @keydown.enter.prevent="focusNext"
                                     class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                 />
                             </div>
                             <div>
                                 <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted">Transferencias</label>
                                 <input
-                                    v-model.number="transferencia"
-                                    type="number"
-                                    min="0"
+                                    :value="formatCoin(transferencia)"
+                                    type="text"
+                                    inputmode="numeric"
                                     placeholder="0"
+                                    @input="onMontoInput($event, 'transferencia')"
+                                    @keydown.enter.prevent="focusNext"
                                     class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                 />
                             </div>
@@ -287,7 +364,7 @@ function formatDate(iso: string) {
                                 class="flex-1 rounded-xl border border-gray-200 py-2.5 text-xs font-bold text-content-secondary transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">
                                 Cancelar
                             </button>
-                            <button type="submit" :disabled="loading || totalEfectivo <= 0"
+                            <button type="submit" :disabled="loading || totalEfectivo <= 0 || hasCoinErrors"
                                 class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary-600 py-2.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50">
                                 <template v-if="loading">
                                     <span class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white"></span>
