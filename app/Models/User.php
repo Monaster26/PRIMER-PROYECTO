@@ -52,4 +52,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Sale::class, 'user_id');
     }
+
+    public function observaciones(): HasMany
+    {
+        return $this->hasMany(Observacion::class);
+    }
 }

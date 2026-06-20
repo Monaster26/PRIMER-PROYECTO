@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ExpenseController;
 use App\Http\Controllers\Admin\LossController;
 use App\Http\Controllers\Admin\MonthlySummaryController;
+use App\Http\Controllers\Admin\ObservacionController;
 use App\Http\Controllers\Admin\PendingInvoiceController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
@@ -31,6 +32,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::post('pos/close-session', [CashSessionController::class, 'closeFromPos'])->name('pos.close-session');
         Route::get('pos/close-summary/{cashSession}', [CashSessionController::class, 'showCloseSummary'])
             ->name('pos.close-summary');
+        Route::post('pos/observacion', [ObservacionController::class, 'store'])->name('pos.observacion');
     });
 
     Route::middleware('role:admin')->group(function () {
@@ -107,5 +109,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::put('cajeros/{user}', [UserController::class, 'update'])->name('cajeros.update');
         Route::delete('cajeros/{user}', [UserController::class, 'destroy'])->name('cajeros.destroy');
         Route::get('clientes', [UserController::class, 'clients'])->name('clientes');
+
+        // Observaciones
+        Route::get('observaciones', [ObservacionController::class, 'index'])->name('observaciones.index');
     });
 });

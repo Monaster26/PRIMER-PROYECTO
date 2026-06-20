@@ -24,7 +24,7 @@ import {
     X,
 } from 'lucide-vue-next';
 import { storeToRefs } from 'pinia';
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
 function csrfToken(): string {
     // ponytail: Inertia-shared token from server, always current; meta tag can be stale after login
@@ -107,6 +107,12 @@ const showCashMovementModal = ref(false);
 const cashMovementType = ref<'ingreso' | 'retiro'>('ingreso');
 const showCloseSessionModal = ref(false);
 const showCartWarning = ref(false);
+const showClearCartModal = ref(false);
+const cancelClearBtnRef = ref<HTMLButtonElement | null>(null);
+
+watch(showClearCartModal, (val) => {
+    if (val) nextTick(() => cancelClearBtnRef.value?.focus());
+});
 
 // Dropdown menu acciones administrativas
 const showMenu = ref(false);
@@ -373,6 +379,18 @@ function decrementQty(index: number) {
 }
 
 function removeItem(index: number) {
+    const item = activeTab.value.cart[index];
+    if (item) {
+        fetch(route('admin.pos.observacion'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
+            body: JSON.stringify({
+                tipo_accion: 'eliminar_item',
+                producto_afectado: item.product.name,
+                detalle: `${item.product.name} (SKU: ${item.product.sku}) x${item.quantity} — $${(item.product.price * item.quantity).toLocaleString('es-CL')}`,
+            }),
+        }).catch(() => {});
+    }
     activeTab.value.cart.splice(index, 1);
 }
 
@@ -381,6 +399,23 @@ function selectProduct(product: Product) {
 }
 
 function clearCart() {
+    showClearCartModal.value = true;
+}
+
+function confirmClearCart() {
+    if (activeTab.value.cart.length) {
+        const lineas = activeTab.value.cart.map(i =>
+            `${i.product.name} (SKU: ${i.product.sku}) x${i.quantity} — $${(i.product.price * i.quantity).toLocaleString('es-CL')}`
+        );
+        fetch(route('admin.pos.observacion'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
+            body: JSON.stringify({
+                tipo_accion: 'limpiar_carrito',
+                detalle: `Limpió carrito (${activeTab.value.cart.length} items): ${lineas.join(' | ')}`,
+            }),
+        }).catch(() => {});
+    }
     activeTab.value.cart = [];
     activeTab.value.payments = [
         { method: 'cash', amount: null },
@@ -389,7 +424,12 @@ function clearCart() {
     ];
     lastSaleId.value = null;
     showSuccess.value = false;
+    showClearCartModal.value = false;
     focusScanner();
+}
+
+function cancelClearCart() {
+    showClearCartModal.value = false;
 }
 
 function validateStock(): boolean {
@@ -1255,6 +1295,48 @@ function validateCoin(key: string) {
                             class="w-full rounded-xl bg-rose-500 py-2.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-rose-600">
                             Entendido
                         </button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="showClearCartModal"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm"
+                @click.self="cancelClearCart"
+            >
+                <div class="w-full max-w-sm rounded-2xl bg-white shadow-xl dark:bg-surface-dark">
+                    <div class="flex items-center justify-between border-b border-gray-100 px-5 py-3 dark:border-gray-800">
+                        <h3 class="font-display text-sm font-bold text-content-primary dark:text-white">
+                            Limpiar Carrito
+                        </h3>
+                        <button @click="cancelClearCart"
+                            class="rounded-lg p-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
+                            <X class="h-4 w-4 text-content-muted" />
+                        </button>
+                    </div>
+                    <div class="space-y-4 p-5">
+                        <p class="text-sm text-content-secondary leading-relaxed">
+                            ¿Está seguro que desea eliminar la venta?
+                        </p>
+                        <div class="flex gap-2">
+                            <button ref="cancelClearBtnRef" @click="cancelClearCart"
+                                class="flex-1 rounded-xl bg-rose-500 py-2.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-rose-600">
+                                Cancelar
+                            </button>
+                            <button @click="confirmClearCart"
+                                class="flex-1 rounded-xl border border-gray-200 bg-white py-2.5 text-xs font-bold text-content-secondary transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700">
+                                Aceptar
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
