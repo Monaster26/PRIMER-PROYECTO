@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CashMovementController;
 use App\Http\Controllers\Admin\CashSessionController;
+use App\Http\Controllers\Admin\ControlZetaController;
 use App\Http\Controllers\Admin\DailyControlController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ExpenseController;
@@ -75,6 +76,10 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         // Control diario
         Route::resource('control-diario', DailyControlController::class)
             ->except(['show', 'create', 'edit']);
+
+        // Z Mensual
+        Route::get('z-mensual', [ControlZetaController::class, 'index'])->name('z-mensual.index');
+        Route::put('z-mensual/{controlZeta}', [ControlZetaController::class, 'update'])->name('z-mensual.update');
 
         // Gastos
         Route::resource('gastos', ExpenseController::class)

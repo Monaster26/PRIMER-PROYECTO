@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { formatDate, formatTime } from '@/helpers/format';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import DateFilter from '@/Components/DateFilter.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Check, EyeOff, Plus, Trash2, Wallet, X } from 'lucide-vue-next';
+import { Check, Eye, EyeOff, Plus, Trash2, Wallet, X } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
 
 const props = defineProps<{
@@ -20,7 +21,42 @@ const props = defineProps<{
         total_retiros: number;
         count: number;
     };
+    filters?: {
+        dia: number | null;
+        mes: number | null;
+        anio: number | null;
+    };
 }>();
+
+const meses = [
+    { value: 1, label: 'Enero' },
+    { value: 2, label: 'Febrero' },
+    { value: 3, label: 'Marzo' },
+    { value: 4, label: 'Abril' },
+    { value: 5, label: 'Mayo' },
+    { value: 6, label: 'Junio' },
+    { value: 7, label: 'Julio' },
+    { value: 8, label: 'Agosto' },
+    { value: 9, label: 'Septiembre' },
+    { value: 10, label: 'Octubre' },
+    { value: 11, label: 'Noviembre' },
+    { value: 12, label: 'Diciembre' },
+];
+
+const todayStr = new Date().toISOString().slice(0, 10);
+const filterDate = ref<string>(
+    props.filters?.dia && props.filters?.mes && props.filters?.anio
+        ? `${props.filters.anio}-${String(props.filters.mes).padStart(2, '0')}-${String(props.filters.dia).padStart(2, '0')}`
+        : todayStr
+);
+
+function onDatePicked(payload: { dia: number; mes: number; anio: number }) {
+    router.get(route('admin.arqueo-caja.index'), {
+        dia: payload.dia,
+        mes: payload.mes,
+        anio: payload.anio,
+    }, { preserveState: true, preserveScroll: true });
+}
 
 const denominations = [
     { key: '20k', label: '$20.000', value: 20000 },
@@ -37,6 +73,9 @@ const denominations = [
 const showForm = ref(false);
 const mode = ref<'create' | 'close'>('create');
 const editingSession = ref<any>(null);
+
+const showAuditModal = ref(false);
+const auditSession = ref<any>(null);
 
 const emptyForm = {
     user_id: null as number | null,
@@ -158,6 +197,16 @@ function submitForm() {
     }
 }
 
+function openAudit(session: any) {
+    auditSession.value = session;
+    showAuditModal.value = true;
+}
+
+function closeAudit() {
+    showAuditModal.value = false;
+    auditSession.value = null;
+}
+
 function deleteSession(id: number) {
     if (!confirm('¿Eliminar esta sesión de caja?')) return;
     router.delete(route('admin.arqueo-caja.destroy', id), {
@@ -206,6 +255,29 @@ const diferencia = computed(() => {
 });
 
 const fmtCLP = (v: number) => '$' + Math.round(v).toLocaleString('es-CL');
+
+// ─── Audit modal computed totals ─────────────────────────────────
+const auditTotalApertura = computed(() => {
+    const dg = auditSession.value?.apertura_desglose;
+    if (!dg) return 0;
+    let t = 0;
+    for (const d of denominations) {
+        const cnt = dg[d.key] ?? 0;
+        t += Number(cnt) * d.value;
+    }
+    return t;
+});
+
+const auditTotalCierre = computed(() => {
+    const dg = auditSession.value?.cierre_desglose;
+    if (!dg) return 0;
+    let t = 0;
+    for (const d of denominations) {
+        const cnt = dg[d.key] ?? 0;
+        t += Number(cnt) * d.value;
+    }
+    return t;
+});
 </script>
 
 <template>
@@ -238,6 +310,16 @@ const fmtCLP = (v: number) => '$' + Math.round(v).toLocaleString('es-CL');
                 >
                     <Plus class="h-3.5 w-3.5" /> Nueva Sesión
                 </button>
+            </div>
+
+            <div
+                class="flex flex-wrap items-end gap-2 border-b border-gray-100 px-4 py-2.5 dark:border-gray-800"
+            >
+                <DateFilter
+                    v-model="filterDate"
+                    label="Fecha"
+                    @select="onDatePicked"
+                />
             </div>
 
             <div class="overflow-x-auto">
@@ -361,6 +443,14 @@ const fmtCLP = (v: number) => '$' + Math.round(v).toLocaleString('es-CL');
                                         class="rounded-lg px-2 py-1 text-[10px] font-bold text-primary-500 transition-colors hover:bg-primary-50 dark:hover:bg-primary-900/20"
                                     >
                                         Cerrar
+                                    </button>
+                                    <button
+                                        v-if="s.closed_at"
+                                        @click="openAudit(s)"
+                                        class="flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-bold text-primary-500 transition-colors hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                                    >
+                                        <Eye class="h-3 w-3" />
+                                        Ver Auditoría
                                     </button>
                                     <button
                                         @click="deleteSession(s.id)"
@@ -1090,6 +1180,375 @@ const fmtCLP = (v: number) => '$' + Math.round(v).toLocaleString('es-CL');
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </Transition>
+
+        <!-- ═══════ AUDIT MODAL ═══════ -->
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="showAuditModal"
+                class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-2 pt-8 backdrop-blur-sm"
+            >
+                <div
+                    class="relative mx-auto my-4 w-full max-w-4xl rounded-2xl bg-white shadow-xl dark:bg-surface-dark"
+                >
+                    <!-- Modal Header -->
+                    <div
+                        class="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-gray-100 bg-white px-4 py-2.5 dark:border-gray-800 dark:bg-surface-dark"
+                    >
+                        <div class="flex items-center gap-2">
+                            <Eye class="h-4 w-4 text-primary-500" />
+                            <h3
+                                class="font-display text-sm font-bold text-content-primary dark:text-white"
+                            >
+                                Auditoría de Caja
+                            </h3>
+                        </div>
+                        <button
+                            @click="closeAudit"
+                            class="rounded-lg p-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                        >
+                            <X class="h-4 w-4 text-content-muted" />
+                        </button>
+                    </div>
+
+                    <!-- Audit Info Header -->
+                    <div
+                        v-if="auditSession"
+                        class="border-b border-gray-100 bg-gray-50/50 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/30"
+                    >
+                        <div class="flex flex-wrap items-center gap-x-6 gap-y-1 text-[11px]">
+                            <span class="font-bold text-content-primary dark:text-white">
+                                {{ auditSession.user?.name || '—' }}
+                            </span>
+                            <span class="text-content-muted">|</span>
+                            <span class="text-content-secondary">
+                                Apertura:
+                                <span class="font-semibold text-content-primary">
+                                    {{ auditSession.opened_at ? formatDate(auditSession.opened_at) + ' ' + formatTime(auditSession.opened_at) : '—' }}
+                                </span>
+                            </span>
+                            <span class="text-content-muted">|</span>
+                            <span class="text-content-secondary">
+                                Cierre:
+                                <span class="font-semibold text-content-primary">
+                                    {{ auditSession.closed_at ? formatDate(auditSession.closed_at) + ' ' + formatTime(auditSession.closed_at) : '—' }}
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Audit Body: Two Columns -->
+                    <div class="grid grid-cols-1 gap-3 p-4 lg:grid-cols-2">
+                        <!-- ═══ LEFT: APERTURA ═══ -->
+                        <div
+                            class="overflow-hidden rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/50"
+                        >
+                            <div
+                                class="flex items-center gap-1.5 bg-primary-500 px-3 py-1.5"
+                            >
+                                <Wallet class="h-3.5 w-3.5 text-white" />
+                                <h4
+                                    class="font-display text-[11px] font-bold text-white"
+                                >
+                                    Apertura de Caja
+                                </h4>
+                            </div>
+                            <div class="p-3">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr
+                                            class="border-b border-gray-200 text-[9px] font-bold uppercase tracking-wider text-content-muted dark:border-gray-700 dark:text-gray-500"
+                                        >
+                                            <th class="pb-1 text-left">
+                                                Denominación
+                                            </th>
+                                            <th class="pb-1 text-center">
+                                                Cant.
+                                            </th>
+                                            <th class="pb-1 text-right">
+                                                Total
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody
+                                        class="divide-y divide-gray-100 dark:divide-gray-800"
+                                    >
+                                        <tr
+                                            v-for="d in denominations"
+                                            :key="'aa-' + d.key"
+                                        >
+                                            <td
+                                                class="py-1 text-[11px] font-semibold text-content-primary dark:text-white"
+                                            >
+                                                {{ d.label }}
+                                            </td>
+                                            <td
+                                                class="py-1 text-center font-mono text-[11px] font-bold text-content-primary"
+                                            >
+                                                {{
+                                                    auditSession?.apertura_desglose?.[d.key] ?? 0
+                                                }}
+                                            </td>
+                                            <td
+                                                class="py-1 text-right font-mono text-[11px] font-bold text-primary-500"
+                                            >
+                                                {{
+                                                    fmtCLP(
+                                                        (auditSession?.apertura_desglose?.[d.key] ?? 0) * d.value
+                                                    )
+                                                }}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr
+                                            class="border-t-2 border-primary-500"
+                                        >
+                                            <td
+                                                class="pt-1.5 text-[11px] font-bold text-content-primary dark:text-white"
+                                            >
+                                                Total Apertura
+                                            </td>
+                                            <td class="pt-1.5"></td>
+                                            <td
+                                                class="pt-1.5 text-right font-mono text-sm font-bold text-primary-600"
+                                            >
+                                                {{ fmtCLP(auditTotalApertura) }}
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- ═══ RIGHT: CIERRE ═══ -->
+                        <div
+                            class="overflow-hidden rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/50"
+                        >
+                            <div
+                                class="flex items-center gap-1.5 bg-gray-800 px-3 py-1.5 dark:bg-gray-700"
+                            >
+                                <Wallet class="h-3.5 w-3.5 text-white" />
+                                <h4
+                                    class="font-display text-[11px] font-bold text-white"
+                                >
+                                    Cierre de Caja
+                                </h4>
+                            </div>
+                            <div class="p-3">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr
+                                            class="border-b border-gray-200 text-[9px] font-bold uppercase tracking-wider text-content-muted dark:border-gray-700 dark:text-gray-500"
+                                        >
+                                            <th class="pb-1 text-left">
+                                                Denominación
+                                            </th>
+                                            <th class="pb-1 text-center">
+                                                Cant.
+                                            </th>
+                                            <th class="pb-1 text-right">
+                                                Total
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody
+                                        class="divide-y divide-gray-100 dark:divide-gray-800"
+                                    >
+                                        <tr
+                                            v-for="d in denominations"
+                                            :key="'ac-' + d.key"
+                                        >
+                                            <td
+                                                class="py-1 text-[11px] font-semibold text-content-primary dark:text-white"
+                                            >
+                                                {{ d.label }}
+                                            </td>
+                                            <td
+                                                class="py-1 text-center font-mono text-[11px] font-bold text-content-primary"
+                                            >
+                                                {{
+                                                    auditSession?.cierre_desglose?.[d.key] ?? 0
+                                                }}
+                                            </td>
+                                            <td
+                                                class="py-1 text-right font-mono text-[11px] font-bold text-primary-500"
+                                            >
+                                                {{
+                                                    fmtCLP(
+                                                        (auditSession?.cierre_desglose?.[d.key] ?? 0) * d.value
+                                                    )
+                                                }}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr
+                                            class="border-t-2 border-gray-800 dark:border-gray-500"
+                                        >
+                                            <td
+                                                class="pt-1.5 text-[11px] font-bold text-content-primary dark:text-white"
+                                            >
+                                                Total Cierre
+                                            </td>
+                                            <td class="pt-1.5"></td>
+                                            <td
+                                                class="pt-1.5 text-right font-mono text-sm font-bold text-content-primary"
+                                            >
+                                                {{ fmtCLP(auditTotalCierre) }}
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+
+                                <!-- Summary Cards -->
+                                <div
+                                    class="mt-3 grid grid-cols-2 gap-2"
+                                >
+                                    <div
+                                        class="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800"
+                                    >
+                                        <div
+                                            class="text-[9px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                                        >
+                                            Efvo. Cierre
+                                        </div>
+                                        <div
+                                            class="font-mono text-xs font-bold text-content-primary"
+                                        >
+                                            {{
+                                                fmtCLP(
+                                                    auditSession?.total_efectivo_cierre || 0
+                                                )
+                                            }}
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800"
+                                    >
+                                        <div
+                                            class="text-[9px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                                        >
+                                            + Red C./Transf.
+                                        </div>
+                                        <div
+                                            class="font-mono text-xs font-bold text-content-primary"
+                                        >
+                                            {{
+                                                fmtCLP(
+                                                    (auditSession?.total_red_compra || 0) +
+                                                    (auditSession?.total_transferencia || 0)
+                                                )
+                                            }}
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800"
+                                    >
+                                        <div
+                                            class="text-[9px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                                        >
+                                            Esperado en Caja
+                                        </div>
+                                        <div
+                                            class="font-mono text-xs font-bold text-primary-500"
+                                        >
+                                            {{
+                                                fmtCLP(
+                                                    auditSession?.total_caja_esperado || 0
+                                                )
+                                            }}
+                                        </div>
+                                    </div>
+                                    <div
+                                        :class="
+                                            auditSession?.diferencia_descuadre != null
+                                                ? auditSession.diferencia_descuadre < 0
+                                                    ? 'border-danger/20 bg-danger/5'
+                                                    : auditSession.diferencia_descuadre > 0
+                                                        ? 'border-success/20 bg-success/5'
+                                                        : 'border-gray-200 bg-white'
+                                                : 'border-gray-200 bg-white'
+                                        "
+                                        class="rounded-lg border p-2"
+                                    >
+                                        <div
+                                            class="text-[9px] font-bold uppercase tracking-wider"
+                                            :class="
+                                                auditSession?.diferencia_descuadre != null
+                                                    ? auditSession.diferencia_descuadre < 0
+                                                        ? 'text-danger'
+                                                        : auditSession.diferencia_descuadre > 0
+                                                            ? 'text-success'
+                                                            : 'text-content-muted'
+                                                    : 'text-content-muted'
+                                            "
+                                        >
+                                            {{
+                                                auditSession?.diferencia_descuadre != null
+                                                    ? auditSession.diferencia_descuadre < 0
+                                                        ? 'Descuadre'
+                                                        : auditSession.diferencia_descuadre > 0
+                                                            ? 'Sobrante'
+                                                            : 'Cuadrado'
+                                                    : 'Diferencia'
+                                            }}
+                                        </div>
+                                        <div
+                                            class="font-mono text-xs font-bold"
+                                            :class="
+                                                auditSession?.diferencia_descuadre != null
+                                                    ? auditSession.diferencia_descuadre < 0
+                                                        ? 'text-danger'
+                                                        : auditSession.diferencia_descuadre > 0
+                                                            ? 'text-success'
+                                                            : 'text-content-primary'
+                                                    : 'text-content-muted'
+                                            "
+                                        >
+                                            {{
+                                                auditSession?.diferencia_descuadre != null
+                                                    ? fmtCLP(auditSession.diferencia_descuadre)
+                                                    : '—'
+                                            }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Audit footer note -->
+                                <div
+                                    class="mt-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-[10px] text-content-muted dark:border-gray-700 dark:bg-gray-800"
+                                >
+                                    <span class="font-semibold text-content-primary">Retiros:</span>
+                                    {{ fmtCLP(auditSession?.total_retiros || 0) }}
+                                    &nbsp;·&nbsp;
+                                    <span class="font-semibold text-content-primary">Ingresos:</span>
+                                    {{ fmtCLP(auditSession?.total_ingresos || 0) }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal footer -->
+                    <div
+                        class="flex justify-end border-t border-gray-100 px-4 py-2 dark:border-gray-800"
+                    >
+                        <button
+                            @click="closeAudit"
+                            class="rounded-xl bg-gray-100 px-4 py-1.5 text-[11px] font-bold text-content-secondary transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                        >
+                            Cerrar
+                        </button>
+                    </div>
                 </div>
             </div>
         </Transition>

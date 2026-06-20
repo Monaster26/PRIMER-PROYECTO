@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import DateFilter from '@/Components/DateFilter.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { Banknote, CreditCard, Percent, TrendingUp, Wallet } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
@@ -30,13 +31,20 @@ const props = defineProps<{
     };
 }>();
 
-const selectedDate = ref(props.date);
+const filterDate = ref(props.date);
 const selectedUser = ref<number | ''>(props.userId ?? '');
 
 function consultar() {
-    const params: Record<string, any> = { date: selectedDate.value };
+    const params: Record<string, any> = { date: filterDate.value };
     if (selectedUser.value !== '') params.user_id = selectedUser.value;
     router.get(route('admin.reporte-diario', params));
+}
+
+function onDatePicked(payload: { dia: number; mes: number; anio: number }) {
+    const m = String(payload.mes).padStart(2, '0');
+    const d = String(payload.dia).padStart(2, '0');
+    filterDate.value = `${payload.anio}-${m}-${d}`;
+    consultar();
 }
 
 const fmt = (v: number) =>
@@ -88,15 +96,11 @@ const diferenciaColor = computed(() => {
             <!-- Filters -->
             <div class="rounded-xl border border-gray-100 bg-white p-4 dark:border-gray-800 dark:bg-surface-dark">
                 <div class="flex flex-wrap items-end gap-3">
-                    <div class="min-w-0 flex-1">
-                        <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-400">Fecha</label>
-                        <input
-                            v-model="selectedDate"
-                            type="date"
-                            @change="consultar"
-                            class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-800 transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                        />
-                    </div>
+                    <DateFilter
+                        v-model="filterDate"
+                        label="Fecha"
+                        @select="onDatePicked"
+                    />
                     <div class="min-w-0 flex-1">
                         <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-400">Cajero</label>
                         <select

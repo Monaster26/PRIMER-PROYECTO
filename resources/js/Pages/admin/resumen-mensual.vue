@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import DateFilter from '@/Components/DateFilter.vue';
 import { Head, router } from '@inertiajs/vue3';
 import {
     CalendarRange,
@@ -25,18 +26,27 @@ const props = defineProps<{
     available_years: number[];
 }>();
 
-const selectedYear = ref(props.resumen.year);
-const selectedMonth = ref(props.resumen.month);
+const todayStr = new Date().toISOString().slice(0, 10);
+const filterDate = ref<string>(
+    `${props.resumen.year}-${String(props.resumen.month).padStart(2, '0')}-01`
+);
 
 function loadSummary() {
+    const [y, m] = filterDate.value.split('-');
     router.get(
         route('admin.resumen-mensual.index'),
         {
-            year: selectedYear.value,
-            month: selectedMonth.value,
+            year: parseInt(y),
+            month: parseInt(m),
         },
         { preserveState: true, preserveScroll: true },
     );
+}
+
+function onDatePicked(payload: { dia: number; mes: number; anio: number }) {
+    const m = String(payload.mes).padStart(2, '0');
+    filterDate.value = `${payload.anio}-${m}-01`;
+    loadSummary();
 }
 
 const months = [
@@ -79,24 +89,11 @@ const fmt = (v: number) =>
                 <h2 class="font-bold text-content-primary dark:text-white">
                     Período
                 </h2>
-                <select
-                    v-model="selectedMonth"
-                    @change="loadSummary"
-                    class="rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                >
-                    <option v-for="(m, i) in months" :key="i" :value="i + 1">
-                        {{ m }}
-                    </option>
-                </select>
-                <select
-                    v-model="selectedYear"
-                    @change="loadSummary"
-                    class="rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                >
-                    <option v-for="y in available_years" :key="y" :value="y">
-                        {{ y }}
-                    </option>
-                </select>
+                <DateFilter
+                    v-model="filterDate"
+                    label="Mes / Año"
+                    @select="onDatePicked"
+                />
                 <span
                     class="ml-2 text-sm font-bold text-content-primary dark:text-white"
                     >{{ resumen.month_name }} {{ resumen.year }}</span

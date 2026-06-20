@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CashMovement;
 use App\Models\CashSession;
+use App\Models\ControlZeta;
 use App\Models\Sale;
 use App\Models\User;
 use App\Models\ZetaReport;
@@ -24,6 +25,22 @@ class CashSessionController extends Controller
             $query->where('user_id', $request->user()->id);
         }
 
+        $filters = [
+            'dia'  => $request->integer('dia'),
+            'mes'  => $request->integer('mes'),
+            'anio' => $request->integer('anio'),
+        ];
+
+        if ($filters['anio']) {
+            $query->whereYear('opened_at', $filters['anio']);
+        }
+        if ($filters['mes']) {
+            $query->whereMonth('opened_at', $filters['mes']);
+        }
+        if ($filters['dia']) {
+            $query->whereDay('opened_at', $filters['dia']);
+        }
+
         $sessions = $query->orderBy('opened_at', 'desc')->paginate(30);
         $cashiers = User::role('cashier')->get();
 
@@ -40,6 +57,7 @@ class CashSessionController extends Controller
             'sessions' => $sessions,
             'cashiers' => $cashiers,
             'cashMovements' => $cashMovementsSummary,
+            'filters' => $filters,
         ]);
     }
 
@@ -77,6 +95,18 @@ class CashSessionController extends Controller
         $validated['total_retiros'] ??= 0;
         $validated['total_ingresos'] ??= 0;
 
+        $validated['apertura_desglose'] = [
+            '20k' => $validated['cant_20k_apertura'],
+            '10k' => $validated['cant_10k_apertura'],
+            '5k'  => $validated['cant_5k_apertura'],
+            '2k'  => $validated['cant_2k_apertura'],
+            '1k'  => $validated['cant_1k_apertura'],
+            '500' => $validated['cant_500_apertura'],
+            '100' => $validated['cant_100_apertura'],
+            '50'  => $validated['cant_50_apertura'],
+            '10'  => $validated['cant_10_apertura'],
+        ];
+
         CashSession::create($validated);
 
         return redirect()->route('admin.arqueo-caja.index')->with('success', 'Sesión de caja registrada.');
@@ -102,6 +132,18 @@ class CashSessionController extends Controller
             'observations' => 'nullable|string|max:255',
         ]);
 
+        $cierreDesglose = [
+            '20k' => $validated['cant_20k_cierre'],
+            '10k' => $validated['cant_10k_cierre'],
+            '5k'  => $validated['cant_5k_cierre'],
+            '2k'  => $validated['cant_2k_cierre'],
+            '1k'  => $validated['cant_1k_cierre'],
+            '500' => $validated['cant_500_cierre'],
+            '100' => $validated['cant_100_cierre'],
+            '50'  => $validated['cant_50_cierre'],
+            '10'  => $validated['cant_10_cierre'],
+        ];
+
         $cashSession->update([
             'closed_at' => $validated['closed_at'],
             'cant_20k_cierre' => $validated['cant_20k_cierre'],
@@ -117,6 +159,7 @@ class CashSessionController extends Controller
             'total_transferencia' => $validated['total_transferencia'] ?? 0,
             'total_retiros' => $validated['total_retiros'] ?? 0,
             'total_ingresos' => $validated['total_ingresos'] ?? 0,
+            'cierre_desglose' => $cierreDesglose,
         ]);
 
         $date = $cashSession->date ?? \Carbon\Carbon::parse($cashSession->opened_at)->toDateString();
@@ -186,6 +229,23 @@ class CashSessionController extends Controller
             $totalIngresos = (int) (clone $movementQuery)->where('type', 'ingreso')->sum('amount');
             $totalRetiros  = (int) (clone $movementQuery)->where('type', 'retiro')->sum('amount');
 
+            $cant_500_cierre = (int) round($validated['coin_500'] / 500);
+            $cant_100_cierre = (int) round($validated['coin_100'] / 100);
+            $cant_50_cierre  = (int) round($validated['coin_50']  / 50);
+            $cant_10_cierre  = (int) round($validated['coin_10']  / 10);
+
+            $cierreDesglose = [
+                '20k' => $validated['cant_20k_cierre'],
+                '10k' => $validated['cant_10k_cierre'],
+                '5k'  => $validated['cant_5k_cierre'],
+                '2k'  => $validated['cant_2k_cierre'],
+                '1k'  => $validated['cant_1k_cierre'],
+                '500' => $cant_500_cierre,
+                '100' => $cant_100_cierre,
+                '50'  => $cant_50_cierre,
+                '10'  => $cant_10_cierre,
+            ];
+
             $session->update([
                 'closed_at' => now(),
                 'cant_20k_cierre' => $validated['cant_20k_cierre'],
@@ -193,17 +253,30 @@ class CashSessionController extends Controller
                 'cant_5k_cierre' => $validated['cant_5k_cierre'],
                 'cant_2k_cierre' => $validated['cant_2k_cierre'],
                 'cant_1k_cierre' => $validated['cant_1k_cierre'],
-                'cant_500_cierre' => (int) round($validated['coin_500'] / 500),
-                'cant_100_cierre' => (int) round($validated['coin_100'] / 100),
-                'cant_50_cierre'  => (int) round($validated['coin_50']  / 50),
-                'cant_10_cierre'  => (int) round($validated['coin_10']  / 10),
+                'cant_500_cierre' => $cant_500_cierre,
+                'cant_100_cierre' => $cant_100_cierre,
+                'cant_50_cierre'  => $cant_50_cierre,
+                'cant_10_cierre'  => $cant_10_cierre,
                 'total_red_compra' => $validated['total_red_compra'],
                 'total_transferencia' => $validated['total_transferencia'],
                 'total_ingresos' => $totalIngresos,
                 'total_retiros' => $totalRetiros,
+                'cierre_desglose' => $cierreDesglose,
             ]);
 
             $session->refresh();
+
+            $esperado = $session->opening_balance + (int)($cashSales / 100) + $totalIngresos - $totalRetiros;
+            $diferencia = $session->total_efectivo_cierre - $esperado;
+
+            ControlZeta::where('cash_session_id', $session->id)->update([
+                'esperado_caja'    => $esperado,
+                'efectivo_neto'    => ($session->total_efectivo_cierre + $totalRetiros) - $session->opening_balance,
+                'red_compra_total' => $session->total_red_compra,
+                'transferencia'    => $session->total_transferencia,
+                'sobrante'         => max($diferencia, 0),
+                'faltante'         => max(-$diferencia, 0),
+            ]);
 
             ZetaReport::updateOrCreate(
                 ['date' => $date, 'cashier_id' => $user->id],
@@ -216,7 +289,6 @@ class CashSessionController extends Controller
                 ],
             );
 
-            $esperado = $session->opening_balance + (int)($cashSales / 100) + $totalIngresos - $totalRetiros;
             $tz = 'America/Santiago';
             $pdfData = [
                 'sesion_id'       => $session->id,

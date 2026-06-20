@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CashSession;
+use App\Models\ControlZeta;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -61,14 +62,33 @@ class PosController extends Controller
             ($validated['cant_50_apertura'] * 50) +
             ($validated['cant_10_apertura'] * 10);
 
+        $aperturaDesglose = [
+            '20k' => $validated['cant_20k_apertura'],
+            '10k' => $validated['cant_10k_apertura'],
+            '5k'  => $validated['cant_5k_apertura'],
+            '2k'  => $validated['cant_2k_apertura'],
+            '1k'  => $validated['cant_1k_apertura'],
+            '500' => $validated['cant_500_apertura'],
+            '100' => $validated['cant_100_apertura'],
+            '50'  => $validated['cant_50_apertura'],
+            '10'  => $validated['cant_10_apertura'],
+        ];
+
         $session = CashSession::create([
-            'user_id' => $request->user()->id,
-            'opened_at' => now(),
-            'opening_balance' => $total,
+            'user_id'          => $request->user()->id,
+            'opened_at'        => now(),
+            'opening_balance'  => $total,
+            'apertura_desglose'=> $aperturaDesglose,
             ...$validated,
         ]);
 
         // total_efectivo_apertura se calcula automáticamente en el modelo (saving event)
+
+        ControlZeta::create([
+            'cash_session_id' => $session->id,
+            'fecha_apertura'  => now(),
+            'cajero'          => $request->user()->name,
+        ]);
 
         return response()->json([
             'success' => true,

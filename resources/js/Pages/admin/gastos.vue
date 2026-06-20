@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatDate } from '@/helpers/format';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import DateFilter from '@/Components/DateFilter.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import {
     ArrowUpDown,
@@ -32,23 +33,10 @@ const props = defineProps<{
     summary: { total: number; cash: number; transfer: number; count: number };
 }>();
 
-const months = [
-    'Enero',
-    'Febrero',
-    'Marzo',
-    'Abril',
-    'Mayo',
-    'Junio',
-    'Julio',
-    'Agosto',
-    'Septiembre',
-    'Octubre',
-    'Noviembre',
-    'Diciembre',
-];
-
-const selectedMonth = ref(props.month);
-const selectedYear = ref(props.year);
+const todayStr = new Date().toISOString().slice(0, 10);
+const filterDate = ref<string>(
+    `${props.year}-${String(props.month).padStart(2, '0')}-01`
+);
 const showForm = ref(false);
 const editingId = ref<number | null>(null);
 
@@ -61,14 +49,21 @@ const form = useForm({
 });
 
 function loadMonth() {
+    const [y, m] = filterDate.value.split('-');
     router.get(
         route('admin.gastos.index'),
         {
-            month: selectedMonth.value,
-            year: selectedYear.value,
+            month: parseInt(m),
+            year: parseInt(y),
         },
         { preserveState: true, preserveScroll: true },
     );
+}
+
+function onDatePicked(payload: { dia: number; mes: number; anio: number }) {
+    const m = String(payload.mes).padStart(2, '0');
+    filterDate.value = `${payload.anio}-${m}-01`;
+    loadMonth();
 }
 
 function openNew() {
@@ -91,12 +86,15 @@ function closeForm() {
     editingId.value = null;
     form.reset();
 }
+function getFilterParams() {
+    const [y, m] = filterDate.value.split('-');
+    return { month: parseInt(m), year: parseInt(y) };
+}
 function submitForm() {
     if (editingId.value) {
         form.put(route('admin.gastos.update', {
             expense: editingId.value,
-            month: selectedMonth.value,
-            year: selectedYear.value,
+            ...getFilterParams(),
         }), {
             onSuccess: closeForm,
         });
@@ -107,7 +105,7 @@ function submitForm() {
 function deleteExpense(id: number) {
     if (!confirm('¿Eliminar este gasto?')) return;
     router.delete(route('admin.gastos.destroy', id), {
-        data: { month: selectedMonth.value, year: selectedYear.value },
+        data: getFilterParams(),
         preserveScroll: true,
     });
 }
@@ -137,28 +135,11 @@ const fmt = (v: number) =>
                 <h2 class="font-bold text-content-primary dark:text-white">
                     Período
                 </h2>
-                <select
-                    v-model="selectedMonth"
-                    @change="loadMonth"
-                    class="rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                >
-                    <option v-for="(m, i) in months" :key="i" :value="i + 1">
-                        {{ m }}
-                    </option>
-                </select>
-                <select
-                    v-model="selectedYear"
-                    @change="loadMonth"
-                    class="rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                >
-                    <option
-                        v-for="y in [year - 1, year, year + 1]"
-                        :key="y"
-                        :value="y"
-                    >
-                        {{ y }}
-                    </option>
-                </select>
+                <DateFilter
+                    v-model="filterDate"
+                    label="Mes / Año"
+                    @select="onDatePicked"
+                />
                 <span
                     class="text-sm font-bold text-content-primary dark:text-white"
                     >{{ month_name }} {{ year }}</span

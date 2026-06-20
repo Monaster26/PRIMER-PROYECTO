@@ -47,6 +47,9 @@ class CashSession extends Model
         // Resumen
         'total_caja_esperado',
         'diferencia_descuadre',
+        // Desglose JSON
+        'apertura_desglose',
+        'cierre_desglose',
     ];
 
     protected function casts(): array
@@ -85,6 +88,8 @@ class CashSession extends Model
             'total_ingresos' => 'integer',
             'total_caja_esperado' => 'integer',
             'diferencia_descuadre' => 'integer',
+            'apertura_desglose' => 'array',
+            'cierre_desglose' => 'array',
         ];
     }
 

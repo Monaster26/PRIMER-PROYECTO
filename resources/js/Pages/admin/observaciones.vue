@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatDateTime } from '@/helpers/format';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import DateFilter from '@/Components/DateFilter.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Eye, FileText, ShoppingCart, Trash2 } from 'lucide-vue-next';
 import { ref } from 'vue';
@@ -19,13 +20,21 @@ const props = defineProps<{
 }>();
 
 const selectedUser = ref(props.filters.user_id ?? '');
-const selectedDate = ref(props.filters.fecha ?? '');
+const todayStr = new Date().toISOString().slice(0, 10);
+const filterDate = ref<string>(props.filters?.fecha ?? todayStr);
 
 function consultar() {
     const params: Record<string, any> = {};
     if (selectedUser.value !== '') params.user_id = selectedUser.value;
-    if (selectedDate.value !== '') params.fecha = selectedDate.value;
+    if (filterDate.value) params.fecha = filterDate.value;
     router.get(route('admin.observaciones.index', params));
+}
+
+function onDatePicked(payload: { dia: number; mes: number; anio: number }) {
+    const m = String(payload.mes).padStart(2, '0');
+    const d = String(payload.dia).padStart(2, '0');
+    filterDate.value = `${payload.anio}-${m}-${d}`;
+    consultar();
 }
 
 const accionLabel: Record<string, string> = {
@@ -69,12 +78,12 @@ const accionColor: Record<string, string> = {
                         <option v-for="u in users" :key="u.id" :value="u.id">{{ u.name }}</option>
                     </select>
                 </div>
-                <div class="min-w-[180px]">
-                    <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400">Fecha</label>
-                    <input type="date" v-model="selectedDate" @change="consultar"
-                        class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-content-primary focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
-                </div>
-                <button @click="selectedUser = ''; selectedDate = ''; consultar()"
+                <DateFilter
+                    v-model="filterDate"
+                    label="Fecha"
+                    @select="onDatePicked"
+                />
+                <button @click="selectedUser = ''; filterDate = todayStr; consultar()"
                     class="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-bold text-content-secondary transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">
                     Limpiar Filtros
                 </button>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatDate, formatTime } from '@/helpers/format';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import DateFilter from '@/Components/DateFilter.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import {
     CalendarRange,
@@ -54,7 +55,21 @@ function loadMonth() {
         },
         { preserveState: true, preserveScroll: true },
     );
-} 
+}
+
+function onFromPicked(payload: { dia: number; mes: number; anio: number }) {
+    const m = String(payload.mes).padStart(2, '0');
+    const d = String(payload.dia).padStart(2, '0');
+    filterFrom.value = `${payload.anio}-${m}-${d}`;
+    loadMonth();
+}
+
+function onToPicked(payload: { dia: number; mes: number; anio: number }) {
+    const m = String(payload.mes).padStart(2, '0');
+    const d = String(payload.dia).padStart(2, '0');
+    filterTo.value = `${payload.anio}-${m}-${d}`;
+    loadMonth();
+}
 
 function viewDetail(sale: any) {
     detailSale.value = sale;
@@ -242,28 +257,16 @@ const fmt = (v: number) =>
                     class="h-6 w-px bg-gray-200 dark:bg-gray-700"
                 ></span>
 
-                <label class="flex items-center gap-1 text-xs text-content-muted">
-                    Desde
-                    <input
-                        v-model="filterFrom"
-                        type="date"
-                        class="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                    />
-                </label>
-                <label class="flex items-center gap-1 text-xs text-content-muted">
-                    Hasta
-                    <input
-                        v-model="filterTo"
-                        type="date"
-                        class="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                    />
-                </label>
-                <button
-                    @click="loadMonth"
-                    class="rounded-xl bg-primary-500 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-primary-600"
-                >
-                    Filtrar
-                </button>
+                <DateFilter
+                    v-model="filterFrom"
+                    label="Desde"
+                    @select="onFromPicked"
+                />
+                <DateFilter
+                    v-model="filterTo"
+                    label="Hasta"
+                    @select="onToPicked"
+                />
                 <button
                     @click="filterFrom = ''; filterTo = ''; loadMonth()"
                     class="rounded-xl border border-gray-200 px-3 py-1.5 text-xs font-bold text-content-muted transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"

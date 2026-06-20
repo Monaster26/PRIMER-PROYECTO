@@ -116,6 +116,11 @@ const navGroups = computed(() => {
                 label: 'Finanzas',
                 items: [
                     {
+                        label: 'Z Mensual',
+                        name: 'admin.z-mensual.index',
+                        icon: BarChart3,
+                    },
+                    {
                         label: 'Gastos',
                         name: 'admin.gastos.index',
                         icon: ReceiptText,
