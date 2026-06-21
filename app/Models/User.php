@@ -43,11 +43,6 @@ class User extends Authenticatable
         return $this->hasMany(CashSession::class);
     }
 
-    public function zetaReports(): HasMany
-    {
-        return $this->hasMany(ZetaReport::class, 'cashier_id');
-    }
-
     public function sales(): HasMany
     {
         return $this->hasMany(Sale::class, 'user_id');

@@ -3,7 +3,7 @@ export function formatDate(dateStr) {
     let parts;
     if (
         typeof dateStr === 'string' &&
-        (parts = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/))
+        (parts = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/))
     ) {
         const [, y, m, d] = parts.map(Number);
         return new Date(y, m - 1, d).toLocaleDateString('es-CL', {

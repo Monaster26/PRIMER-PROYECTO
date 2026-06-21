@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class CashSession extends Model
 {
@@ -155,14 +154,4 @@ class CashSession extends Model
         return $this->hasMany(CashMovement::class, 'sesion_caja_id');
     }
 
-    public function zetaReport(): HasOne
-    {
-        return $this->hasOne(ZetaReport::class, 'date', 'date')
-            ->whereColumn('cashier_id', 'user_id');
-    }
-
-    public function dailyControl(): HasOne
-    {
-        return $this->hasOne(DailyControl::class, 'date', 'date');
-    }
 }

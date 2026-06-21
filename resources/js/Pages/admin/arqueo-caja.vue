@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import DateFilter from '@/Components/DateFilter.vue';
 import { formatDate, formatTime } from '@/helpers/format';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import DateFilter from '@/Components/DateFilter.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { Check, Eye, EyeOff, Plus, Trash2, Wallet, X } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
@@ -47,15 +47,19 @@ const todayStr = new Date().toISOString().slice(0, 10);
 const filterDate = ref<string>(
     props.filters?.dia && props.filters?.mes && props.filters?.anio
         ? `${props.filters.anio}-${String(props.filters.mes).padStart(2, '0')}-${String(props.filters.dia).padStart(2, '0')}`
-        : todayStr
+        : todayStr,
 );
 
 function onDatePicked(payload: { dia: number; mes: number; anio: number }) {
-    router.get(route('admin.arqueo-caja.index'), {
-        dia: payload.dia,
-        mes: payload.mes,
-        anio: payload.anio,
-    }, { preserveState: true, preserveScroll: true });
+    router.get(
+        route('admin.arqueo-caja.index'),
+        {
+            dia: payload.dia,
+            mes: payload.mes,
+            anio: payload.anio,
+        },
+        { preserveState: true, preserveScroll: true },
+    );
 }
 
 const denominations = [
@@ -328,6 +332,9 @@ const auditTotalCierre = computed(() => {
                         class="bg-gray-50 text-[10px] uppercase tracking-wider text-content-muted dark:bg-gray-900/50 dark:text-gray-500"
                     >
                         <tr>
+                            <th class="px-4 py-2 text-center font-bold">
+                                Reporte Z
+                            </th>
                             <th class="px-4 py-2 font-bold">Cajero</th>
                             <th class="px-4 py-2 font-bold">Apertura</th>
                             <th class="px-4 py-2 font-bold">Cierre</th>
@@ -353,7 +360,7 @@ const auditTotalCierre = computed(() => {
                     >
                         <tr v-if="!sessions.data?.length">
                             <td
-                                colspan="8"
+                                colspan="9"
                                 class="px-4 py-8 text-center text-xs text-content-muted dark:text-gray-500"
                             >
                                 No hay sesiones de caja registradas.
@@ -364,6 +371,11 @@ const auditTotalCierre = computed(() => {
                             :key="s.id"
                             class="group transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
                         >
+                            <td
+                                class="px-4 py-2 text-center font-mono text-xs font-bold text-content-primary"
+                            >
+                                #{{ String(s.id).padStart(8, '0') }}
+                            </td>
                             <td
                                 class="px-4 py-2 text-xs font-medium text-content-primary dark:text-white"
                             >
@@ -994,7 +1006,9 @@ const auditTotalCierre = computed(() => {
                                                 ]"
                                             />
                                             <p
-                                                v-if="form.errors.total_ingresos"
+                                                v-if="
+                                                    form.errors.total_ingresos
+                                                "
                                                 class="mt-0.5 text-[9px] text-danger"
                                             >
                                                 {{ form.errors.total_ingresos }}
@@ -1112,7 +1126,9 @@ const auditTotalCierre = computed(() => {
 
                                 <!-- Cash Movements Reference -->
                                 <div
-                                    v-if="cashMovements && cashMovements.count > 0"
+                                    v-if="
+                                        cashMovements && cashMovements.count > 0
+                                    "
                                     class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 dark:border-emerald-800 dark:bg-emerald-900/10"
                                 >
                                     <div
@@ -1121,11 +1137,25 @@ const auditTotalCierre = computed(() => {
                                         Movimientos del día
                                     </div>
                                     <div class="flex gap-4 text-[11px]">
-                                        <span class="font-medium text-emerald-600 dark:text-emerald-400">
-                                            +${{ cashMovements.total_ingresos.toLocaleString('es-CL') }} ingresos
+                                        <span
+                                            class="font-medium text-emerald-600 dark:text-emerald-400"
+                                        >
+                                            +${{
+                                                cashMovements.total_ingresos.toLocaleString(
+                                                    'es-CL',
+                                                )
+                                            }}
+                                            ingresos
                                         </span>
-                                        <span class="font-medium text-orange-600 dark:text-orange-400">
-                                            -${{ cashMovements.total_retiros.toLocaleString('es-CL') }} retiros
+                                        <span
+                                            class="font-medium text-orange-600 dark:text-orange-400"
+                                        >
+                                            -${{
+                                                cashMovements.total_retiros.toLocaleString(
+                                                    'es-CL',
+                                                )
+                                            }}
+                                            retiros
                                         </span>
                                     </div>
                                 </div>
@@ -1225,22 +1255,46 @@ const auditTotalCierre = computed(() => {
                         v-if="auditSession"
                         class="border-b border-gray-100 bg-gray-50/50 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/30"
                     >
-                        <div class="flex flex-wrap items-center gap-x-6 gap-y-1 text-[11px]">
-                            <span class="font-bold text-content-primary dark:text-white">
+                        <div
+                            class="flex flex-wrap items-center gap-x-6 gap-y-1 text-[11px]"
+                        >
+                            <span
+                                class="font-bold text-content-primary dark:text-white"
+                            >
                                 {{ auditSession.user?.name || '—' }}
                             </span>
                             <span class="text-content-muted">|</span>
                             <span class="text-content-secondary">
                                 Apertura:
-                                <span class="font-semibold text-content-primary">
-                                    {{ auditSession.opened_at ? formatDate(auditSession.opened_at) + ' ' + formatTime(auditSession.opened_at) : '—' }}
+                                <span
+                                    class="font-semibold text-content-primary"
+                                >
+                                    {{
+                                        auditSession.opened_at
+                                            ? formatDate(
+                                                  auditSession.opened_at,
+                                              ) +
+                                              ' ' +
+                                              formatTime(auditSession.opened_at)
+                                            : '—'
+                                    }}
                                 </span>
                             </span>
                             <span class="text-content-muted">|</span>
                             <span class="text-content-secondary">
                                 Cierre:
-                                <span class="font-semibold text-content-primary">
-                                    {{ auditSession.closed_at ? formatDate(auditSession.closed_at) + ' ' + formatTime(auditSession.closed_at) : '—' }}
+                                <span
+                                    class="font-semibold text-content-primary"
+                                >
+                                    {{
+                                        auditSession.closed_at
+                                            ? formatDate(
+                                                  auditSession.closed_at,
+                                              ) +
+                                              ' ' +
+                                              formatTime(auditSession.closed_at)
+                                            : '—'
+                                    }}
                                 </span>
                             </span>
                         </div>
@@ -1295,7 +1349,10 @@ const auditTotalCierre = computed(() => {
                                                 class="py-1 text-center font-mono text-[11px] font-bold text-content-primary"
                                             >
                                                 {{
-                                                    auditSession?.apertura_desglose?.[d.key] ?? 0
+                                                    auditSession
+                                                        ?.apertura_desglose?.[
+                                                        d.key
+                                                    ] ?? 0
                                                 }}
                                             </td>
                                             <td
@@ -1303,7 +1360,10 @@ const auditTotalCierre = computed(() => {
                                             >
                                                 {{
                                                     fmtCLP(
-                                                        (auditSession?.apertura_desglose?.[d.key] ?? 0) * d.value
+                                                        (auditSession
+                                                            ?.apertura_desglose?.[
+                                                            d.key
+                                                        ] ?? 0) * d.value,
                                                     )
                                                 }}
                                             </td>
@@ -1377,7 +1437,10 @@ const auditTotalCierre = computed(() => {
                                                 class="py-1 text-center font-mono text-[11px] font-bold text-content-primary"
                                             >
                                                 {{
-                                                    auditSession?.cierre_desglose?.[d.key] ?? 0
+                                                    auditSession
+                                                        ?.cierre_desglose?.[
+                                                        d.key
+                                                    ] ?? 0
                                                 }}
                                             </td>
                                             <td
@@ -1385,7 +1448,10 @@ const auditTotalCierre = computed(() => {
                                             >
                                                 {{
                                                     fmtCLP(
-                                                        (auditSession?.cierre_desglose?.[d.key] ?? 0) * d.value
+                                                        (auditSession
+                                                            ?.cierre_desglose?.[
+                                                            d.key
+                                                        ] ?? 0) * d.value,
                                                     )
                                                 }}
                                             </td>
@@ -1410,24 +1476,23 @@ const auditTotalCierre = computed(() => {
                                     </tfoot>
                                 </table>
 
-                                <!-- Summary Cards -->
-                                <div
-                                    class="mt-3 grid grid-cols-2 gap-2"
-                                >
+                                <!-- Payment methods -->
+                                <div class="mt-3 grid grid-cols-2 gap-2">
                                     <div
                                         class="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800"
                                     >
                                         <div
                                             class="text-[9px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
                                         >
-                                            Efvo. Cierre
+                                            Redcompra Declarada
                                         </div>
                                         <div
                                             class="font-mono text-xs font-bold text-content-primary"
                                         >
                                             {{
                                                 fmtCLP(
-                                                    auditSession?.total_efectivo_cierre || 0
+                                                    auditSession?.total_red_compra ||
+                                                        0,
                                                 )
                                             }}
                                         </div>
@@ -1438,101 +1503,19 @@ const auditTotalCierre = computed(() => {
                                         <div
                                             class="text-[9px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
                                         >
-                                            + Red C./Transf.
+                                            Transferencia Declarada
                                         </div>
                                         <div
                                             class="font-mono text-xs font-bold text-content-primary"
                                         >
                                             {{
                                                 fmtCLP(
-                                                    (auditSession?.total_red_compra || 0) +
-                                                    (auditSession?.total_transferencia || 0)
+                                                    auditSession?.total_transferencia ||
+                                                        0,
                                                 )
                                             }}
                                         </div>
                                     </div>
-                                    <div
-                                        class="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800"
-                                    >
-                                        <div
-                                            class="text-[9px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
-                                        >
-                                            Esperado en Caja
-                                        </div>
-                                        <div
-                                            class="font-mono text-xs font-bold text-primary-500"
-                                        >
-                                            {{
-                                                fmtCLP(
-                                                    auditSession?.total_caja_esperado || 0
-                                                )
-                                            }}
-                                        </div>
-                                    </div>
-                                    <div
-                                        :class="
-                                            auditSession?.diferencia_descuadre != null
-                                                ? auditSession.diferencia_descuadre < 0
-                                                    ? 'border-danger/20 bg-danger/5'
-                                                    : auditSession.diferencia_descuadre > 0
-                                                        ? 'border-success/20 bg-success/5'
-                                                        : 'border-gray-200 bg-white'
-                                                : 'border-gray-200 bg-white'
-                                        "
-                                        class="rounded-lg border p-2"
-                                    >
-                                        <div
-                                            class="text-[9px] font-bold uppercase tracking-wider"
-                                            :class="
-                                                auditSession?.diferencia_descuadre != null
-                                                    ? auditSession.diferencia_descuadre < 0
-                                                        ? 'text-danger'
-                                                        : auditSession.diferencia_descuadre > 0
-                                                            ? 'text-success'
-                                                            : 'text-content-muted'
-                                                    : 'text-content-muted'
-                                            "
-                                        >
-                                            {{
-                                                auditSession?.diferencia_descuadre != null
-                                                    ? auditSession.diferencia_descuadre < 0
-                                                        ? 'Descuadre'
-                                                        : auditSession.diferencia_descuadre > 0
-                                                            ? 'Sobrante'
-                                                            : 'Cuadrado'
-                                                    : 'Diferencia'
-                                            }}
-                                        </div>
-                                        <div
-                                            class="font-mono text-xs font-bold"
-                                            :class="
-                                                auditSession?.diferencia_descuadre != null
-                                                    ? auditSession.diferencia_descuadre < 0
-                                                        ? 'text-danger'
-                                                        : auditSession.diferencia_descuadre > 0
-                                                            ? 'text-success'
-                                                            : 'text-content-primary'
-                                                    : 'text-content-muted'
-                                            "
-                                        >
-                                            {{
-                                                auditSession?.diferencia_descuadre != null
-                                                    ? fmtCLP(auditSession.diferencia_descuadre)
-                                                    : '—'
-                                            }}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Audit footer note -->
-                                <div
-                                    class="mt-3 rounded-lg border border-gray-200 bg-white px-3 py-2 text-[10px] text-content-muted dark:border-gray-700 dark:bg-gray-800"
-                                >
-                                    <span class="font-semibold text-content-primary">Retiros:</span>
-                                    {{ fmtCLP(auditSession?.total_retiros || 0) }}
-                                    &nbsp;·&nbsp;
-                                    <span class="font-semibold text-content-primary">Ingresos:</span>
-                                    {{ fmtCLP(auditSession?.total_ingresos || 0) }}
                                 </div>
                             </div>
                         </div>

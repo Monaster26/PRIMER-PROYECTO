@@ -2,11 +2,8 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     BarChart3,
-    CalendarRange,
-    ClipboardList,
     CreditCard,
     Eye,
-    FileText,
     GitCompareArrows,
     LayoutDashboard,
     Package,
@@ -101,11 +98,6 @@ const navGroups = computed(() => {
                         icon: ShoppingCart,
                     },
                     {
-                        label: 'Reportes Zeta',
-                        name: 'admin.zeta.index',
-                        icon: FileText,
-                    },
-                    {
                         label: 'Observaciones',
                         name: 'admin.observaciones.index',
                         icon: Eye,
@@ -129,16 +121,6 @@ const navGroups = computed(() => {
                         label: 'Facturas Pendientes',
                         name: 'admin.facturas-pendientes.index',
                         icon: CreditCard,
-                    },
-                    {
-                        label: 'Control Diario',
-                        name: 'admin.control-diario.index',
-                        icon: ClipboardList,
-                    },
-                    {
-                        label: 'Resumen Mensual',
-                        name: 'admin.resumen-mensual.index',
-                        icon: CalendarRange,
                     },
                 ],
             },

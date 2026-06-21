@@ -30,7 +30,7 @@
     <tr><td class="lbl">Cajero:</td><td class="val">{{ $cajero }}</td></tr>
     <tr><td class="lbl">Apertura:</td><td class="val">{{ $apertura }}</td></tr>
     <tr><td class="lbl">Cierre:</td><td class="val">{{ $cierre }}</td></tr>
-    <tr><td class="lbl">Sesión #:</td><td class="val">{{ $sesion_id }}</td></tr>
+    <tr><td class="lbl">Reporte Z:</td><td class="val">{{ str_pad($sesion_id, 8, '0', STR_PAD_LEFT) }}</td></tr>
 </table>
 
 <hr>

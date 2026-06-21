@@ -3,11 +3,9 @@
 use App\Http\Controllers\Admin\CashMovementController;
 use App\Http\Controllers\Admin\CashSessionController;
 use App\Http\Controllers\Admin\ControlZetaController;
-use App\Http\Controllers\Admin\DailyControlController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ExpenseController;
 use App\Http\Controllers\Admin\LossController;
-use App\Http\Controllers\Admin\MonthlySummaryController;
 use App\Http\Controllers\Admin\ObservacionController;
 use App\Http\Controllers\Admin\PendingInvoiceController;
 use App\Http\Controllers\Admin\PosController;
@@ -18,7 +16,6 @@ use App\Http\Controllers\Admin\SaleController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\SupplierProductPriceController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\ZetaReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
@@ -73,10 +70,6 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::resource('comparativa-precios', SupplierProductPriceController::class)
             ->except(['show', 'create', 'edit']);
 
-        // Control diario
-        Route::resource('control-diario', DailyControlController::class)
-            ->except(['show', 'create', 'edit']);
-
         // Z Mensual
         Route::get('z-mensual', [ControlZetaController::class, 'index'])->name('z-mensual.index');
         Route::put('z-mensual/{controlZeta}', [ControlZetaController::class, 'update'])->name('z-mensual.update');
@@ -92,14 +85,6 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 
         // Pérdidas
         Route::resource('perdida', LossController::class)
-            ->except(['show', 'create', 'edit']);
-
-        // Reportes Zeta
-        Route::resource('zeta', ZetaReportController::class)
-            ->except(['show', 'create', 'edit']);
-
-        // Resumen mensual
-        Route::resource('resumen-mensual', MonthlySummaryController::class)
             ->except(['show', 'create', 'edit']);
 
         // Pedidos a proveedores

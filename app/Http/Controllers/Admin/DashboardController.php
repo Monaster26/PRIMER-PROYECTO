@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Sale;
-use App\Models\CashSession;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -15,11 +14,11 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
-        if ($user->hasRole('admin')) {
-            return $this->adminDashboard();
+        if (!$user->hasRole('admin')) {
+            return redirect()->route('admin.pos');
         }
 
-        return $this->cashierDashboard($user);
+        return $this->adminDashboard();
     }
 
     private function adminDashboard()
@@ -65,35 +64,4 @@ class DashboardController extends Controller
         ]);
     }
 
-    private function cashierDashboard($user)
-    {
-        $today = now()->toDateString();
-
-        $todaySales = Sale::whereDate('created_at', $today)
-            ->where('user_id', $user->id);
-
-        $todayTotal = (int) $todaySales->sum('total');
-        $todayCount = (clone $todaySales)->count();
-
-        $openSession = CashSession::where('user_id', $user->id)
-            ->whereNull('closed_at')
-            ->first();
-
-        $recentSales = Sale::with('items.product')
-            ->where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
-
-        return Inertia::render('admin/dashboard', [
-            'role' => 'cashier',
-            'stats' => [
-                'today_sales' => $todayTotal,
-                'today_count' => $todayCount,
-                'has_open_session' => $openSession !== null,
-                'session_opened_at' => $openSession?->opened_at,
-            ],
-            'recent_sales' => $recentSales,
-        ]);
-    }
 }

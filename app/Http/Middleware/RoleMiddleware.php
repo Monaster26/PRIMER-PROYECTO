@@ -10,14 +10,22 @@ class RoleMiddleware
 {
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (!$request->user()) {
+        $user = $request->user();
+
+        if (!$user) {
             abort(403, 'No tienes permisos para acceder a esta sección.');
         }
+
         foreach ($roles as $role) {
-            if ($request->user()->hasRole(trim($role))) {
+            if ($user->hasRole(trim($role))) {
                 return $next($request);
             }
         }
+
+        if ($user->hasRole('cashier')) {
+            return redirect()->route('admin.pos');
+        }
+
         abort(403, 'No tienes permisos para acceder a esta sección.');
     }
 }

@@ -40,7 +40,7 @@ Route::get('/pos-test', function () {
 |--------------------------------------------------------------------------
 */
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+    return redirect('/admin');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 /*

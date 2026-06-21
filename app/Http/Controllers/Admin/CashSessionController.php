@@ -8,7 +8,6 @@ use App\Models\CashSession;
 use App\Models\ControlZeta;
 use App\Models\Sale;
 use App\Models\User;
-use App\Models\ZetaReport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -166,19 +165,7 @@ class CashSessionController extends Controller
 
         $cashSession->refresh();
 
-        ZetaReport::updateOrCreate(
-            ['date' => $date, 'cashier_id' => $cashSession->user_id],
-            [
-                'total_z' => $cashSession->total_caja_esperado ?? 0,
-                'net_cash' => $cashSession->total_efectivo_cierre ?? 0,
-                'transfers' => $cashSession->total_transferencia ?? 0,
-                'pos_card_total' => $cashSession->total_red_compra ?? 0,
-                'observations' => $validated['observations'] ?? null,
-                'status' => 'pending_review',
-            ],
-        );
-
-        return redirect()->route('admin.arqueo-caja.index')->with('success', 'Sesión cerrada. Zeta y Control Diario actualizados.');
+        return redirect()->route('admin.arqueo-caja.index')->with('success', 'Sesión cerrada correctamente.');
     }
 
     public function closeFromPos(Request $request): JsonResponse
@@ -218,14 +205,12 @@ class CashSessionController extends Controller
             $validated['coin_50'] ??= 0;
             $validated['coin_10'] ??= 0;
 
-            $date = $session->date ?? now()->toDateString();
-
             $cashSales = Sale::where('user_id', $user->id)
-                ->whereDate('created_at', $date)
+                ->whereBetween('created_at', [$session->opened_at, now()])
                 ->sum('cash_amount');
 
             $movementQuery = CashMovement::where('user_id', $user->id)
-                ->whereDate('created_at', $date);
+                ->where('sesion_caja_id', $session->id);
             $totalIngresos = (int) (clone $movementQuery)->where('type', 'ingreso')->sum('amount');
             $totalRetiros  = (int) (clone $movementQuery)->where('type', 'retiro')->sum('amount');
 
@@ -277,17 +262,6 @@ class CashSessionController extends Controller
                 'sobrante'         => max($diferencia, 0),
                 'faltante'         => max(-$diferencia, 0),
             ]);
-
-            ZetaReport::updateOrCreate(
-                ['date' => $date, 'cashier_id' => $user->id],
-                [
-                    'total_z' => $session->total_caja_esperado ?? 0,
-                    'net_cash' => $session->total_efectivo_cierre ?? 0,
-                    'transfers' => $session->total_transferencia,
-                    'pos_card_total' => $session->total_red_compra,
-                    'status' => 'pending_review',
-                ],
-            );
 
             $tz = 'America/Santiago';
             $pdfData = [
@@ -363,14 +337,12 @@ class CashSessionController extends Controller
             return redirect()->route('admin.pos');
         }
 
-        $date = $cashSession->date ?? $cashSession->opened_at->toDateString();
-
         $cashSales = Sale::where('user_id', $cashSession->user_id)
-            ->whereDate('created_at', $date)
+            ->whereBetween('created_at', [$cashSession->opened_at, $cashSession->closed_at])
             ->sum('cash_amount');
 
         $movementQuery = CashMovement::where('user_id', $cashSession->user_id)
-            ->whereDate('created_at', $date);
+            ->where('sesion_caja_id', $cashSession->id);
         $totalIngresos = (int) (clone $movementQuery)->where('type', 'ingreso')->sum('amount');
         $totalRetiros  = (int) (clone $movementQuery)->where('type', 'retiro')->sum('amount');
 
