@@ -45,7 +45,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::delete('arqueo-caja/{cashSession}', [CashSessionController::class, 'destroy'])
             ->name('arqueo-caja.destroy');
 
-        // Reporte Diario (independiente de sesión de caja)
+        // Corte Diario (independiente de sesión de caja)
         Route::get('reporte-diario', [ReporteDiarioController::class, 'index'])->name('reporte-diario');
 
         // Catálogo de productos

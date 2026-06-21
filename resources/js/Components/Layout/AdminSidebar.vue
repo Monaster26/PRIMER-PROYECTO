@@ -57,16 +57,32 @@ const navGroups = computed(() => {
         groups.push({
             label: 'Caja',
             items: [
-                { label: 'Caja Rápida (POS)', name: 'admin.pos', icon: ShoppingCart },
-                { label: 'Arqueo de Caja', name: 'admin.arqueo-caja.index', icon: Wallet },
-                { label: 'Reporte Diario', name: 'admin.reporte-diario', icon: BarChart3 },
+                {
+                    label: 'Caja Rápida (POS)',
+                    name: 'admin.pos',
+                    icon: ShoppingCart,
+                },
+                {
+                    label: 'Arqueo de Caja',
+                    name: 'admin.arqueo-caja.index',
+                    icon: Wallet,
+                },
+                {
+                    label: 'Corte Diario',
+                    name: 'admin.reporte-diario',
+                    icon: BarChart3,
+                },
             ],
         });
     } else if (isCashier.value) {
         groups.push({
             label: 'Caja',
             items: [
-                { label: 'Caja Rápida (POS)', name: 'admin.pos', icon: ShoppingCart },
+                {
+                    label: 'Caja Rápida (POS)',
+                    name: 'admin.pos',
+                    icon: ShoppingCart,
+                },
             ],
         });
     }
