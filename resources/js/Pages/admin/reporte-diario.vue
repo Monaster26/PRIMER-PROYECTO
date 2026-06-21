@@ -21,8 +21,6 @@ const props = defineProps<{
         ingresos: number;
         withdrawals: number;
         expected: number;
-        efectivoCierre: number;
-        diferencia: number;
     };
     digitalSales: {
         card: number;
@@ -67,28 +65,7 @@ const profitMargin = computed(() => {
     return (props.summary.netProfit / props.summary.grossSales) * 100;
 });
 
-const diferenciaLabel = computed(() => {
-    const d = props.cashBalance.diferencia;
-    if (d < 0) return `Faltante: ${fmt(Math.abs(d))}`;
-    if (d > 0) return `Sobrante: +${fmt(d)}`;
-    return 'Caja Cuadrada';
-});
 
-const diferenciaTitle = computed(() => {
-    const d = props.cashBalance.diferencia;
-    if (d < 0) return 'Diferencia (Faltante)';
-    if (d > 0) return 'Diferencia (Sobrante)';
-    return 'Resultado';
-});
-
-const diferenciaColor = computed(() => {
-    const d = props.cashBalance.diferencia;
-    if (d < 0)
-        return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400';
-    if (d > 0)
-        return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400';
-    return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400';
-});
 </script>
 
 <template>
@@ -208,25 +185,6 @@ const diferenciaColor = computed(() => {
                         >
                             {{ fmt(cashBalance.expected) }}
                         </p>
-                    </div>
-                </div>
-                <!-- Descuadre -->
-                <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-2">
-                    <div class="rounded-xl bg-gray-50 p-3 dark:bg-gray-800/50">
-                        <p class="text-xs text-gray-400">
-                            Efectivo Real (Cierre)
-                        </p>
-                        <p
-                            class="text-lg font-bold text-gray-800 dark:text-white"
-                        >
-                            {{ fmt(cashBalance.efectivoCierre) }}
-                        </p>
-                    </div>
-                    <div class="rounded-xl p-3" :class="diferenciaColor">
-                        <p class="text-xs font-semibold uppercase opacity-70">
-                            {{ diferenciaTitle }}
-                        </p>
-                        <p class="text-lg font-bold">{{ diferenciaLabel }}</p>
                     </div>
                 </div>
             </div>
@@ -406,7 +364,7 @@ const diferenciaColor = computed(() => {
                         <p
                             class="text-xs text-primary-600 dark:text-primary-400"
                         >
-                            Total General (Apertura + Ventas)
+                            Total General (Apertura + Ventas + Ingresos - Retiros)
                         </p>
                         <p
                             class="text-2xl font-bold text-primary-700 dark:text-primary-300"

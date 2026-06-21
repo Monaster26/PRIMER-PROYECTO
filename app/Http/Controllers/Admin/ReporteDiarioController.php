@@ -110,8 +110,6 @@ class ReporteDiarioController extends Controller
                 'ingresos'        => $totalIngresos,
                 'withdrawals'     => $totalRetiros,
                 'expected'        => $openingBalance + $cashSales + $totalIngresos - $totalRetiros,
-                'efectivoCierre'  => $efectivoCierre,
-                'diferencia'      => $efectivoCierre - ($openingBalance + $cashSales + $totalIngresos - $totalRetiros),
             ],
             'digitalSales' => [
                 'card'     => $cardSales,
@@ -121,7 +119,7 @@ class ReporteDiarioController extends Controller
             'byCategory' => $byCategory,
             'summary' => [
                 'grossSales'   => $grandTotal,
-                'totalGeneral' => $openingBalance + $grandTotal,
+                'totalGeneral' => $openingBalance + $grandTotal + $totalIngresos - $totalRetiros,
                 'netProfit'    => $netProfit,
             ],
         ]);
