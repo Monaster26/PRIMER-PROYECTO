@@ -885,7 +885,7 @@ function validateCoin(key: string) {
                                  }
                              "
                              type="text"
-                             placeholder="Buscar por nombre, SKU o código..."
+                             placeholder="Buscar por nombre"
                              class="w-full rounded-2xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                          />
                         <div
