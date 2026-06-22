@@ -248,6 +248,15 @@ const isBalanced = computed(
     () => Math.abs(remaining.value) < 0.01 && total.value > 0,
 );
 
+watch(total, (newTotal) => {
+    const card = activeTab.value.payments.find(p => p.method === 'card');
+    const cash = activeTab.value.payments.find(p => p.method === 'cash');
+    const transfer = activeTab.value.payments.find(p => p.method === 'transfer');
+    if (card) card.amount = newTotal > 0 ? Math.round(newTotal) : null;
+    if (cash) cash.amount = null;
+    if (transfer) transfer.amount = null;
+});
+
 type BalanceState = 'exacto' | 'faltante' | 'exceso';
 
 const balanceState = computed<BalanceState | null>(() => {
@@ -706,6 +715,31 @@ const fmtDec = (v: number) =>
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
     });
+
+function onPaymentFocus(e: Event, method: string) {
+    const input = e.target as HTMLInputElement;
+    const currentPayment = activeTab.value.payments.find(p => p.method === method);
+    const currentAmount = Number(currentPayment?.amount) || 0;
+
+    const others = activeTab.value.payments.filter(p => p.method !== method);
+    const otherSum = others.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const nonZeroOthers = others.filter(p => Number(p.amount) > 0);
+
+    // ponytail: symmetry — move total from sole other field to focused field
+    if (otherSum >= total.value && currentAmount === 0 && nonZeroOthers.length === 1) {
+        others.forEach(p => p.amount = null);
+    }
+
+    const freshOthers = activeTab.value.payments.filter(p => p.method !== method);
+    const freshOtherSum = freshOthers.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const saldo = Math.max(0, total.value - freshOtherSum);
+
+    if (currentPayment) {
+        currentPayment.amount = saldo > 0 ? Math.round(saldo) : null;
+    }
+
+    setTimeout(() => input.select(), 0);
+}
 
 function formatCoin(val: number | null): string {
     if (val === null || val === undefined) return '';
@@ -1384,6 +1418,7 @@ function validateCoin(key: string) {
                             >
                             <input
                                 v-model.number="payment.amount"
+                                @focus="onPaymentFocus($event, payment.method)"
                                 type="number"
                                 min="0"
                                 step="100"
