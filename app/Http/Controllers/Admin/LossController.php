@@ -74,8 +74,12 @@ class LossController extends Controller
             $product->increment('stock', $loss->quantity);
         }
 
+        $month = (int) (request('month') ?? now()->month);
+        $year  = (int) (request('year') ?? now()->year);
+
         try {
             $loss->delete();
+            session()->flash('success', 'Pérdida eliminada y stock restaurado.');
         } catch (\Throwable $e) {
             Log::error('Error al eliminar pérdida #{id}: {msg}', [
                 'id'  => $loss->id,
@@ -84,16 +88,13 @@ class LossController extends Controller
             if ($product) {
                 $product->decrement('stock', $loss->quantity);
             }
-            return redirect()->route('admin.perdida.index', [
-                'month' => request('month', now()->month),
-                'year'  => request('year', now()->year),
-            ])->with('error', 'No se pudo eliminar la pérdida.');
+            session()->flash('error', 'No se pudo eliminar la pérdida.');
         }
 
         return redirect()->route('admin.perdida.index', [
-            'month' => request('month', now()->month),
-            'year'  => request('year', now()->year),
-        ])->with('success', 'Pérdida eliminada y stock restaurado.');
+            'month' => $month,
+            'year'  => $year,
+        ]);
     }
 
     public function update(Request $request, Loss $loss): RedirectResponse
