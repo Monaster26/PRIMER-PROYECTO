@@ -178,7 +178,7 @@ const profitMargin = computed(() => {
                         <p
                             class="text-xs text-primary-600 dark:text-primary-400"
                         >
-                            = Total Esperado
+                            = Total Efectivo en caja
                         </p>
                         <p
                             class="text-lg font-bold text-primary-700 dark:text-primary-300"

@@ -68,6 +68,11 @@ const scannerRef = ref<HTMLInputElement | null>(null);
 const searchRef = ref<HTMLInputElement | null>(null);
 const searchQuery = ref('');
 const showSearchDropdown = ref(false);
+
+function focusBarcodeInput() {
+    scannerRef.value?.focus();
+    scannerRef.value?.select();
+}
 const searchFocused = ref(false);
 const checkoutLoading = ref(false);
 const lastSaleId = ref<number | null>(null);
@@ -1237,6 +1242,7 @@ function validateCoin(key: string) {
                                         </button>
                                         <input
                                             v-model.number="item.quantity"
+                                            @keydown.enter.prevent="focusBarcodeInput"
                                             type="number"
                                             min="1"
                                             :max="item.product.stock"

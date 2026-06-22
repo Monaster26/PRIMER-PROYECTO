@@ -2,6 +2,7 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     BarChart3,
+    ClipboardList,
     CreditCard,
     Eye,
     GitCompareArrows,
@@ -112,6 +113,11 @@ const navGroups = computed(() => {
                         label: 'Pérdidas',
                         name: 'admin.perdida.index',
                         icon: TrendingDown,
+                    },
+                    {
+                        label: 'Auditoria de inventario',
+                        name: 'admin.inventory-adjustments.create',
+                        icon: ClipboardList,
                     },
                 ],
             },

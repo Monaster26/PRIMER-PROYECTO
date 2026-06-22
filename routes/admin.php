@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CashSessionController;
 use App\Http\Controllers\Admin\ControlZetaController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ExpenseController;
+use App\Http\Controllers\Admin\InventoryAdjustmentController;
 use App\Http\Controllers\Admin\LossController;
 use App\Http\Controllers\Admin\ObservacionController;
 use App\Http\Controllers\Admin\PendingInvoiceController;
@@ -110,5 +111,12 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
             ->name('observaciones.mark-read');
         Route::put('observaciones/{observacion}', [ObservacionController::class, 'update'])
             ->name('observaciones.update');
+
+        // Auditoria de Inventario
+        Route::prefix('inventory-adjustments')->name('inventory-adjustments.')->group(function () {
+            Route::get('/create', [InventoryAdjustmentController::class, 'create'])->name('create');
+            Route::post('/scan', [InventoryAdjustmentController::class, 'scanProduct'])->name('scan');
+            Route::post('/', [InventoryAdjustmentController::class, 'store'])->name('store');
+        });
     });
 });
