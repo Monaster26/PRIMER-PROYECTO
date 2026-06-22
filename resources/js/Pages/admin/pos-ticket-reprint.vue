@@ -52,11 +52,11 @@ onMounted(() => {
     <div id="thermal-ticket" class="mx-auto w-[80mm] bg-white p-4 text-[10px]">
         <div class="text-center">
             <img src="/images/logo.png" alt="Monasterio Market" class="mx-auto mb-2 h-12 w-auto object-contain" />
-            <p class="text-xs font-bold uppercase tracking-wider">Monasterio Market Spa</p>
+            <p class="text-xs font-bold uppercase tracking-wider">Monasterios Market Spa</p>
             <p class="mt-0.5">RUT: 76.367.537-0</p>
             <p class="mt-0.5 leading-tight">Venta al por menor de alimentos, accesorios de teléfono y ventas por internet</p>
             <p>Código SII: 472101</p>
-            <p class="mt-0.5">Santiago,Av. Manuel Antonio Matta 833, Local 7</p>
+            <p class="mt-0.5">Santiago, Av. Manuel Antonio Matta 833, Local 7</p>
         </div>
 
         <div class="my-3 border-t border-dashed border-gray-400"></div>

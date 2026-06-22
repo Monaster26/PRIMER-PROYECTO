@@ -1267,10 +1267,11 @@ function validateCoin(key: string) {
                     <div class="flex items-center gap-1">
                         <button
                             @click="openSalesHistory"
-                            class="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-50 text-blue-500 transition-colors hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
+                            class="flex items-center gap-1.5 rounded-xl bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
                             title="Historial de Ventas"
                         >
-                            <Clock class="h-4 w-4" />
+                            <Clock class="h-3.5 w-3.5" />
+                            <span>Historial de venta</span>
                         </button>
                         <button
                             @click.stop="toggleMenu"
