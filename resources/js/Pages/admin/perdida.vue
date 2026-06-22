@@ -136,12 +136,11 @@ function confirmDelete(id: number) {
 function executeDelete() {
     if (deleteTarget.value === null || deleting.value) return;
     deleting.value = true;
-    router.delete(route('admin.perdida.destroy', deleteTarget.value), {
-        data: getFilterParams(),
+    router.delete(route('admin.perdida.destroy', {
+        loss: deleteTarget.value,
+        ...getFilterParams(),
+    }), {
         preserveScroll: true,
-        onFinish: () => {
-            deleting.value = false;
-        },
         onSuccess: () => {
             const [y, m] = filterDate.value.split('-');
             router.visit(
@@ -151,6 +150,12 @@ function executeDelete() {
                 }),
                 { preserveScroll: true },
             );
+        },
+        onFinish: () => {
+            deleting.value = false;
+        },
+        onError: () => {
+            alert('Error al eliminar la pérdida. Intenta de nuevo.');
         },
     });
     showConfirmDelete.value = false;
@@ -172,7 +177,7 @@ function submitUpdate() {
     if (!editItem.value) return;
     editForm.put(
         route('admin.perdida.update', {
-            perdida: editItem.value.id,
+            loss: editItem.value.id,
             ...getFilterParams(),
         }),
         {
@@ -333,6 +338,7 @@ const fmt = (v: number) =>
                         <tr>
                             <th class="px-6 py-3 font-bold">Fecha</th>
                             <th class="px-6 py-3 font-bold">Producto</th>
+                            <th class="px-6 py-3 font-bold">SKU</th>
                             <th class="px-6 py-3 text-center font-bold">
                                 Cantidad
                             </th>
@@ -350,7 +356,7 @@ const fmt = (v: number) =>
                     >
                         <tr v-if="!losses.data?.length">
                             <td
-                                colspan="6"
+                                colspan="7"
                                 class="px-6 py-12 text-center text-sm text-content-muted dark:text-gray-500"
                             >
                                 No hay pérdidas registradas en {{ month_name }}
@@ -371,6 +377,11 @@ const fmt = (v: number) =>
                                 class="px-6 py-4 text-sm font-medium text-content-primary dark:text-white"
                             >
                                 {{ l.product?.name || '—' }}
+                            </td>
+                            <td
+                                class="px-6 py-4 text-sm text-content-secondary font-mono"
+                            >
+                                {{ l.product?.sku || '—' }}
                             </td>
                             <td
                                 class="px-6 py-4 text-center text-sm font-bold text-danger"

@@ -85,6 +85,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 
         // Pérdidas
         Route::resource('perdida', LossController::class)
+            ->parameters(['perdida' => 'loss'])
             ->except(['show', 'create', 'edit']);
 
         // Pedidos a proveedores
