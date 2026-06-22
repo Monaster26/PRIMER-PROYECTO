@@ -31,6 +31,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::get('pos/close-summary/{cashSession}', [CashSessionController::class, 'showCloseSummary'])
             ->name('pos.close-summary');
         Route::post('pos/observacion', [ObservacionController::class, 'store'])->name('pos.observacion');
+        Route::get('pos/reprint/{sale}', [PosController::class, 'reprint'])->name('pos.reprint');
     });
 
     Route::middleware('role:admin')->group(function () {

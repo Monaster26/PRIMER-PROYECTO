@@ -16,7 +16,7 @@ use Inertia\Inertia;
 
 class PosController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $products = Product::active()
             ->orderBy('name')
@@ -36,7 +36,7 @@ class PosController extends Controller
             ->latest('closed_at')
             ->first(['cierre_desglose', 'total_efectivo_cierre', 'closed_at', 'user_id']);
 
-        return Inertia::render('admin/pos', [
+        $response = [
             'products' => $products,
             'hasOpenSession' => $hasOpenSession,
             'ultimaSesion' => $ultimaSession ? [
@@ -45,6 +45,70 @@ class PosController extends Controller
                 'cerrado_por' => $ultimaSession->user?->name,
                 'cerrado_at' => $ultimaSession->closed_at?->format('d/m/Y H:i'),
             ] : null,
+        ];
+
+        // Partial reload: solo cuando el modal solicita todaySales
+        $partial = $request->header('X-Inertia-Partial-Data');
+        $partialKeys = $partial ? explode(',', $partial) : [];
+
+        if (in_array('todaySales', $partialKeys)) {
+            $sales = Sale::with(['items.product', 'payments', 'cashier'])
+                ->where('user_id', $user->id)
+                ->whereDate('created_at', today())
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $response['todaySales'] = $sales->map(fn($s) => [
+                'id'              => $s->id,
+                'folio'           => $s->id,
+                'time'            => $s->created_at->format('H:i'),
+                'total'           => $s->total,
+                'items'           => $s->items->map(fn($i) => [
+                    'name'     => $i->product?->name ?? 'Producto sin nombre',
+                    'quantity' => $i->quantity,
+                    'price'    => $i->price,
+                    'total'    => $i->total_line,
+                ]),
+                'payments'        => $s->payments->map(fn($p) => [
+                    'method' => $p->method,
+                    'amount' => $p->amount,
+                ]),
+                'cash_amount'     => $s->cash_amount,
+                'card_amount'     => $s->card_amount,
+                'transfer_amount' => $s->transfer_amount,
+                'cashier_name'    => $s->cashier?->name,
+                'created_at'      => $s->created_at->toDateTimeString(),
+            ]);
+        }
+
+        return Inertia::render('admin/pos', $response);
+    }
+
+    public function reprint(Sale $sale)
+    {
+        $sale->load(['items.product', 'payments', 'cashier']);
+
+        return Inertia::render('admin/pos-ticket-reprint', [
+            'sale' => [
+                'id'        => $sale->id,
+                'folio'     => $sale->id,
+                'items'     => $sale->items->map(fn($i) => [
+                    'name'     => $i->product?->name ?? 'Producto sin nombre',
+                    'quantity' => $i->quantity,
+                    'price'    => $i->price,
+                    'total'    => $i->total_line,
+                ]),
+                'payments'  => $sale->payments->map(fn($p) => [
+                    'method' => $p->method,
+                    'amount' => $p->amount,
+                ]),
+                'total'           => $sale->total,
+                'cash_amount'     => $sale->cash_amount,
+                'card_amount'     => $sale->card_amount,
+                'transfer_amount' => $sale->transfer_amount,
+                'cashier_name'    => $sale->cashier?->name,
+                'created_at'      => $sale->created_at->toDateTimeString(),
+            ],
         ]);
     }
 

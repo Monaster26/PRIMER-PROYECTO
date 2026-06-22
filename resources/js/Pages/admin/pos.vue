@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import CashMovementModal from '@/Components/CashMovementModal.vue';
+import SalesHistoryModal from '@/Components/SalesHistoryModal.vue';
 import SessionCloseModal from '@/Components/SessionCloseModal.vue';
 import { useBarcodeScanner } from '@/composables/useBarcodeScanner';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import type { Product } from '@/Stores/posTabsStore';
 import { usePosTabsStore } from '@/Stores/posTabsStore';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     ArrowDownLeft,
     ArrowUpRight,
     Banknote,
     Check,
+    Clock,
     CreditCard,
     FileText,
     Landmark,
@@ -44,7 +46,22 @@ const props = defineProps<{
         cerrado_por: string;
         cerrado_at: string;
     } | null;
+    todaySales: TodaySale[] | null;
 }>();
+
+interface TodaySale {
+    id: number;
+    folio: number;
+    time: string;
+    total: number;
+    items: { name: string; quantity: number; price: number; total: number }[];
+    payments: { method: string; amount: number }[];
+    cash_amount: number;
+    card_amount: number;
+    transfer_amount: number;
+    cashier_name: string;
+    created_at: string;
+}
 
 const scannerInput = ref('');
 const scannerRef = ref<HTMLInputElement | null>(null);
@@ -123,6 +140,26 @@ const showDiscrepancyModal = ref(false)
 const discrepancyData = ref<{ requiere_justificacion: boolean; diferencia: number; ultimo_cierre_monto: number; ultimo_cierre_desglose: Record<string, number> | null; nuevo_apertura_monto: number } | null>(null)
 const discrepancyReason = ref('');
 const cancelClearBtnRef = ref<HTMLButtonElement | null>(null);
+
+const showSalesHistoryModal = ref(false);
+
+function openSalesHistory() {
+    (router as any).reload({
+        only: ['todaySales'],
+        preserveState: true,
+        preserveScroll: true,
+        onError: () => {
+            alert('Error al cargar el historial de ventas.');
+        },
+        onSuccess: () => {
+            showSalesHistoryModal.value = true;
+        },
+    });
+}
+
+function reprintTicket(saleId: number) {
+    window.open(route('admin.pos.reprint', saleId), '_blank', 'width=400,height=600');
+}
 
 watch(showClearCartModal, (val) => {
     if (val) nextTick(() => cancelClearBtnRef.value?.focus());
@@ -1227,13 +1264,22 @@ function validateCoin(key: string) {
                     >
                         Resumen
                     </h3>
-                    <button
-                        @click.stop="toggleMenu"
-                        class="flex h-7 w-7 items-center justify-center rounded-xl bg-primary-50 text-primary-500 transition-colors hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50"
-                        title="Acciones"
-                    >
-                        <Menu class="h-4 w-4" />
-                    </button>
+                    <div class="flex items-center gap-1">
+                        <button
+                            @click="openSalesHistory"
+                            class="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-50 text-blue-500 transition-colors hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
+                            title="Historial de Ventas"
+                        >
+                            <Clock class="h-4 w-4" />
+                        </button>
+                        <button
+                            @click.stop="toggleMenu"
+                            class="flex h-7 w-7 items-center justify-center rounded-xl bg-primary-50 text-primary-500 transition-colors hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50"
+                            title="Acciones"
+                        >
+                            <Menu class="h-4 w-4" />
+                        </button>
+                    </div>
 
                     <Transition
                         enter-active-class="transition duration-150 ease-out"
@@ -1392,6 +1438,13 @@ function validateCoin(key: string) {
             </div>
         </div>
         </div>
+
+        <SalesHistoryModal
+            :show="showSalesHistoryModal"
+            :sales="props.todaySales"
+            @close="showSalesHistoryModal = false"
+            @reprint="reprintTicket"
+        />
 
         <CashMovementModal
             :show="showCashMovementModal"
