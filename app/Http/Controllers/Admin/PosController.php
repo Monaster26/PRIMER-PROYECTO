@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CashSession;
 use App\Models\ControlZeta;
+use App\Models\Observacion;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -30,9 +31,20 @@ class PosController extends Controller
                 ->latest('opened_at')
                 ->exists();
 
+        $ultimaSession = CashSession::whereNotNull('closed_at')
+            ->with('user:id,name')
+            ->latest('closed_at')
+            ->first(['cierre_desglose', 'total_efectivo_cierre', 'closed_at', 'user_id']);
+
         return Inertia::render('admin/pos', [
             'products' => $products,
             'hasOpenSession' => $hasOpenSession,
+            'ultimaSesion' => $ultimaSession ? [
+                'cierre_desglose' => $ultimaSession->cierre_desglose,
+                'total_efectivo_cierre' => $ultimaSession->total_efectivo_cierre,
+                'cerrado_por' => $ultimaSession->user?->name,
+                'cerrado_at' => $ultimaSession->closed_at?->format('d/m/Y H:i'),
+            ] : null,
         ]);
     }
 
@@ -73,6 +85,42 @@ class PosController extends Controller
             '50'  => $validated['cant_50_apertura'],
             '10'  => $validated['cant_10_apertura'],
         ];
+
+        // Discrepancia contra última sesión cerrada (tolerancia $500)
+        $ultimaSession = CashSession::whereNotNull('closed_at')
+            ->latest('closed_at')
+            ->first();
+
+        if ($ultimaSession) {
+            $diferencia = $total - $ultimaSession->total_efectivo_cierre;
+
+            if (abs($diferencia) > 500 && !$request->has('observacion')) {
+                return response()->json([
+                    'message' => 'Diferencia detectada en gaveta',
+                    'requiere_justificacion' => true,
+                    'diferencia' => $diferencia,
+                    'ultimo_cierre_monto' => (int) $ultimaSession->total_efectivo_cierre,
+                    'ultimo_cierre_desglose' => $ultimaSession->cierre_desglose,
+                    'nuevo_apertura_monto' => $total,
+                ], 422);
+            }
+
+            if (abs($diferencia) > 500 && $request->has('observacion')) {
+                Observacion::create([
+                    'user_id' => $request->user()->id,
+                    'tipo_accion' => 'descuadre_apertura',
+                    'detalle' => $request->input('observacion'),
+                    'monto_diferencia' => $diferencia,
+                    'read_at' => null,
+                    'metadata' => [
+                        'old_desglose' => $ultimaSession->cierre_desglose,
+                        'new_desglose' => $aperturaDesglose,
+                        'old_total' => (int) $ultimaSession->total_efectivo_cierre,
+                        'new_total' => $total,
+                    ],
+                ]);
+            }
+        }
 
         $session = CashSession::create([
             'user_id'          => $request->user()->id,

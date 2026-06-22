@@ -7,6 +7,7 @@ import type { Product } from '@/Stores/posTabsStore';
 import { usePosTabsStore } from '@/Stores/posTabsStore';
 import { Head, usePage } from '@inertiajs/vue3';
 import {
+    AlertTriangle,
     ArrowDownLeft,
     ArrowUpRight,
     Banknote,
@@ -37,6 +38,12 @@ function csrfToken(): string {
 const props = defineProps<{
     products: Product[];
     hasOpenSession: boolean;
+    ultimaSesion: {
+        cierre_desglose: Record<string, number> | null;
+        total_efectivo_cierre: number;
+        cerrado_por: string;
+        cerrado_at: string;
+    } | null;
 }>();
 
 const scannerInput = ref('');
@@ -84,6 +91,10 @@ const coinAmounts = reactive<Record<string, number | null>>({
 
 const coinErrors = reactive<Record<string, string | null>>({});
 
+const desgloseAnterior = computed(() =>
+    discrepancyData.value?.ultimo_cierre_desglose ?? props.ultimaSesion?.cierre_desglose ?? null,
+);
+
 const totalOpening = computed(() => {
     let t = 0;
     for (const d of denominations) {
@@ -107,7 +118,10 @@ const showCashMovementModal = ref(false);
 const cashMovementType = ref<'ingreso' | 'retiro'>('ingreso');
 const showCloseSessionModal = ref(false);
 const showCartWarning = ref(false);
-const showClearCartModal = ref(false);
+const showClearCartModal = ref(false)
+const showDiscrepancyModal = ref(false)
+const discrepancyData = ref<{ requiere_justificacion: boolean; diferencia: number; ultimo_cierre_monto: number; ultimo_cierre_desglose: Record<string, number> | null; nuevo_apertura_monto: number } | null>(null)
+const discrepancyReason = ref('');
 const cancelClearBtnRef = ref<HTMLButtonElement | null>(null);
 
 watch(showClearCartModal, (val) => {
@@ -575,10 +589,56 @@ function submitOpenSession() {
         body: JSON.stringify(body),
     })
         .then((res) => {
+            if (!res.ok) return res.json().then((err) => {
+                if (err.requiere_justificacion) {
+                    discrepancyData.value = err;
+                    showDiscrepancyModal.value = true;
+                    throw new Error;
+                }
+                throw new Error(err.message || 'Error al abrir caja');
+            });
+            return res.json();
+        })
+        .then(() => {
+            sessionOpened.value = true;
+            localStorage.setItem('pos_session_opened', 'true');
+            nextTick(() => focusScanner());
+        })
+        .catch((err) => {
+            if (err.message) sessionOpenError.value = err.message;
+        })
+        .finally(() => {
+            sessionOpening.value = false;
+        });
+}
+
+function confirmOpenWithDiscrepancy() {
+    sessionOpening.value = true;
+    const body: Record<string, any> = {};
+    for (const d of denominations) {
+        if (d.directInput) {
+            body[`cant_${d.key}_apertura`] = Math.round((Number(coinAmounts[d.key]) || 0) / d.value);
+        } else {
+            body[`cant_${d.key}_apertura`] = Number(billQtys[d.key]) || 0;
+        }
+    }
+    body.observacion = discrepancyReason.value;
+
+    fetch(route('admin.pos.open-session'), {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken(),
+        },
+        body: JSON.stringify(body),
+    })
+        .then((res) => {
             if (!res.ok) return res.json().then((err) => { throw new Error(err.message || 'Error al abrir caja'); });
             return res.json();
         })
         .then(() => {
+            showDiscrepancyModal.value = false;
             sessionOpened.value = true;
             localStorage.setItem('pos_session_opened', 'true');
             nextTick(() => focusScanner());
@@ -591,8 +651,8 @@ function submitOpenSession() {
         });
 }
 
-const fmt = (v: number) =>
-    '$' + v.toLocaleString('es-CO', { minimumFractionDigits: 0 });
+const fmt = (v: number | undefined | null) =>
+    v != null ? '$' + v.toLocaleString('es-CO', { minimumFractionDigits: 0 }) : '$0';
 
 function focusNext(e: Event) {
     const form = (e.target as HTMLElement).closest('form');
@@ -651,7 +711,7 @@ function validateCoin(key: string) {
             v-if="!sessionOpened"
             class="flex min-h-[60vh] items-center justify-center"
         >
-            <div class="w-full max-w-2xl">
+            <div class="w-full max-w-5xl">
                 <div
                     class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-surface-dark"
                 >
@@ -668,96 +728,183 @@ function validateCoin(key: string) {
 
                     <form @submit.prevent="submitOpenSession" class="space-y-4 p-5">
                         <p class="text-xs leading-relaxed text-content-muted">
-                            Registra el efectivo inicial en caja desglosando
-                            billetes y monedas.
+                            El cajero entrante compara su conteo físico con el cierre anterior (columna izquierda)
+                            y registra sus cantidades (columna derecha).
                         </p>
 
-                        <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
-                            <!-- Left: Bills -->
-                            <div class="rounded-xl bg-blue-50/50 p-3 dark:bg-blue-900/10">
-                                <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-primary">
-                                    Billetes
-                                </label>
-                                <table class="w-full text-left">
-                                    <thead>
-                                        <tr class="text-[10px] font-bold uppercase tracking-wider text-content-muted">
-                                            <th class="pb-1">Denominación</th>
-                                            <th class="pb-1 text-center">Cant.</th>
-                                            <th class="pb-1 text-right">Subtotal</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                                        <tr v-for="d in bills" :key="d.key">
-                                            <td class="py-1.5 text-sm font-semibold text-content-primary dark:text-white">{{ d.label }}</td>
-                                            <td class="py-1.5 text-center">
-                                                <input
-                                                    v-model.number="billQtys[d.key]"
-                                                    type="number"
-                                                    min="0"
-                                                    :autofocus="d.key === '20k'"
-                                                    :id="d.key === '20k' ? 'input-20k' : undefined"
-                                                    @keydown.enter.prevent="focusNext"
-                                                    class="w-16 rounded-lg border border-gray-200 bg-gray-50 px-1 py-1 text-center text-sm text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                                                />
-                                            </td>
-                                            <td class="py-1.5 text-right text-sm font-bold text-content-primary dark:text-white">
-                                                {{ fmt((billQtys[d.key] || 0) * d.value) }}
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                            <!-- ═══ COLUMNA IZQUIERDA: Cierre Anterior (Solo Lectura) ═══ -->
+                            <div v-if="desgloseAnterior" class="space-y-4 opacity-75">
+                                <div class="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 dark:bg-gray-800">
+                                    <FileText class="h-4 w-4 text-content-muted" />
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-content-muted">
+                                        Cierre Anterior
+                                    </span>
+                                    <span class="ml-auto text-[10px] text-content-muted">{{ props.ultimaSesion?.cerrado_por }} · {{ props.ultimaSesion?.cerrado_at }}</span>
+                                </div>
+
+                                <!-- Bills -->
+                                <div class="rounded-xl bg-blue-50/30 p-3 dark:bg-blue-900/5">
+                                    <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-muted">Billetes</label>
+                                    <table class="w-full text-left">
+                                        <thead>
+                                            <tr class="text-[10px] font-bold uppercase tracking-wider text-content-muted">
+                                                <th class="pb-1">Denominación</th>
+                                                <th class="pb-1 text-center">Cant.</th>
+                                                <th class="pb-1 text-right">Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                            <tr v-for="d in bills" :key="d.key">
+                                                <td class="py-1.5 text-sm font-semibold text-content-muted">{{ d.label }}</td>
+                                                <td class="py-1.5 text-center">
+                                                    <input :value="desgloseAnterior[d.key] ?? 0" disabled
+                                                        class="w-16 rounded-lg border border-gray-200 bg-gray-100 px-1 py-1 text-center text-sm text-content-muted opacity-60 dark:border-gray-700 dark:bg-gray-800"
+                                                    />
+                                                </td>
+                                                <td class="py-1.5 text-right text-sm font-bold text-content-muted">
+                                                    {{ fmt((desgloseAnterior[d.key] ?? 0) * d.value) }}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Coins -->
+                                <div class="rounded-xl bg-amber-50/30 p-3 dark:bg-amber-900/5">
+                                    <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-muted">Monedas</label>
+                                    <table class="w-full text-left">
+                                        <thead>
+                                            <tr class="text-[10px] font-bold uppercase tracking-wider text-content-muted">
+                                                <th class="pb-1">Denominación</th>
+                                                <th class="pb-1 text-center">Cant.</th>
+                                                <th class="pb-1 text-right">Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                            <tr v-for="d in coins" :key="d.key">
+                                                <td class="py-1.5 text-sm font-semibold text-content-muted">{{ d.label }}</td>
+                                                <td class="py-1.5 text-center">
+                                                    <input :value="desgloseAnterior[d.key] ?? 0" disabled
+                                                        class="w-16 rounded-lg border border-gray-200 bg-gray-100 px-1 py-1 text-center text-sm text-content-muted opacity-60 dark:border-gray-700 dark:bg-gray-800"
+                                                    />
+                                                </td>
+                                                <td class="py-1.5 text-right text-sm font-bold text-content-muted">
+                                                    {{ fmt((desgloseAnterior[d.key] ?? 0) * d.value) }}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Total Cierre Anterior -->
+                                <div class="rounded-xl bg-gray-100 p-3 text-center dark:bg-gray-800">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-content-muted">Total Cierre Anterior</span>
+                                    <p class="font-mono text-lg font-black text-content-muted">
+                                        {{ fmt(props.ultimaSesion?.total_efectivo_cierre ?? 0) }}
+                                    </p>
+                                </div>
                             </div>
 
-                            <!-- Right: Coins -->
-                            <div class="rounded-xl bg-amber-50/50 p-3 dark:bg-amber-900/10">
-                                <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-primary">
-                                    Monedas
-                                </label>
-                                <table class="w-full text-left">
-                                    <thead>
-                                        <tr class="text-[10px] font-bold uppercase tracking-wider text-content-muted">
-                                            <th class="pb-1">Denominación</th>
-                                            <th class="pb-1 text-center">Subtotal</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                                        <tr v-for="d in coins" :key="d.key">
-                                            <td class="py-1.5 text-sm font-semibold text-content-primary dark:text-white">{{ d.label }}</td>
-                                            <td class="py-1.5 text-center">
-                                                <input
-                                                    :value="formatCoin(coinAmounts[d.key])"
-                                                    @input="onCoinInput($event, d.key)"
-                                                    @blur="validateCoin(d.key)"
-                                                    type="text"
-                                                    inputmode="numeric"
-                                                    placeholder="0"
-                                                    @keydown.enter.prevent="focusNext"
-                                                    :class="[
-                                                        'w-28 rounded-lg px-2 py-1.5 text-center text-sm transition-shadow',
-                                                        coinErrors[d.key]
-                                                            ? 'border-red-500 bg-red-50 focus:ring-red-500/30'
-                                                            : 'border-gray-200 bg-gray-50 focus:border-primary-500 focus:ring-primary-500/30',
-                                                        'dark:bg-gray-900 dark:text-white',
-                                                    ]"
-                                                />
-                                                <p
-                                                    v-if="coinErrors[d.key]"
-                                                    class="mt-1 text-[10px] font-medium text-red-500"
-                                                >
-                                                    {{ coinErrors[d.key] }}
-                                                </p>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                            <!-- ═══ Sin cierre anterior: placeholder informativo ═══ -->
+                            <div v-else class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 p-8 dark:border-gray-700">
+                                <FileText class="mb-2 h-8 w-8 text-content-muted opacity-40" />
+                                <p class="text-sm font-medium text-content-muted">No hay cierre anterior</p>
+                                <p class="text-xs text-content-muted/60">Este es el primer turno registrado</p>
                             </div>
-                        </div>
 
-                        <div class="rounded-xl bg-primary-50 p-3 text-center dark:bg-primary-900/20">
-                            <span class="text-xs font-bold uppercase tracking-wider text-content-muted">Total Efectivo</span>
-                            <p class="font-mono text-xl font-black text-primary-600 dark:text-primary-400">
-                                {{ fmt(totalOpening) }}
-                            </p>
+                            <!-- ═══ COLUMNA DERECHA: Apertura Actual (Formulario Activo) ═══ -->
+                            <div class="space-y-4">
+                                <div class="flex items-center gap-2 rounded-lg bg-primary-50 px-3 py-2 dark:bg-primary-900/20">
+                                    <Wallet class="h-4 w-4 text-primary-500" />
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400">
+                                        Tu Apertura
+                                    </span>
+                                </div>
+
+                                <!-- Bills -->
+                                <div class="rounded-xl bg-blue-50/50 p-3 dark:bg-blue-900/10">
+                                    <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-primary">Billetes</label>
+                                    <table class="w-full text-left">
+                                        <thead>
+                                            <tr class="text-[10px] font-bold uppercase tracking-wider text-content-muted">
+                                                <th class="pb-1">Denominación</th>
+                                                <th class="pb-1 text-center">Cant.</th>
+                                                <th class="pb-1 text-right">Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                            <tr v-for="d in bills" :key="d.key">
+                                                <td class="py-1.5 text-sm font-semibold text-content-primary dark:text-white">{{ d.label }}</td>
+                                                <td class="py-1.5 text-center">
+                                                    <input
+                                                        v-model.number="billQtys[d.key]"
+                                                        type="number"
+                                                        min="0"
+                                                        :autofocus="d.key === '20k'"
+                                                        :id="d.key === '20k' ? 'input-20k' : undefined"
+                                                        @keydown.enter.prevent="focusNext"
+                                                        class="w-16 rounded-lg border border-gray-200 bg-gray-50 px-1 py-1 text-center text-sm text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                                    />
+                                                </td>
+                                                <td class="py-1.5 text-right text-sm font-bold text-content-primary dark:text-white">
+                                                    {{ fmt((billQtys[d.key] || 0) * d.value) }}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Coins -->
+                                <div class="rounded-xl bg-amber-50/50 p-3 dark:bg-amber-900/10">
+                                    <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-primary">Monedas</label>
+                                    <table class="w-full text-left">
+                                        <thead>
+                                            <tr class="text-[10px] font-bold uppercase tracking-wider text-content-muted">
+                                                <th class="pb-1">Denominación</th>
+                                                <th class="pb-1 text-center">Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                            <tr v-for="d in coins" :key="d.key">
+                                                <td class="py-1.5 text-sm font-semibold text-content-primary dark:text-white">{{ d.label }}</td>
+                                                <td class="py-1.5 text-center">
+                                                    <input
+                                                        :value="formatCoin(coinAmounts[d.key])"
+                                                        @input="onCoinInput($event, d.key)"
+                                                        @blur="validateCoin(d.key)"
+                                                        type="text"
+                                                        inputmode="numeric"
+                                                        placeholder="0"
+                                                        @keydown.enter.prevent="focusNext"
+                                                        :class="[
+                                                            'w-28 rounded-lg px-2 py-1.5 text-center text-sm transition-shadow',
+                                                            coinErrors[d.key]
+                                                                ? 'border-red-500 bg-red-50 focus:ring-red-500/30'
+                                                                : 'border-gray-200 bg-gray-50 focus:border-primary-500 focus:ring-primary-500/30',
+                                                            'dark:bg-gray-900 dark:text-white',
+                                                        ]"
+                                                    />
+                                                    <p
+                                                        v-if="coinErrors[d.key]"
+                                                        class="mt-1 text-[10px] font-medium text-red-500"
+                                                    >
+                                                        {{ coinErrors[d.key] }}
+                                                    </p>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Total Apertura -->
+                                <div class="rounded-xl bg-primary-50 p-3 text-center dark:bg-primary-900/20">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-content-muted">Total Apertura</span>
+                                    <p class="font-mono text-xl font-black text-primary-600 dark:text-primary-400">
+                                        {{ fmt(totalOpening) }}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
 
                         <p
@@ -1335,6 +1482,53 @@ function validateCoin(key: string) {
                             <button @click="confirmClearCart"
                                 class="flex-1 rounded-xl border border-gray-200 bg-white py-2.5 text-xs font-bold text-content-secondary transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700">
                                 Aceptar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="showDiscrepancyModal"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm"
+                @click.self="showDiscrepancyModal = false"
+            >
+                <div class="w-full max-w-md rounded-2xl bg-white shadow-xl dark:bg-surface-dark">
+                    <div class="flex items-center justify-between border-b border-gray-100 px-5 py-3 dark:border-gray-800">
+                        <h3 class="font-display text-sm font-bold text-content-primary dark:text-white">
+                            ⚠️ Diferencia en gaveta
+                        </h3>
+                        <button @click="showDiscrepancyModal = false"
+                            class="rounded-lg p-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
+                            <X class="h-4 w-4 text-content-muted" />
+                        </button>
+                    </div>
+                    <div class="space-y-4 p-5">
+                        <p class="text-sm text-content-secondary leading-relaxed">
+                            El monto de apertura (<strong class="text-content-primary">{{ fmt(discrepancyData?.nuevo_apertura_monto) }}</strong>)
+                            difiere del último cierre (<strong class="text-content-primary">{{ fmt(discrepancyData?.ultimo_cierre_monto) }}</strong>)
+                            por <strong class="text-amber-600 dark:text-amber-400">{{ fmt(discrepancyData?.diferencia) }}</strong>.
+                        </p>
+                        <p class="text-xs text-content-muted">Escriba una justificación para continuar:</p>
+                        <textarea v-model="discrepancyReason"
+                            class="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm outline-none transition-colors focus:border-amber-400 focus:ring-2 focus:ring-amber-200 dark:border-gray-700 dark:bg-gray-800/50 dark:text-white dark:focus:border-amber-500"
+                            rows="3" placeholder="Ej: Se realizó un depósito bancario después del cierre..."></textarea>
+                        <div class="flex gap-2">
+                            <button @click="showDiscrepancyModal = false"
+                                class="flex-1 rounded-xl bg-gray-200 py-2.5 text-xs font-bold text-gray-600 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                                Cancelar
+                            </button>
+                            <button @click="confirmOpenWithDiscrepancy" :disabled="!discrepancyReason.trim()"
+                                class="flex-1 rounded-xl bg-amber-500 py-2.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-amber-600 disabled:opacity-50">
+                                Justificar y Abrir
                             </button>
                         </div>
                     </div>

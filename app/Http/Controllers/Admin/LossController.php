@@ -7,6 +7,7 @@ use App\Models\Loss;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class LossController extends Controller
@@ -73,11 +74,47 @@ class LossController extends Controller
             $product->increment('stock', $loss->quantity);
         }
 
-        $loss->delete();
+        try {
+            $loss->delete();
+        } catch (\Throwable $e) {
+            Log::error('Error al eliminar pérdida #{id}: {msg}', [
+                'id'  => $loss->id,
+                'msg' => $e->getMessage(),
+            ]);
+            if ($product) {
+                $product->decrement('stock', $loss->quantity);
+            }
+            return redirect()->route('admin.perdida.index', [
+                'month' => request('month', now()->month),
+                'year'  => request('year', now()->year),
+            ])->with('error', 'No se pudo eliminar la pérdida.');
+        }
 
         return redirect()->route('admin.perdida.index', [
             'month' => request('month', now()->month),
             'year'  => request('year', now()->year),
         ])->with('success', 'Pérdida eliminada y stock restaurado.');
+    }
+
+    public function update(Request $request, Loss $loss): RedirectResponse
+    {
+        $validated = $request->validate([
+            'date'     => 'required|date',
+            'quantity' => 'required|integer|min:1',
+            'reason'   => 'nullable|string|max:255',
+        ]);
+
+        $oldQty = $loss->quantity;
+        $loss->update($validated);
+
+        $diff = $loss->quantity - $oldQty;
+        if ($diff !== 0 && ($product = $loss->product)) {
+            $diff > 0 ? $product->decrement('stock', $diff) : $product->increment('stock', abs($diff));
+        }
+
+        return redirect()->route('admin.perdida.index', [
+            'month' => request('month', now()->month),
+            'year'  => request('year', now()->year),
+        ])->with('success', 'Pérdida actualizada.');
     }
 }

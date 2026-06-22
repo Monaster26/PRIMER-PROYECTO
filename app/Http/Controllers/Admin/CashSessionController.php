@@ -25,10 +25,15 @@ class CashSessionController extends Controller
         }
 
         $filters = [
-            'dia'  => $request->integer('dia'),
-            'mes'  => $request->integer('mes'),
-            'anio' => $request->integer('anio'),
+            'dia'        => $request->integer('dia'),
+            'mes'        => $request->integer('mes'),
+            'anio'       => $request->integer('anio'),
+            'cashier_id' => $request->integer('cashier_id'),
         ];
+
+        if ($filters['cashier_id']) {
+            $query->where('user_id', $filters['cashier_id']);
+        }
 
         if ($filters['anio']) {
             $query->whereYear('opened_at', $filters['anio']);

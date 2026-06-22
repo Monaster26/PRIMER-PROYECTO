@@ -102,5 +102,11 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 
         // Observaciones
         Route::get('observaciones', [ObservacionController::class, 'index'])->name('observaciones.index');
+        Route::get('observaciones/unread-count', [ObservacionController::class, 'unreadCount'])
+            ->name('observaciones.unread-count');
+        Route::put('observaciones/{observacion}/mark-read', [ObservacionController::class, 'markAsRead'])
+            ->name('observaciones.mark-read');
+        Route::put('observaciones/{observacion}', [ObservacionController::class, 'update'])
+            ->name('observaciones.update');
     });
 });

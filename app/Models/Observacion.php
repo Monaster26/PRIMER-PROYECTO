@@ -16,11 +16,35 @@ class Observacion extends Model
         'tipo_accion',
         'producto_afectado',
         'detalle',
+        'monto_diferencia',
+        'read_at',
+        'estado',
+        'nota_admin',
+        'revisado_at',
+        'metadata',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
+        'read_at' => 'datetime',
+        'revisado_at' => 'datetime',
+        'metadata' => 'array',
     ];
+
+    public function scopeUnread($query)
+    {
+        return $query->whereNull('read_at');
+    }
+
+    public function scopePendiente($query)
+    {
+        return $query->where('estado', 'pendiente');
+    }
+
+    public function scopeRevisado($query)
+    {
+        return $query->where('estado', 'revisado');
+    }
 
     public function user(): BelongsTo
     {

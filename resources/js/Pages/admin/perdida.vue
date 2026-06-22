@@ -9,6 +9,7 @@ import {
     DollarSign,
     Hash,
     Package,
+    Pencil,
     Plus,
     Trash2,
     TrendingDown,
@@ -43,6 +44,18 @@ const showDropdown = ref(false);
 const form = useForm({
     date: new Date().toISOString().split('T')[0],
     product_id: null as number | null,
+    quantity: 1,
+    reason: '',
+});
+
+const showEditModal = ref(false);
+const editItem = ref<any>(null);
+const showConfirmDelete = ref(false);
+const deleteTarget = ref<number | null>(null);
+const deleting = ref(false);
+
+const editForm = useForm({
+    date: '',
     quantity: 1,
     reason: '',
 });
@@ -116,17 +129,66 @@ function getFilterParams() {
     const [y, m] = filterDate.value.split('-');
     return { month: parseInt(m), year: parseInt(y) };
 }
-function deleteLoss(id: number) {
-    if (
-        !confirm(
-            '¿Eliminar este registro? Se restaurará el stock del producto.',
-        )
-    )
-        return;
-    router.delete(route('admin.perdida.destroy', id), {
+function confirmDelete(id: number) {
+    deleteTarget.value = id;
+    showConfirmDelete.value = true;
+}
+function executeDelete() {
+    if (deleteTarget.value === null || deleting.value) return;
+    deleting.value = true;
+    router.delete(route('admin.perdida.destroy', deleteTarget.value), {
         data: getFilterParams(),
         preserveScroll: true,
+        onFinish: () => {
+            deleting.value = false;
+        },
+        onSuccess: () => {
+            const [y, m] = filterDate.value.split('-');
+            router.visit(
+                route('admin.perdida.index', {
+                    month: parseInt(m),
+                    year: parseInt(y),
+                }),
+                { preserveScroll: true },
+            );
+        },
     });
+    showConfirmDelete.value = false;
+    deleteTarget.value = null;
+}
+function openEdit(loss: any) {
+    editItem.value = loss;
+    editForm.date = loss.date;
+    editForm.quantity = loss.quantity;
+    editForm.reason = loss.reason || '';
+    showEditModal.value = true;
+}
+function closeEdit() {
+    showEditModal.value = false;
+    editItem.value = null;
+    editForm.reset();
+}
+function submitUpdate() {
+    if (!editItem.value) return;
+    editForm.put(
+        route('admin.perdida.update', {
+            perdida: editItem.value.id,
+            ...getFilterParams(),
+        }),
+        {
+            onSuccess: () => {
+                const [y, m] = filterDate.value.split('-');
+                router.visit(
+                    route('admin.perdida.index', {
+                        month: parseInt(m),
+                        year: parseInt(y),
+                    }),
+                    { preserveScroll: true },
+                );
+                closeEdit();
+            },
+        },
+    );
 }
 
 const fmt = (v: number) =>
@@ -327,10 +389,16 @@ const fmt = (v: number) =>
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <div
-                                    class="flex items-center justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100"
+                                    class="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100"
                                 >
                                     <button
-                                        @click="deleteLoss(l.id)"
+                                        @click="openEdit(l)"
+                                        class="rounded-xl p-2 text-content-muted transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                                    >
+                                        <Pencil class="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        @click="confirmDelete(l.id)"
                                         class="rounded-xl p-2 text-danger transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
                                     >
                                         <Trash2 class="h-4 w-4" />
@@ -503,6 +571,151 @@ const fmt = (v: number) =>
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </Transition>
+
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="showEditModal"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+            >
+                <div
+                    class="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-xl dark:bg-surface-dark"
+                >
+                    <div class="mb-6 flex items-center justify-between">
+                        <h3
+                            class="font-display text-lg font-bold text-content-primary dark:text-white"
+                        >
+                            Editar Pérdida
+                        </h3>
+                        <button
+                            @click="closeEdit"
+                            class="rounded-xl p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                        >
+                            <X class="h-5 w-5 text-content-muted" />
+                        </button>
+                    </div>
+                    <form @submit.prevent="submitUpdate" class="space-y-4">
+                        <div>
+                            <label
+                                class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                                >Fecha</label
+                            >
+                            <input
+                                v-model="editForm.date"
+                                type="date"
+                                required
+                                class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                                >Producto</label
+                            >
+                            <input
+                                :value="editItem?.product?.name || ''"
+                                type="text"
+                                readonly
+                                class="w-full rounded-2xl border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm text-content-muted dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                                >Cantidad</label
+                            >
+                            <input
+                                v-model.number="editForm.quantity"
+                                type="number"
+                                min="1"
+                                required
+                                class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                                >Motivo</label
+                            >
+                            <textarea
+                                v-model="editForm.reason"
+                                rows="2"
+                                class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                            ></textarea>
+                        </div>
+                        <div class="flex gap-3 pt-2">
+                            <button
+                                type="button"
+                                @click="closeEdit"
+                                class="flex-1 rounded-2xl border border-gray-200 py-2.5 text-sm font-bold text-content-secondary transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                :disabled="editForm.processing"
+                                class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary-500 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-600"
+                            >
+                                <Check class="h-4 w-4" />
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </Transition>
+
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="showConfirmDelete"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+            >
+                <div
+                    class="relative w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl dark:bg-surface-dark"
+                >
+                    <h3
+                        class="font-display text-lg font-bold text-content-primary dark:text-white"
+                    >
+                        Confirmar Eliminación
+                    </h3>
+                    <p class="mt-2 text-sm text-content-secondary">
+                        ¿Eliminar este registro? Se restaurará el stock del
+                        producto.
+                    </p>
+                    <div class="mt-6 flex gap-3">
+                        <button
+                            @click="
+                                showConfirmDelete = false;
+                                deleteTarget = null;
+                            "
+                            class="flex-1 rounded-2xl border border-gray-200 py-2.5 text-sm font-bold text-content-secondary transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            @click="executeDelete"
+                            :disabled="deleting"
+                            class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-danger py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Trash2 class="h-4 w-4" /> Eliminar
+                        </button>
+                    </div>
                 </div>
             </div>
         </Transition>

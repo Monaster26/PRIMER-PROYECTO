@@ -25,6 +25,7 @@ const props = defineProps<{
         dia: number | null;
         mes: number | null;
         anio: number | null;
+        cashier_id: number | null;
     };
 }>();
 
@@ -50,6 +51,8 @@ const filterDate = ref<string>(
         : todayStr,
 );
 
+const selectedCashier = ref<number | null>(props.filters?.cashier_id ?? null);
+
 function onDatePicked(payload: { dia: number; mes: number; anio: number }) {
     router.get(
         route('admin.arqueo-caja.index'),
@@ -57,21 +60,36 @@ function onDatePicked(payload: { dia: number; mes: number; anio: number }) {
             dia: payload.dia,
             mes: payload.mes,
             anio: payload.anio,
+            cashier_id: selectedCashier.value,
+        },
+        { preserveState: true, preserveScroll: true },
+    );
+}
+
+function onCashierChange() {
+    const d = filterDate.value.split('-');
+    router.get(
+        route('admin.arqueo-caja.index'),
+        {
+            dia: parseInt(d[2]),
+            mes: parseInt(d[1]),
+            anio: parseInt(d[0]),
+            cashier_id: selectedCashier.value,
         },
         { preserveState: true, preserveScroll: true },
     );
 }
 
 const denominations = [
-    { key: '20k', label: '$20.000', value: 20000 },
-    { key: '10k', label: '$10.000', value: 10000 },
-    { key: '5k', label: '$5.000', value: 5000 },
-    { key: '2k', label: '$2.000', value: 2000 },
-    { key: '1k', label: '$1.000', value: 1000 },
-    { key: '500', label: '$500', value: 500 },
-    { key: '100', label: '$100', value: 100 },
-    { key: '50', label: '$50', value: 50 },
-    { key: '10', label: '$10', value: 10 },
+    { key: '20k', label: '$20.000', value: 20000, type: 'bill' },
+    { key: '10k', label: '$10.000', value: 10000, type: 'bill' },
+    { key: '5k',  label: '$5.000',  value: 5000,  type: 'bill' },
+    { key: '2k',  label: '$2.000',  value: 2000,  type: 'bill' },
+    { key: '1k',  label: '$1.000',  value: 1000,  type: 'bill' },
+    { key: '500', label: '$500',    value: 500,   type: 'coin' },
+    { key: '100', label: '$100',    value: 100,   type: 'coin' },
+    { key: '50',  label: '$50',     value: 50,    type: 'coin' },
+    { key: '10',  label: '$10',     value: 10,    type: 'coin' },
 ] as const;
 
 const showForm = ref(false);
@@ -80,6 +98,13 @@ const editingSession = ref<any>(null);
 
 const showAuditModal = ref(false);
 const auditSession = ref<any>(null);
+
+const coinErrors = ref<string[]>([]);
+
+function aperturaSubtotal(d: (typeof denominations)[number]) {
+    const v = (form as any)[`cant_${d.key}_apertura`] ?? 0;
+    return mode.value === 'close' || d.type === 'bill' ? Number(v) * d.value : Number(v);
+}
 
 const emptyForm = {
     user_id: null as number | null,
@@ -115,6 +140,20 @@ const emptyForm = {
 };
 
 const form = useForm({ ...emptyForm });
+
+form.transform((data) => {
+    const t = { ...data };
+    const suffix = mode.value === 'create' ? '_apertura' : '_cierre';
+    for (const d of denominations) {
+        if (d.type !== 'coin') continue;
+        const key = `cant_${d.key}${suffix}` as keyof typeof data;
+        const v = t[key];
+        if (v !== null && v !== undefined && v !== '' && Number(v) > 0) {
+            (t as any)[key] = Math.round(Number(v) / d.value);
+        }
+    }
+    return t;
+});
 
 function openNew() {
     mode.value = 'create';
@@ -188,10 +227,23 @@ function openClose(session: any) {
 function closeForm() {
     showForm.value = false;
     editingSession.value = null;
+    coinErrors.value = [];
     form.reset();
 }
 
 function submitForm() {
+    coinErrors.value = [];
+    const suffix = mode.value === 'close' ? '_cierre' : '_apertura';
+    for (const d of denominations) {
+        if (d.type !== 'coin') continue;
+        const v = (form as any)[`cant_${d.key}${suffix}`];
+        if (v !== null && v !== undefined && v !== '' && Number(v) > 0 && Number(v) % d.value !== 0) {
+            coinErrors.value.push(
+                `El monto ingresado para ${d.label} debe ser un múltiplo exacto de ${d.label}.`,
+            );
+        }
+    }
+    if (coinErrors.value.length) return;
     if (mode.value === 'create') {
         form.post(route('admin.arqueo-caja.store'), { onSuccess: closeForm });
     } else if (mode.value === 'close' && editingSession.value) {
@@ -230,7 +282,11 @@ const totalApertura = computed(() => {
     let t = 0;
     for (const d of denominations) {
         const v = (form as any)[`cant_${d.key}_apertura`] ?? 0;
-        t += Number(v) * d.value;
+        if (mode.value === 'close') {
+            t += Number(v) * d.value;
+        } else {
+            t += d.type === 'coin' ? Number(v) : Number(v) * d.value;
+        }
     }
     return t;
 });
@@ -239,7 +295,8 @@ const totalCierre = computed(() => {
     let t = 0;
     for (const d of denominations) {
         const v = (form as any)[`cant_${d.key}_cierre`];
-        if (v !== null && v !== undefined && v !== '') t += Number(v) * d.value;
+        if (v === null || v === undefined || v === '') continue;
+        t += d.type === 'coin' ? Number(v) : Number(v) * d.value;
     }
     return t;
 });
@@ -324,6 +381,23 @@ const auditTotalCierre = computed(() => {
                     label="Fecha"
                     @select="onDatePicked"
                 />
+                <div class="min-w-[140px]">
+                    <label class="mb-0.5 block text-[9px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400">Cajero</label>
+                    <select
+                        v-model="selectedCashier"
+                        @change="onCashierChange"
+                        class="w-full rounded-lg border border-gray-200 bg-white px-2 py-1 text-[11px] text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    >
+                        <option :value="null">Todos</option>
+                        <option
+                            v-for="c in cashiers"
+                            :key="c.id"
+                            :value="c.id"
+                        >
+                            {{ c.name }}
+                        </option>
+                    </select>
+                </div>
             </div>
 
             <div class="overflow-x-auto">
@@ -561,6 +635,17 @@ const auditTotalCierre = computed(() => {
                             Corrige los errores antes de guardar.
                         </div>
 
+                        <div
+                            v-if="coinErrors.length"
+                            class="rounded-xl border border-danger/20 bg-danger/10 px-3 py-2 text-[11px] text-danger"
+                        >
+                            <ul class="list-disc pl-4">
+                                <li v-for="err in coinErrors" :key="err">
+                                    {{ err }}
+                                </li>
+                            </ul>
+                        </div>
+
                         <!-- ─── TWO COLUMN LAYOUT ─── -->
                         <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
                             <!-- ═══ LEFT: APERTURA ═══ -->
@@ -648,7 +733,7 @@ const auditTotalCierre = computed(() => {
                                                     Denominación
                                                 </th>
                                                 <th class="pb-1 text-center">
-                                                    Cant.
+                                                    Cant./Monto
                                                 </th>
                                                 <th class="pb-1 text-right">
                                                     Total
@@ -669,40 +754,39 @@ const auditTotalCierre = computed(() => {
                                                 </td>
                                                 <td class="py-1 text-center">
                                                     <input
-                                                        :id="
-                                                            'apertura_' + d.key
-                                                        "
-                                                        :name="
-                                                            'cant_' +
-                                                            d.key +
-                                                            '_apertura'
-                                                        "
-                                                        v-model.number="
-                                                            form[
-                                                                ('cant_' +
-                                                                    d.key +
-                                                                    '_apertura') as keyof typeof form
-                                                            ] as any
-                                                        "
+                                                        v-if="d.type === 'bill'"
+                                                        :id="'apertura_' + d.key"
+                                                        :name="'cant_' + d.key + '_apertura'"
+                                                        v-model.number="form[('cant_' + d.key + '_apertura') as keyof typeof form] as any"
                                                         type="number"
                                                         min="0"
-                                                        :disabled="
-                                                            mode === 'close'
-                                                        "
+                                                        placeholder="0"
+                                                        :disabled="mode === 'close'"
                                                         class="w-14 rounded-lg border border-gray-200 bg-white px-1 py-0.5 text-center text-[11px] text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                                                    />
+                                                    <input
+                                                        v-else
+                                                        :id="'apertura_' + d.key"
+                                                        :name="'cant_' + d.key + '_apertura'"
+                                                        v-model.number="form[('cant_' + d.key + '_apertura') as keyof typeof form] as any"
+                                                        type="number"
+                                                        min="0"
+                                                        :step="d.value"
+                                                        placeholder="$0"
+                                                        :disabled="mode === 'close'"
+                                                        :class="[
+                                                            'w-28 rounded-lg border bg-white px-1 py-0.5 text-center text-[11px] text-content-primary transition-shadow focus:ring-1 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-800 dark:text-white',
+                                                            coinErrors.some(e => e.includes(d.label))
+                                                                ? 'border-danger focus:border-danger focus:ring-danger/30'
+                                                                : 'border-gray-200 focus:border-primary-500 focus:ring-primary-500/30 dark:border-gray-700',
+                                                        ]"
                                                     />
                                                 </td>
                                                 <td
                                                     class="py-1 text-right font-mono text-[11px] font-bold text-primary-500"
                                                 >
                                                     {{
-                                                        fmtCLP(
-                                                            ((form as any)[
-                                                                'cant_' +
-                                                                    d.key +
-                                                                    '_apertura'
-                                                            ] ?? 0) * d.value,
-                                                        )
+                                                        fmtCLP(aperturaSubtotal(d))
                                                     }}
                                                 </td>
                                             </tr>
@@ -776,7 +860,7 @@ const auditTotalCierre = computed(() => {
                                                     Denominación
                                                 </th>
                                                 <th class="pb-1 text-center">
-                                                    Cant.
+                                                    Cant./Monto
                                                 </th>
                                                 <th class="pb-1 text-right">
                                                     Total
@@ -797,22 +881,30 @@ const auditTotalCierre = computed(() => {
                                                 </td>
                                                 <td class="py-1 text-center">
                                                     <input
+                                                        v-if="d.type === 'bill'"
                                                         :id="'cierre_' + d.key"
-                                                        :name="
-                                                            'cant_' +
-                                                            d.key +
-                                                            '_cierre'
-                                                        "
-                                                        v-model.number="
-                                                            form[
-                                                                ('cant_' +
-                                                                    d.key +
-                                                                    '_cierre') as keyof typeof form
-                                                            ] as any
-                                                        "
+                                                        :name="'cant_' + d.key + '_cierre'"
+                                                        v-model.number="form[('cant_' + d.key + '_cierre') as keyof typeof form] as any"
                                                         type="number"
                                                         min="0"
+                                                        placeholder="0"
                                                         class="w-14 rounded-lg border border-gray-200 bg-white px-1 py-0.5 text-center text-[11px] text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                                                    />
+                                                    <input
+                                                        v-else
+                                                        :id="'cierre_' + d.key"
+                                                        :name="'cant_' + d.key + '_cierre'"
+                                                        v-model.number="form[('cant_' + d.key + '_cierre') as keyof typeof form] as any"
+                                                        type="number"
+                                                        min="0"
+                                                        :step="d.value"
+                                                        placeholder="$0"
+                                                        :class="[
+                                                            'w-28 rounded-lg border bg-white px-1 py-0.5 text-center text-[11px] text-content-primary transition-shadow focus:ring-1 dark:bg-gray-800 dark:text-white',
+                                                            coinErrors.some(e => e.includes(d.label))
+                                                                ? 'border-danger focus:border-danger focus:ring-danger/30'
+                                                                : 'border-gray-200 focus:border-primary-500 focus:ring-primary-500/30 dark:border-gray-700',
+                                                        ]"
                                                     />
                                                 </td>
                                                 <td
@@ -820,11 +912,9 @@ const auditTotalCierre = computed(() => {
                                                 >
                                                     {{
                                                         fmtCLP(
-                                                            ((form as any)[
-                                                                'cant_' +
-                                                                    d.key +
-                                                                    '_cierre'
-                                                            ] ?? 0) * d.value,
+                                                            d.type === 'coin'
+                                                                ? ((form as any)['cant_' + d.key + '_cierre'] ?? 0)
+                                                                : ((form as any)['cant_' + d.key + '_cierre'] ?? 0) * d.value
                                                         )
                                                     }}
                                                 </td>
