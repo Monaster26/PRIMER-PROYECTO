@@ -257,6 +257,10 @@ watch(nameQuery, (val) => {
     }, 300);
 });
 
+function hideNameDropdown() {
+    setTimeout(() => (showNameDropdown.value = false), 200);
+}
+
 async function handleSkuEnter() {
     const q = skuQuery.value.trim();
     if (!q) return;
@@ -1078,13 +1082,7 @@ const fmt = (v: number) =>
                                         type="text"
                                         placeholder="Buscar por nombre..."
                                         class="w-full rounded-2xl border-0 bg-transparent py-3 pl-11 pr-4 text-sm text-content-primary placeholder:text-content-muted focus:ring-2 focus:ring-primary-500 dark:text-white"
-                                        @blur="
-                                            setTimeout(
-                                                () =>
-                                                    (showNameDropdown = false),
-                                                200,
-                                            )
-                                        "
+                                        @blur="hideNameDropdown"
                                         @focus="
                                             nameResults.length > 0
                                                 ? (showNameDropdown = true)

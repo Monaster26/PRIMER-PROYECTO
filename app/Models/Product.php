@@ -134,6 +134,22 @@ class Product extends Model
         });
     }
 
+    // ─── Boot ──────────────────────────────────────────────
+
+    protected static function booted()
+    {
+        static::updated(function ($product) {
+            if ($product->wasChanged('stock')) {
+                \Log::info('Stock cambió — lanzando evento', [
+                    'product_id' => $product->id,
+                    'old'        => $product->getOriginal('stock'),
+                    'new'        => $product->stock,
+                ]);
+                broadcast(new \App\Events\ProductStockUpdated($product->id, $product->stock))->toOthers();
+            }
+        });
+    }
+
     // ─── Accessors ─────────────────────────────────────────
 
     /** Precio formateado en pesos colombianos */

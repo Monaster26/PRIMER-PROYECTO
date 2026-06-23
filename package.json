@@ -33,7 +33,9 @@
         "vue-tsc": "^2.2.12"
     },
     "dependencies": {
+        "laravel-echo": "^2.3.7",
         "lucide-vue-next": "^1.0.0",
-        "pinia": "^3.0.4"
+        "pinia": "^3.0.4",
+        "pusher-js": "^8.5.0"
     }
 }

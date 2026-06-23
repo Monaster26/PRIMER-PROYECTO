@@ -46,7 +46,7 @@ const props = defineProps<{
         cerrado_por: string;
         cerrado_at: string;
     } | null;
-    todaySales: TodaySale[] | null;
+    todaySales?: TodaySale[] | null;
 }>();
 
 interface TodaySale {
@@ -1483,7 +1483,7 @@ function validateCoin(key: string) {
 
         <SalesHistoryModal
             :show="showSalesHistoryModal"
-            :sales="props.todaySales"
+            :sales="props.todaySales ?? null"
             @close="showSalesHistoryModal = false"
             @reprint="reprintTicket"
         />

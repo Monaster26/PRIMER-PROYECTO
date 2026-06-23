@@ -6,6 +6,8 @@ import type { User } from './';
 declare global {
     interface Window {
         axios: AxiosInstance;
+        Pusher: any;
+        Echo: any;
     }
 
     /* eslint-disable no-var */

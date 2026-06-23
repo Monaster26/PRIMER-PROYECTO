@@ -2,12 +2,13 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { Check, Loader2, Trash2 } from 'lucide-vue-next';
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const STORAGE_KEY = 'monasterios_inventory_draft';
 
 interface ScannedItem {
     product_id: number;
+    id?: number;
     name: string;
     sku: string;
     system_stock: number;
@@ -42,6 +43,30 @@ onMounted(() => {
         try { items.value = JSON.parse(saved); } catch { /* ignore corrupt data */ }
     }
     barcodeInput.value?.focus();
+
+    console.log('[Auditoría] Escuchando canal inventory...');
+    window.Echo?.channel('inventory')
+        .listen('.ProductStockUpdated', (e: any) => {
+            // ── DEBUG ──
+            console.log('→ WebSocket detectó cambio:', JSON.stringify(e));
+            console.log('→ Estructura de un item en tabla:', items.value[0]);
+
+            // ── Búsqueda flexible ──
+            const idx = items.value.findIndex(
+                i => i.product_id === e.product_id || i.id === e.product_id
+            );
+
+            if (idx !== -1) {
+                console.log('→ Actualizando', items.value[idx].name, 'stock_sistema', items.value[idx].system_stock, '→', e.new_stock);
+                items.value[idx].system_stock = e.new_stock;
+            } else {
+                console.log('→ Producto', e.product_id, 'no está en la tabla (idx =', idx, ')');
+            }
+        });
+});
+
+onBeforeUnmount(() => {
+    window.Echo?.leaveChannel('inventory');
 });
 
 function fmt(cents: number): string {
