@@ -17,7 +17,7 @@ const props = defineProps<{
     users: { id: number; name: string }[];
     cashBalance: {
         opening: number;
-        cashSales: number;
+        cierre: number;
         ingresos: number;
         withdrawals: number;
         expected: number;
@@ -144,12 +144,12 @@ const profitMargin = computed(() => {
                         <p
                             class="text-xs text-emerald-600 dark:text-emerald-400"
                         >
-                            + Ventas Efectivo
+                            + Cierre declarado
                         </p>
                         <p
                             class="text-lg font-bold text-emerald-700 dark:text-emerald-300"
                         >
-                            {{ fmt(cashBalance.cashSales) }}
+                            {{ fmt(cashBalance.cierre) }}
                         </p>
                     </div>
                     <div class="rounded-xl bg-sky-50 p-3 dark:bg-sky-900/20">

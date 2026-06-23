@@ -106,10 +106,10 @@ class ReporteDiarioController extends Controller
             'users'      => $users,
             'cashBalance' => [
                 'opening'         => $openingBalance,
-                'cashSales'       => $cashSales,
+                'cierre'          => $efectivoCierre,
                 'ingresos'        => $totalIngresos,
                 'withdrawals'     => $totalRetiros,
-                'expected'        => $openingBalance + $cashSales + $totalIngresos - $totalRetiros,
+                'expected'        => $efectivoCierre + $totalRetiros - $openingBalance,
             ],
             'digitalSales' => [
                 'card'     => $cardSales,
