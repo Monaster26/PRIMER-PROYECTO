@@ -6,12 +6,29 @@ use App\Http\Controllers\Controller;
 use App\Models\InventoryAdjustment;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class InventoryAdjustmentController extends Controller
 {
+    public function index(Request $request)
+    {
+        $query = InventoryAdjustment::with(['user', 'items.product']);
+
+        if ($request->has('date')) {
+            $query->whereDate('created_at', $request->date);
+        }
+
+        $adjustments = $query->latest()->paginate(10)->withQueryString();
+
+        return Inertia::render('admin/inventory/Index', [
+            'adjustments' => $adjustments,
+            'filters'     => $request->only(['date']),
+        ]);
+    }
+
     public function create()
     {
         return Inertia::render('admin/inventory/Create');
@@ -42,7 +59,7 @@ class InventoryAdjustmentController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'items'                     => 'required|array|min:1',
@@ -88,13 +105,10 @@ class InventoryAdjustmentController extends Controller
                 return $adjustment->load('items.product');
             });
 
-            return response()->json([
-                'success'    => "Ajuste #{$adjustment->id} completado.",
-                'adjustment' => $adjustment,
-            ]);
+            return redirect()->back()->with('success', '¡Auditoría de inventario procesada con éxito!');
         } catch (\Throwable $e) {
             report($e);
-            return response()->json(['error' => 'Error al procesar el ajuste de inventario.'], 500);
+            return redirect()->back()->with('error', 'Error al procesar el inventario: ' . $e->getMessage());
         }
     }
 }

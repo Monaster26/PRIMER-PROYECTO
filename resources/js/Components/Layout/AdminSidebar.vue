@@ -116,7 +116,7 @@ const navGroups = computed(() => {
                     },
                     {
                         label: 'Auditoria de inventario',
-                        name: 'admin.inventory-adjustments.create',
+                        name: 'admin.inventory-adjustments.index',
                         icon: ClipboardList,
                     },
                 ],

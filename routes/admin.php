@@ -114,6 +114,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 
         // Auditoria de Inventario
         Route::prefix('inventory-adjustments')->name('inventory-adjustments.')->group(function () {
+            Route::get('/', [InventoryAdjustmentController::class, 'index'])->name('index');
             Route::get('/create', [InventoryAdjustmentController::class, 'create'])->name('create');
             Route::post('/scan', [InventoryAdjustmentController::class, 'scanProduct'])->name('scan');
             Route::post('/', [InventoryAdjustmentController::class, 'store'])->name('store');

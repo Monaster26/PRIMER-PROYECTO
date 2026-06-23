@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { Check, Loader2, Trash2 } from 'lucide-vue-next';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 
@@ -22,10 +22,19 @@ const loading = ref(false);
 const submitting = ref(false);
 const error = ref('');
 const highlightedId = ref<number | null>(null);
+const page = usePage();
 
 watch(items, (val) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(val));
 }, { deep: true });
+
+watch(() => (page.props as any).flash?.success, (message) => {
+    if (message) {
+        items.value = [];
+        localStorage.removeItem(STORAGE_KEY);
+        submitting.value = false;
+    }
+}, { immediate: true });
 
 onMounted(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -97,13 +106,23 @@ function removeItem(index: number) {
     items.value.splice(index, 1);
 }
 
-const totalCostDiff = computed(() =>
-    items.value.reduce((sum, i) => sum + ((i.counted_stock - i.system_stock) * i.cost_price), 0),
-);
+const faltantes = computed(() => {
+    const loss = items.value.filter(i => i.counted_stock - i.system_stock < 0);
+    return {
+        count: loss.length,
+        unidades: loss.reduce((s, i) => s + Math.abs(i.counted_stock - i.system_stock), 0),
+        costo: loss.reduce((s, i) => s + Math.abs((i.counted_stock - i.system_stock) * i.cost_price), 0),
+    };
+});
 
-const totalDiffUnits = computed(() =>
-    items.value.reduce((sum, i) => sum + (i.counted_stock - i.system_stock), 0),
-);
+const sobrantes = computed(() => {
+    const surplus = items.value.filter(i => i.counted_stock - i.system_stock > 0);
+    return {
+        count: surplus.length,
+        unidades: surplus.reduce((s, i) => s + (i.counted_stock - i.system_stock), 0),
+        costo: surplus.reduce((s, i) => s + ((i.counted_stock - i.system_stock) * i.cost_price), 0),
+    };
+});
 
 function finalizeInventory() {
     if (submitting.value || items.value.length === 0) return;
@@ -115,12 +134,6 @@ function finalizeInventory() {
         })),
     }, {
         preserveState: true,
-        onSuccess: () => {
-            items.value = [];
-            localStorage.removeItem(STORAGE_KEY);
-            submitting.value = false;
-            barcodeInput.value?.focus();
-        },
         onError: () => { submitting.value = false; },
     });
 }
@@ -154,11 +167,15 @@ function finalizeInventory() {
                             class="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-primary-500"
                         >Buscando...</span>
                     </div>
-                    <div class="shrink-0 rounded-xl bg-gray-100 px-4 py-3 dark:bg-gray-800">
-                        <p class="text-xs text-content-muted">Diferencia total</p>
-                        <p class="text-lg font-bold tabular-nums" :class="totalCostDiff < 0 ? 'text-red-600' : totalCostDiff > 0 ? 'text-green-600' : ''">
-                            {{ fmt(totalCostDiff) }}
-                        </p>
+                    <div class="flex shrink-0 items-center gap-2">
+                        <div class="rounded-xl bg-red-50 px-3 py-2 dark:bg-red-900/20">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400">Pérdidas</p>
+                            <p class="text-sm font-bold tabular-nums text-red-600">{{ fmt(faltantes.costo) }}</p>
+                        </div>
+                        <div class="rounded-xl bg-green-50 px-3 py-2 dark:bg-green-900/20">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-green-700 dark:text-green-400">Sobrantes</p>
+                            <p class="text-sm font-bold tabular-nums text-green-600">{{ fmt(sobrantes.costo) }}</p>
+                        </div>
                     </div>
                 </div>
                 <p
@@ -223,17 +240,24 @@ function finalizeInventory() {
 
             <!-- Summary + Finalize -->
             <div v-if="items.length > 0" class="flex items-center justify-between rounded-2xl bg-gray-50 p-4 dark:bg-gray-800/50">
-                <div class="space-y-1">
-                    <p class="text-sm text-content-muted">
-                        <span class="font-medium">{{ items.length }}</span> producto(s) · 
-                        <span :class="totalDiffUnits < 0 ? 'text-red-600' : totalDiffUnits > 0 ? 'text-green-600' : ''">
-                            {{ totalDiffUnits > 0 ? '+' : '' }}{{ totalDiffUnits }} unidades
-                        </span>
-                    </p>
-                    <p class="text-2xl font-bold" :class="totalCostDiff < 0 ? 'text-red-600' : totalCostDiff > 0 ? 'text-green-600' : ''">
-                        {{ fmt(Math.abs(totalCostDiff)) }}
-                        <span class="text-sm font-normal text-content-muted">{{ totalCostDiff < 0 ? 'en pérdidas' : totalCostDiff > 0 ? 'en sobrantes' : 'sin diferencias' }}</span>
-                    </p>
+                <div class="flex items-center gap-6">
+                    <div v-if="faltantes.count > 0">
+                        <p class="text-xs text-content-muted">
+                            <span class="font-medium text-red-600">{{ faltantes.count }}</span> producto(s) con pérdidas
+                        </p>
+                        <p class="text-lg font-bold text-red-600">-{{ faltantes.unidades }} uds</p>
+                        <p class="text-sm font-bold text-red-600">{{ fmt(faltantes.costo) }}</p>
+                    </div>
+                    <div v-if="sobrantes.count > 0" class="border-l border-gray-200 pl-6 dark:border-gray-700">
+                        <p class="text-xs text-content-muted">
+                            <span class="font-medium text-green-600">{{ sobrantes.count }}</span> producto(s) con sobrantes
+                        </p>
+                        <p class="text-lg font-bold text-green-600">+{{ sobrantes.unidades }} uds</p>
+                        <p class="text-sm font-bold text-green-600">{{ fmt(sobrantes.costo) }}</p>
+                    </div>
+                    <div v-if="faltantes.count === 0 && sobrantes.count === 0" class="text-sm text-content-muted">
+                        Sin diferencias
+                    </div>
                 </div>
                 <button
                     @click="finalizeInventory"
