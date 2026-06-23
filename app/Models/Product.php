@@ -30,6 +30,8 @@ class Product extends Model
         'max_discount',
         'image_path',
         'is_active',
+        'is_featured',
+        'expiration_date',
         'has_variants',
         'sort_order',
         'sub_category',
@@ -37,6 +39,7 @@ class Product extends Model
 
     protected $casts = [
         'is_active'    => 'boolean',
+        'is_featured'  => 'boolean',
         'has_variants' => 'boolean',
         'cost_price'   => 'integer',
         'price'        => 'integer',

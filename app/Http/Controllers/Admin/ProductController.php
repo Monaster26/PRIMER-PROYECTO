@@ -7,6 +7,7 @@ use App\Imports\ProductsImport;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\StockMovement;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -44,6 +45,8 @@ class ProductController extends Controller
             'stock'         => 'required|integer|min:0',
             'min_stock'     => 'nullable|integer|min:0',
             'is_active'     => 'boolean',
+            'is_featured'     => 'boolean',
+            'expiration_date' => 'nullable|date',
             'sort_order'    => 'nullable|integer|min:0',
             'description'   => 'nullable|string',
             'image'         => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
@@ -56,6 +59,7 @@ class ProductController extends Controller
 
         $validated['slug'] = Str::slug($validated['name']) . '-' . Str::random(6);
         $validated['is_active'] = $request->boolean('is_active');
+        $validated['is_featured'] = $request->boolean('is_featured');
         $validated['cost_price'] = $validated['cost_price'] ? (int) (round((float) $validated['cost_price'], 2) * 100) : 0;
         $validated['price'] = (int) (round((float) $validated['price'], 2) * 100);
         $validated['tax_rate'] = $validated['tax_rate'] ?? 0;
@@ -86,6 +90,8 @@ class ProductController extends Controller
             'stock'         => 'required|integer|min:0',
             'min_stock'     => 'nullable|integer|min:0',
             'is_active'     => 'boolean',
+            'is_featured'     => 'boolean',
+            'expiration_date' => 'nullable|date',
             'sort_order'    => 'nullable|integer|min:0',
             'description'   => 'nullable|string',
             'image'         => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
@@ -97,6 +103,7 @@ class ProductController extends Controller
         }
 
         $validated['is_active'] = $request->boolean('is_active');
+        $validated['is_featured'] = $request->boolean('is_featured');
         $validated['cost_price'] = $validated['cost_price'] ? (int) (round((float) $validated['cost_price'], 2) * 100) : 0;
         $validated['price'] = (int) (round((float) $validated['price'], 2) * 100);
         $validated['tax_rate'] = $validated['tax_rate'] ?? 0;
@@ -148,13 +155,44 @@ class ProductController extends Controller
             ->with('success', $message);
     }
 
+    public function searchSkuAjax(Request $request): JsonResponse
+    {
+        $search = $request->get('query');
+
+        $product = Product::where('is_active', true)
+            ->where(function ($q) use ($search) {
+                $q->where('sku', $search)
+                  ->orWhere('barcode', $search);
+            })
+            ->first(['id', 'name', 'sku', 'barcode', 'stock', 'cost_price', 'price', 'image_path']);
+
+        return response()->json($product);
+    }
+
+    public function searchNameAjax(Request $request): JsonResponse
+    {
+        $search = $request->get('query');
+
+        $products = Product::where('is_active', true)
+            ->where('name', 'LIKE', "%{$search}%")
+            ->limit(5)
+            ->get(['id', 'name', 'sku', 'barcode', 'stock', 'cost_price', 'price', 'image_path']);
+
+        return response()->json($products);
+    }
+
     public function addStock(Request $request, Product $product): RedirectResponse
     {
         $validated = $request->validate([
-            'quantity'  => 'required|integer|min:1',
-            'unit_cost' => 'nullable|numeric|min:0',
-            'notes'     => 'nullable|string|max:500',
+            'quantity'        => 'required|integer|min:1',
+            'unit_cost'       => 'nullable|numeric|min:0',
+            'notes'           => 'nullable|string|max:500',
+            'expiration_date' => 'nullable|date',
         ]);
+
+        if (!empty($validated['expiration_date'])) {
+            $product->update(['expiration_date' => $validated['expiration_date']]);
+        }
 
         StockMovement::record(
             $product,
@@ -166,6 +204,11 @@ class ProductController extends Controller
             notes: $validated['notes'] ?? null,
             employeeId: auth()->id(),
         );
+
+        if ($validated['unit_cost'] !== null) {
+            $newCost = (int) ((float) $validated['unit_cost'] * 100);
+            $product->update(['cost_price' => $newCost]);
+        }
 
         return redirect()->route('admin.codigos.index')
             ->with('success', "Stock añadido: {$validated['quantity']} unidades.");

@@ -56,6 +56,10 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
             ->except(['show', 'create', 'edit']);
         Route::post('codigos/{product}/add-stock', [AdminProductController::class, 'addStock'])
             ->name('codigos.add-stock');
+        Route::get('codigos/search-sku', [AdminProductController::class, 'searchSkuAjax'])
+            ->name('codigos.search-sku');
+        Route::get('codigos/search-name', [AdminProductController::class, 'searchNameAjax'])
+            ->name('codigos.search-name');
         Route::post('codigos/importar', [AdminProductController::class, 'import'])
             ->name('codigos.import');
 

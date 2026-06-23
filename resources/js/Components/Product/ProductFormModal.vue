@@ -27,6 +27,8 @@ const form = useForm({
     category_id: '',
     sub_category: '',
     is_active: true,
+    is_featured: false,
+    expiration_date: '',
     sort_order: 0,
     unit: 'und',
     tax_rate: '0',
@@ -63,6 +65,8 @@ watch(
                 form.category_id = props.product.category_id.toString();
                 form.sub_category = props.product.sub_category || '';
                 form.is_active = props.product.is_active;
+                form.is_featured = props.product.is_featured ?? false;
+                form.expiration_date = props.product.expiration_date || '';
                 form.sort_order = props.product.sort_order || 0;
                 form.unit = props.product.unit || 'und';
                 form.tax_rate = props.product.tax_rate?.toString() || '0';
@@ -226,11 +230,39 @@ function submit() {
                                                         form.is_active,
                                                 }"
                                             ></span>
-                                        </button>
-                                    </div>
-                                    <div
-                                        class="border-t border-primary-100 pt-4 dark:border-primary-800"
+                                    </button>
+                                </div>
+                                <div
+                                    class="mt-4 flex items-center justify-between"
+                                >
+                                    <span
+                                        class="text-xs font-bold uppercase text-primary-600"
+                                        >Producto Destacado / Oferta</span
                                     >
+                                    <button
+                                        type="button"
+                                        @click="
+                                            form.is_featured = !form.is_featured
+                                        "
+                                        class="relative h-6 w-12 rounded-full transition-colors"
+                                        :class="
+                                            form.is_featured
+                                                ? 'bg-amber-500'
+                                                : 'bg-gray-300'
+                                        "
+                                    >
+                                        <span
+                                            class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform"
+                                            :class="{
+                                                'translate-x-6':
+                                                    form.is_featured,
+                                            }"
+                                        ></span>
+                                    </button>
+                                </div>
+                                <div
+                                    class="border-t border-primary-100 pt-4 dark:border-primary-800"
+                                >
                                         <label
                                             class="mb-2 block text-xs font-bold uppercase text-primary-600"
                                             >Orden en Tienda</label
@@ -373,6 +405,18 @@ function submit() {
                                             </option>
                                             <option value="g">Gramo (g)</option>
                                         </select>
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-muted"
+                                            >Fecha de Vencimiento</label
+                                        >
+                                        <input
+                                            v-model="form.expiration_date"
+                                            type="date"
+                                            class="w-full rounded-2xl border border-gray-100 bg-gray-50 px-5 py-3 text-sm dark:border-gray-800 dark:bg-gray-900"
+                                        />
                                     </div>
 
                                     <div>
