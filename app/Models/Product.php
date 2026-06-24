@@ -130,7 +130,8 @@ class Product extends Model
             $q->where('name', 'like', "%{$term}%")
               ->orWhere('sku', 'like', "%{$term}%")
               ->orWhere('barcode', 'like', "%{$term}%")
-              ->orWhere('brand', 'like', "%{$term}%");
+              ->orWhere('brand', 'like', "%{$term}%")
+              ->orWhereHas('category', fn($cq) => $cq->where('name', 'like', "%{$term}%"));
         });
     }
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CouponController;
@@ -34,13 +35,28 @@ Route::get('/pos-test', function () {
     return Inertia::render('POS/Dashboard');
 })->name('pos.test');
 
+// Categorías públicas (lectura) para Navbar, menú, etc.
+Route::get('/public-categorias', [AdminCategoryController::class, 'index'])
+    ->name('public.categorias');
+
 /*
 |--------------------------------------------------------------------------
 | Dashboard
 |--------------------------------------------------------------------------
 */
+use App\Models\Category;
+use App\Models\Product;
+
 Route::get('/dashboard', function () {
-    return redirect('/admin');
+    return Inertia::render('Dashboard', [
+        'totalCategories' => Category::whereNull('parent_id')->count(),
+        'totalProducts'   => Product::count(),
+        'featuredCategories' => Category::with('children')
+            ->roots()
+            ->ordered()
+            ->limit(6)
+            ->get(['id', 'name', 'slug']),
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 /*

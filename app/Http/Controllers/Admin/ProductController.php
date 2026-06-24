@@ -22,11 +22,14 @@ class ProductController extends Controller
     {
         $products = Product::with('category')
             ->when($request->search, fn($q) => $q->search($request->search))
+            ->when($request->category_id, fn($q, $id) => $q->where('category_id', $id))
             ->orderBy('name')
             ->paginate(30);
 
         return Inertia::render('admin/codigos', [
             'products' => $products,
+            'categories' => Category::ordered()->get(['id', 'name', 'slug', 'parent_id']),
+            'categoryTree' => Category::with('children')->roots()->ordered()->get(['id', 'name', 'slug']),
         ]);
     }
 

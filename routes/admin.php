@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\ObservacionController;
 use App\Http\Controllers\Admin\PendingInvoiceController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\PurchaseOrderController;
 use App\Http\Controllers\Admin\ReporteDiarioController;
 use App\Http\Controllers\Admin\SaleController;
@@ -62,6 +63,16 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
             ->name('codigos.search-name');
         Route::post('codigos/importar', [AdminProductController::class, 'import'])
             ->name('codigos.import');
+
+        // Categorías
+        Route::get('categorias', [AdminCategoryController::class, 'index'])
+            ->name('categorias.index');
+        Route::post('categorias', [AdminCategoryController::class, 'store'])
+            ->name('categorias.store');
+        Route::put('categorias/{category}', [AdminCategoryController::class, 'update'])
+            ->name('categorias.update');
+        Route::delete('categorias/{category}', [AdminCategoryController::class, 'destroy'])
+            ->name('categorias.destroy');
 
         // Ventas
         Route::resource('ventas', SaleController::class)

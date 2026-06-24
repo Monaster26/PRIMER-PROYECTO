@@ -281,10 +281,14 @@ function fmtDiff(d: number): string {
                                         class="text-left text-xs font-bold uppercase tracking-wider text-content-muted"
                                     >
                                         <th class="pb-2">Producto</th>
-                                        <th class="pb-2 text-center">Stock Sis.</th>
+                                        <th class="pb-2 text-center">
+                                            Stock Sis.
+                                        </th>
                                         <th class="pb-2 text-center">Conteo</th>
                                         <th class="pb-2 text-center">Dif.</th>
-                                        <th class="pb-2 text-right">Impacto $</th>
+                                        <th class="pb-2 text-right">
+                                            Impacto $
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody

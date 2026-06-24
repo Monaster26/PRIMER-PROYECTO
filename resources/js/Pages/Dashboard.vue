@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { useCategoryStore } from '@/Stores/categoryStore';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import {
     AlertCircle,
     ArrowDownRight,
@@ -12,7 +11,11 @@ import {
     TrendingUp,
 } from 'lucide-vue-next';
 
-const categoryStore = useCategoryStore();
+const props = defineProps<{
+    totalCategories: number;
+    totalProducts: number;
+    featuredCategories: { id: number; name: string; slug: string; icon?: string | null; children: any[] }[];
+}>();
 
 // ─── Mock Stats Data ──────────────────────────────────────────────
 const stats = [
@@ -27,7 +30,7 @@ const stats = [
     },
     {
         label: 'Total Productos',
-        value: '1,248',
+        value: props.totalProducts.toLocaleString(),
         trend: '+3',
         isUp: true,
         icon: Package,
@@ -36,7 +39,7 @@ const stats = [
     },
     {
         label: 'Categorías Activas',
-        value: categoryStore.categories.length.toString(),
+        value: props.totalCategories.toString(),
         trend: '0',
         isUp: true,
         icon: Layers,
@@ -175,10 +178,10 @@ function getStatusClass(status: string) {
                     >
                         Últimos Pedidos
                     </h3>
-                    <Link
+                    <a
                         href="/orders"
                         class="text-sm font-bold text-primary-500 transition-colors hover:text-primary-600"
-                        >Ver todos</Link
+                        >Ver todos</a
                     >
                 </div>
                 <div class="overflow-x-auto">
@@ -332,14 +335,14 @@ function getStatusClass(status: string) {
                     </div>
                     <div class="flex-1 space-y-3 overflow-y-auto p-4">
                         <div
-                            v-for="cat in categoryStore.categories.slice(0, 6)"
+                            v-for="cat in props.featuredCategories"
                             :key="cat.id"
                             class="group flex cursor-pointer items-center gap-4 rounded-2xl p-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
                         >
                             <div
                                 class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-2xl transition-transform group-hover:scale-110 dark:bg-gray-900"
                             >
-                                {{ cat.emoji }}
+                                {{ cat.icon ?? '' }}
                             </div>
                             <div class="min-w-0 flex-1">
                                 <p
@@ -348,7 +351,7 @@ function getStatusClass(status: string) {
                                     {{ cat.name }}
                                 </p>
                                 <p class="text-xs text-content-muted">
-                                    {{ cat.subcategories.length }} Subcategorías
+                                    {{ cat.children.length }} Subcategorías
                                 </p>
                             </div>
                             <ChevronDown

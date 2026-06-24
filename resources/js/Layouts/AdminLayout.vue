@@ -3,7 +3,7 @@ import AdminSidebar from '@/Components/Layout/AdminSidebar.vue';
 import Header from '@/Components/Layout/Header.vue';
 import { usePage } from '@inertiajs/vue3';
 import { CheckCircle, X, XCircle } from 'lucide-vue-next';
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 
 const sidebarOpen = ref(false);
 const isDark = ref(false);
@@ -36,7 +36,7 @@ watch(
         if (window.innerWidth < 1024) {
             sidebarOpen.value = false;
         }
-    }
+    },
 );
 
 onMounted(() => {
@@ -91,7 +91,11 @@ watch(
             />
         </Transition>
 
-        <AdminSidebar :isOpen="sidebarOpen" @close="sidebarOpen = false" class="flex-shrink-0" />
+        <AdminSidebar
+            :isOpen="sidebarOpen"
+            @close="sidebarOpen = false"
+            class="flex-shrink-0"
+        />
 
         <div class="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
             <Header

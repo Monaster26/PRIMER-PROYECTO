@@ -52,6 +52,7 @@ watch(
     () => props.show,
     (isShowing) => {
         if (isShowing) {
+            categoryStore.fetchCategories();
             if (props.product) {
                 form._method = 'PUT';
                 form.name = props.product.name;
@@ -86,12 +87,9 @@ watch(
 // ─── Lógica de Subcategorías Jerárquicas ──────────────────────────
 const filteredSubcategories = computed(() => {
     if (!form.category_id) return [];
-    // Buscamos en el store central de categorías la estructura jerárquica
-    const selectedCat = categoryStore.categories.find(
-        (c) =>
-            c.id === form.category_id || c.id === form.category_id.toString(),
-    );
-    return selectedCat?.subcategories ?? [];
+    const catId = Number(form.category_id);
+    const selectedCat = categoryStore.categories.find((c) => c.id === catId);
+    return selectedCat?.children ?? [];
 });
 
 function submit() {
@@ -344,7 +342,7 @@ function submit() {
                                                 :key="cat.id"
                                                 :value="cat.id"
                                             >
-                                                {{ cat.emoji }} {{ cat.name }}
+                                                {{ cat.icon }} {{ cat.name }}
                                             </option>
                                         </select>
                                     </div>
@@ -362,10 +360,10 @@ function submit() {
                                             <option value="">Ninguna</option>
                                             <option
                                                 v-for="sub in filteredSubcategories"
-                                                :key="sub"
-                                                :value="sub"
+                                                :key="sub.id"
+                                                :value="sub.name"
                                             >
-                                                {{ sub }}
+                                                {{ sub.name }}
                                             </option>
                                         </select>
                                     </div>

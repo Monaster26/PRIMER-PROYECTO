@@ -1067,7 +1067,9 @@ const computedTotal = () => {
                                 class="rounded-xl bg-gray-50 text-xs uppercase tracking-wider text-content-muted dark:bg-gray-900/50 dark:text-gray-500"
                             >
                                 <tr>
-                                    <th class="px-3 py-2 font-bold">Producto</th>
+                                    <th class="px-3 py-2 font-bold">
+                                        Producto
+                                    </th>
                                     <th class="px-3 py-2 text-center font-bold">
                                         Pedido
                                     </th>

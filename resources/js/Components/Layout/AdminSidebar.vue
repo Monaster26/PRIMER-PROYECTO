@@ -202,7 +202,11 @@ const navGroups = computed(() => {
 <template>
     <aside
         class="fixed inset-y-0 left-0 z-50 flex flex-col border-r border-gray-100 bg-white shadow-sm transition-all duration-300 ease-in-out dark:border-gray-800 dark:bg-surface-dark lg:relative"
-        :class="isOpen ? 'w-64 translate-x-0 opacity-100' : '-translate-x-full lg:translate-x-0 lg:w-0 lg:opacity-0 lg:overflow-hidden lg:border-none'"
+        :class="
+            isOpen
+                ? 'w-64 translate-x-0 opacity-100'
+                : '-translate-x-full lg:w-0 lg:translate-x-0 lg:overflow-hidden lg:border-none lg:opacity-0'
+        "
     >
         <div
             class="flex h-16 flex-shrink-0 items-center bg-gradient-to-r from-primary-500 to-secondary-400 px-6"
