@@ -230,39 +230,40 @@ function submit() {
                                                         form.is_active,
                                                 }"
                                             ></span>
-                                    </button>
-                                </div>
-                                <div
-                                    class="mt-4 flex items-center justify-between"
-                                >
-                                    <span
-                                        class="text-xs font-bold uppercase text-primary-600"
-                                        >Producto Destacado / Oferta</span
-                                    >
-                                    <button
-                                        type="button"
-                                        @click="
-                                            form.is_featured = !form.is_featured
-                                        "
-                                        class="relative h-6 w-12 rounded-full transition-colors"
-                                        :class="
-                                            form.is_featured
-                                                ? 'bg-amber-500'
-                                                : 'bg-gray-300'
-                                        "
+                                        </button>
+                                    </div>
+                                    <div
+                                        class="mt-4 flex items-center justify-between"
                                     >
                                         <span
-                                            class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform"
-                                            :class="{
-                                                'translate-x-6':
-                                                    form.is_featured,
-                                            }"
-                                        ></span>
-                                    </button>
-                                </div>
-                                <div
-                                    class="border-t border-primary-100 pt-4 dark:border-primary-800"
-                                >
+                                            class="text-xs font-bold uppercase text-primary-600"
+                                            >Producto Destacado / Oferta</span
+                                        >
+                                        <button
+                                            type="button"
+                                            @click="
+                                                form.is_featured =
+                                                    !form.is_featured
+                                            "
+                                            class="relative h-6 w-12 rounded-full transition-colors"
+                                            :class="
+                                                form.is_featured
+                                                    ? 'bg-amber-500'
+                                                    : 'bg-gray-300'
+                                            "
+                                        >
+                                            <span
+                                                class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform"
+                                                :class="{
+                                                    'translate-x-6':
+                                                        form.is_featured,
+                                                }"
+                                            ></span>
+                                        </button>
+                                    </div>
+                                    <div
+                                        class="border-t border-primary-100 pt-4 dark:border-primary-800"
+                                    >
                                         <label
                                             class="mb-2 block text-xs font-bold uppercase text-primary-600"
                                             >Orden en Tienda</label

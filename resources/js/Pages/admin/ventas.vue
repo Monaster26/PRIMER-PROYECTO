@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import DateFilter from '@/Components/DateFilter.vue';
 import { formatDate, formatTime } from '@/helpers/format';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import DateFilter from '@/Components/DateFilter.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import {
     CalendarRange,
@@ -253,9 +253,7 @@ const fmt = (v: number) =>
                     Período
                 </h2>
 
-                <span
-                    class="h-6 w-px bg-gray-200 dark:bg-gray-700"
-                ></span>
+                <span class="h-6 w-px bg-gray-200 dark:bg-gray-700"></span>
 
                 <DateFilter
                     v-model="filterFrom"
@@ -268,7 +266,11 @@ const fmt = (v: number) =>
                     @select="onToPicked"
                 />
                 <button
-                    @click="filterFrom = ''; filterTo = ''; loadMonth()"
+                    @click="
+                        filterFrom = '';
+                        filterTo = '';
+                        loadMonth();
+                    "
                     class="rounded-xl border border-gray-200 px-3 py-1.5 text-xs font-bold text-content-muted transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
                 >
                     Limpiar
@@ -870,9 +872,7 @@ const fmt = (v: number) =>
                                 >
                                 <span
                                     class="font-medium text-content-primary dark:text-white"
-                                    >{{
-                                        fmt(item.total_line)
-                                    }}</span
+                                    >{{ fmt(item.total_line) }}</span
                                 >
                             </div>
                         </div>

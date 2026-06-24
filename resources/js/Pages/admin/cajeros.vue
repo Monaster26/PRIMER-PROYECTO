@@ -74,7 +74,12 @@ function submitForm() {
 }
 
 function deleteCashier(c: any) {
-    if (!confirm(`¿Eliminar al cajero "${c.name}"? Esta acción no se puede deshacer.`)) return;
+    if (
+        !confirm(
+            `¿Eliminar al cajero "${c.name}"? Esta acción no se puede deshacer.`,
+        )
+    )
+        return;
     router.delete(route('admin.cajeros.destroy', c.id));
 }
 

@@ -27,5 +27,3 @@ declare module '@inertiajs/core' {
         };
     }
 }
-
-

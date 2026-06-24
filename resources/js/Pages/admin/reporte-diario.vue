@@ -64,8 +64,6 @@ const profitMargin = computed(() => {
     if (props.summary.grossSales === 0) return 0;
     return (props.summary.netProfit / props.summary.grossSales) * 100;
 });
-
-
 </script>
 
 <template>
@@ -364,7 +362,8 @@ const profitMargin = computed(() => {
                         <p
                             class="text-xs text-primary-600 dark:text-primary-400"
                         >
-                            Total General (Apertura + Ventas + Ingresos - Retiros)
+                            Total General (Apertura + Ventas + Ingresos -
+                            Retiros)
                         </p>
                         <p
                             class="text-2xl font-bold text-primary-700 dark:text-primary-300"

@@ -15,6 +15,7 @@ class PurchaseOrder extends Model
         'status',
         'notes',
         'ordered_at',
+        'delivery_at',
         'received_at',
         'created_by',
     ];
@@ -24,6 +25,7 @@ class PurchaseOrder extends Model
         return [
             'total_cost'  => 'integer',
             'ordered_at'  => 'date',
+            'delivery_at' => 'date',
             'received_at' => 'datetime',
         ];
     }

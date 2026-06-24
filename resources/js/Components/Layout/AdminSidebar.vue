@@ -40,7 +40,9 @@ onMounted(async () => {
         const res = await fetch(route('admin.observaciones.unread-count'));
         const json = await res.json();
         unreadObservaciones.value = json.count;
-    } catch { /* silent */ }
+    } catch {
+        /* silent */
+    }
 });
 
 const navGroups = computed(() => {
@@ -241,8 +243,13 @@ const navGroups = computed(() => {
                     "
                 >
                     <component :is="item.icon" class="h-5 w-5 flex-shrink-0" />
-                    <span v-if="unreadObservaciones && item.name === 'admin.observaciones.index'"
-                        class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm">
+                    <span
+                        v-if="
+                            unreadObservaciones &&
+                            item.name === 'admin.observaciones.index'
+                        "
+                        class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm"
+                    >
                         {{ unreadObservaciones }}
                     </span>
                     <span v-if="isOpen" class="select-none truncate">{{

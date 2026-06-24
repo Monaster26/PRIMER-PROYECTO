@@ -10,6 +10,7 @@ use App\Models\StockMovement;
 use App\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -34,48 +35,76 @@ class PurchaseOrderController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'supplier_id'          => 'required|exists:suppliers,id',
-            'ordered_at'           => 'required|date',
-            'notes'                => 'nullable|string|max:500',
-            'items'                => 'required|array|min:1',
-            'items.*.product_id'   => 'required|exists:products,id',
-            'items.*.quantity'     => 'required|integer|min:1',
-            'items.*.unit_cost'    => 'required|numeric|min:0',
+            'supplier_id'            => 'required|exists:suppliers,id',
+            'ordered_at'             => 'required|date',
+            'delivery_at'            => 'nullable|date|after_or_equal:ordered_at',
+            'notes'                  => 'nullable|string|max:500',
+            'items'                  => 'required|array|min:1',
+            'items.*.product_id'     => 'nullable|exists:products,id',
+            'items.*.quantity'       => 'required|integer|min:1',
+            'items.*.unit_cost'      => 'required|numeric|min:0',
+            'items.*.is_new'         => 'required|boolean',
+            'items.*.new_name'       => 'required_if:items.*.is_new,true|nullable|string|max:255',
         ]);
 
-        $lastId = PurchaseOrder::max('id') ?? 0;
-        $orderNumber = 'PO-' . str_pad($lastId + 1, 4, '0', STR_PAD_LEFT);
+        $order = DB::transaction(function () use ($validated) {
+            $lastId = PurchaseOrder::max('id') ?? 0;
+            $orderNumber = 'PO-' . str_pad($lastId + 1, 4, '0', STR_PAD_LEFT);
 
-        $totalCost = 0;
-        $items = [];
+            $totalCost = 0;
 
-        foreach ($validated['items'] as $item) {
-            $unitCost = (int) (round((float) $item['unit_cost'], 2) * 100);
-            $subtotal = $unitCost * (int) $item['quantity'];
-            $totalCost += $subtotal;
-
-            $items[] = new PurchaseOrderItem([
-                'product_id' => $item['product_id'],
-                'quantity'   => (int) $item['quantity'],
-                'unit_cost'  => $unitCost,
-                'subtotal'   => $subtotal,
+            $order = PurchaseOrder::create([
+                'order_number' => $orderNumber,
+                'supplier_id'  => $validated['supplier_id'],
+                'total_cost'   => 0,
+                'status'       => 'pending',
+                'notes'        => $validated['notes'] ?? null,
+                'ordered_at'   => $validated['ordered_at'],
+                'delivery_at'  => $validated['delivery_at'] ?? null,
+                'created_by'   => auth()->id(),
             ]);
-        }
 
-        $order = PurchaseOrder::create([
-            'order_number' => $orderNumber,
-            'supplier_id'  => $validated['supplier_id'],
-            'total_cost'   => $totalCost,
-            'status'       => 'pending',
-            'notes'        => $validated['notes'] ?? null,
-            'ordered_at'   => $validated['ordered_at'],
-            'created_by'   => auth()->id(),
-        ]);
+            foreach ($validated['items'] as $item) {
+                $productId = $item['product_id'] ?? null;
 
-        $order->items()->saveMany($items);
+                if (!empty($item['is_new'])) {
+                    $sku = !empty($item['sku']) ? $item['sku'] : 'TEMP-' . uniqid();
+                    $newProduct = Product::create([
+                        'name'       => $item['new_name'] ?? $item['name'] ?? 'Producto Nuevo',
+                        'sku'        => $sku,
+                        'cost_price' => (int) (round((float) ($item['unit_cost'] ?? 0), 2) * 100),
+                        'price'      => (int) (round((float) ($item['unit_cost'] ?? 0), 2) * 100),
+                        'stock'      => 0,
+                        'is_active'  => true,
+                    ]);
+                    $productId = $newProduct->id;
+                }
+
+                if (empty($productId)) {
+                    \Log::warning('Pedido: ítem saltado sin product_id', $item);
+                    continue;
+                }
+
+                $unitCost = (int) (round((float) ($item['unit_cost'] ?? 0), 2) * 100);
+                $subtotal = $unitCost * (int) ($item['quantity'] ?? 1);
+                $totalCost += $subtotal;
+
+                PurchaseOrderItem::create([
+                    'purchase_order_id' => $order->id,
+                    'product_id'        => $productId,
+                    'quantity'          => (int) $item['quantity'],
+                    'unit_cost'         => $unitCost,
+                    'subtotal'          => $subtotal,
+                ]);
+            }
+
+            $order->update(['total_cost' => $totalCost]);
+
+            return $order;
+        });
 
         return redirect()->route('admin.pedidos.index')
-            ->with('success', "Pedido {$orderNumber} registrado.");
+            ->with('success', "Pedido {$order->order_number} registrado.");
     }
 
     public function receive(Request $request, PurchaseOrder $purchaseOrder): RedirectResponse

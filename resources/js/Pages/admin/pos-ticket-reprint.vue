@@ -6,7 +6,12 @@ const props = defineProps<{
         id: number;
         folio: number;
         total: number;
-        items: { name: string; quantity: number; price: number; total: number }[];
+        items: {
+            name: string;
+            quantity: number;
+            price: number;
+            total: number;
+        }[];
         payments: { method: string; amount: number }[];
         cash_amount: number;
         card_amount: number;
@@ -38,8 +43,12 @@ function paymentLabel(sale: typeof props.sale): string {
 function formatDate(iso: string): string {
     const d = new Date(iso);
     return d.toLocaleDateString('es-CL', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', hour12: false,
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
     });
 }
 
@@ -51,12 +60,23 @@ onMounted(() => {
 <template>
     <div id="thermal-ticket" class="mx-auto w-[80mm] bg-white p-4 text-[10px]">
         <div class="text-center">
-            <img src="/images/logo.png" alt="Monasterio Market" class="mx-auto mb-2 h-12 w-auto object-contain" />
-            <p class="text-xs font-bold uppercase tracking-wider">Monasterios Market Spa</p>
+            <img
+                src="/images/logo.png"
+                alt="Monasterio Market"
+                class="mx-auto mb-2 h-12 w-auto object-contain"
+            />
+            <p class="text-xs font-bold uppercase tracking-wider">
+                Monasterios Market Spa
+            </p>
             <p class="mt-0.5">RUT: 76.367.537-0</p>
-            <p class="mt-0.5 leading-tight">Venta al por menor de alimentos, accesorios de teléfono y ventas por internet</p>
+            <p class="mt-0.5 leading-tight">
+                Venta al por menor de alimentos, accesorios de teléfono y ventas
+                por internet
+            </p>
             <p>Código SII: 472101</p>
-            <p class="mt-0.5">Santiago, Av. Manuel Antonio Matta 833, Local 7</p>
+            <p class="mt-0.5">
+                Santiago, Av. Manuel Antonio Matta 833, Local 7
+            </p>
         </div>
 
         <div class="my-3 border-t border-dashed border-gray-400"></div>
@@ -88,9 +108,13 @@ onMounted(() => {
             </thead>
             <tbody>
                 <tr v-for="(item, i) in sale.items" :key="i" class="align-top">
-                    <td class="py-0.5 font-mono tabular-nums">{{ item.quantity }}</td>
+                    <td class="py-0.5 font-mono tabular-nums">
+                        {{ item.quantity }}
+                    </td>
                     <td class="py-0.5">{{ item.name }}</td>
-                    <td class="py-0.5 text-right font-mono tabular-nums">{{ fmtPesos(item.total) }}</td>
+                    <td class="py-0.5 text-right font-mono tabular-nums">
+                        {{ fmtPesos(item.total) }}
+                    </td>
                 </tr>
             </tbody>
         </table>
@@ -108,7 +132,9 @@ onMounted(() => {
             </div>
             <div class="flex justify-between font-bold">
                 <span>Total</span>
-                <span class="font-mono text-base">{{ fmtPesos(sale.total) }}</span>
+                <span class="font-mono text-base">{{
+                    fmtPesos(sale.total)
+                }}</span>
             </div>
             <div class="flex justify-between">
                 <span>Método de Pago</span>
@@ -120,8 +146,16 @@ onMounted(() => {
 
 <style>
 @media print {
-    @page { margin: 0; }
-    body { margin: 0; padding: 0; }
-    #thermal-ticket { width: 80mm; padding: 4mm; }
+    @page {
+        margin: 0;
+    }
+    body {
+        margin: 0;
+        padding: 0;
+    }
+    #thermal-ticket {
+        width: 80mm;
+        padding: 4mm;
+    }
 }
 </style>

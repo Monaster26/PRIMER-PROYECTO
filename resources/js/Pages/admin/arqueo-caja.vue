@@ -83,13 +83,13 @@ function onCashierChange() {
 const denominations = [
     { key: '20k', label: '$20.000', value: 20000, type: 'bill' },
     { key: '10k', label: '$10.000', value: 10000, type: 'bill' },
-    { key: '5k',  label: '$5.000',  value: 5000,  type: 'bill' },
-    { key: '2k',  label: '$2.000',  value: 2000,  type: 'bill' },
-    { key: '1k',  label: '$1.000',  value: 1000,  type: 'bill' },
-    { key: '500', label: '$500',    value: 500,   type: 'coin' },
-    { key: '100', label: '$100',    value: 100,   type: 'coin' },
-    { key: '50',  label: '$50',     value: 50,    type: 'coin' },
-    { key: '10',  label: '$10',     value: 10,    type: 'coin' },
+    { key: '5k', label: '$5.000', value: 5000, type: 'bill' },
+    { key: '2k', label: '$2.000', value: 2000, type: 'bill' },
+    { key: '1k', label: '$1.000', value: 1000, type: 'bill' },
+    { key: '500', label: '$500', value: 500, type: 'coin' },
+    { key: '100', label: '$100', value: 100, type: 'coin' },
+    { key: '50', label: '$50', value: 50, type: 'coin' },
+    { key: '10', label: '$10', value: 10, type: 'coin' },
 ] as const;
 
 const showForm = ref(false);
@@ -103,7 +103,9 @@ const coinErrors = ref<string[]>([]);
 
 function aperturaSubtotal(d: (typeof denominations)[number]) {
     const v = (form as any)[`cant_${d.key}_apertura`] ?? 0;
-    return mode.value === 'close' || d.type === 'bill' ? Number(v) * d.value : Number(v);
+    return mode.value === 'close' || d.type === 'bill'
+        ? Number(v) * d.value
+        : Number(v);
 }
 
 const emptyForm = {
@@ -237,7 +239,13 @@ function submitForm() {
     for (const d of denominations) {
         if (d.type !== 'coin') continue;
         const v = (form as any)[`cant_${d.key}${suffix}`];
-        if (v !== null && v !== undefined && v !== '' && Number(v) > 0 && Number(v) % d.value !== 0) {
+        if (
+            v !== null &&
+            v !== undefined &&
+            v !== '' &&
+            Number(v) > 0 &&
+            Number(v) % d.value !== 0
+        ) {
             coinErrors.value.push(
                 `El monto ingresado para ${d.label} debe ser un múltiplo exacto de ${d.label}.`,
             );
@@ -382,18 +390,17 @@ const auditTotalCierre = computed(() => {
                     @select="onDatePicked"
                 />
                 <div class="min-w-[140px]">
-                    <label class="mb-0.5 block text-[9px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400">Cajero</label>
+                    <label
+                        class="mb-0.5 block text-[9px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                        >Cajero</label
+                    >
                     <select
                         v-model="selectedCashier"
                         @change="onCashierChange"
                         class="w-full rounded-lg border border-gray-200 bg-white px-2 py-1 text-[11px] text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                     >
                         <option :value="null">Todos</option>
-                        <option
-                            v-for="c in cashiers"
-                            :key="c.id"
-                            :value="c.id"
-                        >
+                        <option v-for="c in cashiers" :key="c.id" :value="c.id">
                             {{ c.name }}
                         </option>
                     </select>
@@ -755,28 +762,61 @@ const auditTotalCierre = computed(() => {
                                                 <td class="py-1 text-center">
                                                     <input
                                                         v-if="d.type === 'bill'"
-                                                        :id="'apertura_' + d.key"
-                                                        :name="'cant_' + d.key + '_apertura'"
-                                                        v-model.number="form[('cant_' + d.key + '_apertura') as keyof typeof form] as any"
+                                                        :id="
+                                                            'apertura_' + d.key
+                                                        "
+                                                        :name="
+                                                            'cant_' +
+                                                            d.key +
+                                                            '_apertura'
+                                                        "
+                                                        v-model.number="
+                                                            form[
+                                                                ('cant_' +
+                                                                    d.key +
+                                                                    '_apertura') as keyof typeof form
+                                                            ] as any
+                                                        "
                                                         type="number"
                                                         min="0"
                                                         placeholder="0"
-                                                        :disabled="mode === 'close'"
+                                                        :disabled="
+                                                            mode === 'close'
+                                                        "
                                                         class="w-14 rounded-lg border border-gray-200 bg-white px-1 py-0.5 text-center text-[11px] text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                                                     />
                                                     <input
                                                         v-else
-                                                        :id="'apertura_' + d.key"
-                                                        :name="'cant_' + d.key + '_apertura'"
-                                                        v-model.number="form[('cant_' + d.key + '_apertura') as keyof typeof form] as any"
+                                                        :id="
+                                                            'apertura_' + d.key
+                                                        "
+                                                        :name="
+                                                            'cant_' +
+                                                            d.key +
+                                                            '_apertura'
+                                                        "
+                                                        v-model.number="
+                                                            form[
+                                                                ('cant_' +
+                                                                    d.key +
+                                                                    '_apertura') as keyof typeof form
+                                                            ] as any
+                                                        "
                                                         type="number"
                                                         min="0"
                                                         :step="d.value"
                                                         placeholder="$0"
-                                                        :disabled="mode === 'close'"
+                                                        :disabled="
+                                                            mode === 'close'
+                                                        "
                                                         :class="[
                                                             'w-28 rounded-lg border bg-white px-1 py-0.5 text-center text-[11px] text-content-primary transition-shadow focus:ring-1 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-800 dark:text-white',
-                                                            coinErrors.some(e => e.includes(d.label))
+                                                            coinErrors.some(
+                                                                (e) =>
+                                                                    e.includes(
+                                                                        d.label,
+                                                                    ),
+                                                            )
                                                                 ? 'border-danger focus:border-danger focus:ring-danger/30'
                                                                 : 'border-gray-200 focus:border-primary-500 focus:ring-primary-500/30 dark:border-gray-700',
                                                         ]"
@@ -786,7 +826,9 @@ const auditTotalCierre = computed(() => {
                                                     class="py-1 text-right font-mono text-[11px] font-bold text-primary-500"
                                                 >
                                                     {{
-                                                        fmtCLP(aperturaSubtotal(d))
+                                                        fmtCLP(
+                                                            aperturaSubtotal(d),
+                                                        )
                                                     }}
                                                 </td>
                                             </tr>
@@ -883,8 +925,18 @@ const auditTotalCierre = computed(() => {
                                                     <input
                                                         v-if="d.type === 'bill'"
                                                         :id="'cierre_' + d.key"
-                                                        :name="'cant_' + d.key + '_cierre'"
-                                                        v-model.number="form[('cant_' + d.key + '_cierre') as keyof typeof form] as any"
+                                                        :name="
+                                                            'cant_' +
+                                                            d.key +
+                                                            '_cierre'
+                                                        "
+                                                        v-model.number="
+                                                            form[
+                                                                ('cant_' +
+                                                                    d.key +
+                                                                    '_cierre') as keyof typeof form
+                                                            ] as any
+                                                        "
                                                         type="number"
                                                         min="0"
                                                         placeholder="0"
@@ -893,15 +945,30 @@ const auditTotalCierre = computed(() => {
                                                     <input
                                                         v-else
                                                         :id="'cierre_' + d.key"
-                                                        :name="'cant_' + d.key + '_cierre'"
-                                                        v-model.number="form[('cant_' + d.key + '_cierre') as keyof typeof form] as any"
+                                                        :name="
+                                                            'cant_' +
+                                                            d.key +
+                                                            '_cierre'
+                                                        "
+                                                        v-model.number="
+                                                            form[
+                                                                ('cant_' +
+                                                                    d.key +
+                                                                    '_cierre') as keyof typeof form
+                                                            ] as any
+                                                        "
                                                         type="number"
                                                         min="0"
                                                         :step="d.value"
                                                         placeholder="$0"
                                                         :class="[
                                                             'w-28 rounded-lg border bg-white px-1 py-0.5 text-center text-[11px] text-content-primary transition-shadow focus:ring-1 dark:bg-gray-800 dark:text-white',
-                                                            coinErrors.some(e => e.includes(d.label))
+                                                            coinErrors.some(
+                                                                (e) =>
+                                                                    e.includes(
+                                                                        d.label,
+                                                                    ),
+                                                            )
                                                                 ? 'border-danger focus:border-danger focus:ring-danger/30'
                                                                 : 'border-gray-200 focus:border-primary-500 focus:ring-primary-500/30 dark:border-gray-700',
                                                         ]"
@@ -913,8 +980,21 @@ const auditTotalCierre = computed(() => {
                                                     {{
                                                         fmtCLP(
                                                             d.type === 'coin'
-                                                                ? ((form as any)['cant_' + d.key + '_cierre'] ?? 0)
-                                                                : ((form as any)['cant_' + d.key + '_cierre'] ?? 0) * d.value
+                                                                ? ((
+                                                                      form as any
+                                                                  )[
+                                                                      'cant_' +
+                                                                          d.key +
+                                                                          '_cierre'
+                                                                  ] ?? 0)
+                                                                : ((
+                                                                      form as any
+                                                                  )[
+                                                                      'cant_' +
+                                                                          d.key +
+                                                                          '_cierre'
+                                                                  ] ?? 0) *
+                                                                      d.value,
                                                         )
                                                     }}
                                                 </td>

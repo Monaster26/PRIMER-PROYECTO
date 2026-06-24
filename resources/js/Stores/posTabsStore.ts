@@ -11,7 +11,9 @@ function saveTabs(tabs: TabState[], activeIndex: number) {
         );
     } catch (e) {
         if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-            console.warn('localStorage llena, no se pudo guardar el estado del POS');
+            console.warn(
+                'localStorage llena, no se pudo guardar el estado del POS',
+            );
         }
     }
 }

@@ -16,7 +16,7 @@ import {
     Upload,
     X,
 } from 'lucide-vue-next';
-import { computed, ref, watch, nextTick } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 
 const props = defineProps<{
     products: {
@@ -227,9 +227,15 @@ const stockForm = useForm({
     expiration_date: '',
 });
 
-const totalInvestment = computed(() => stockForm.quantity * (stockForm.unit_cost || 0));
-const totalInvestmentFormatted = computed(() =>
-    '$ ' + totalInvestment.value.toLocaleString('es-CO', { minimumFractionDigits: 0 }),
+const totalInvestment = computed(
+    () => stockForm.quantity * (stockForm.unit_cost || 0),
+);
+const totalInvestmentFormatted = computed(
+    () =>
+        '$ ' +
+        totalInvestment.value.toLocaleString('es-CO', {
+            minimumFractionDigits: 0,
+        }),
 );
 
 let nameTimer: ReturnType<typeof setTimeout>;
@@ -243,9 +249,12 @@ watch(nameQuery, (val) => {
     nameLoading.value = true;
     nameTimer = setTimeout(async () => {
         try {
-            const res = await window.axios.get(route('admin.codigos.search-name'), {
-                params: { query: val.trim() },
-            });
+            const res = await window.axios.get(
+                route('admin.codigos.search-name'),
+                {
+                    params: { query: val.trim() },
+                },
+            );
             nameResults.value = res.data;
             showNameDropdown.value = true;
         } catch {
@@ -322,10 +331,18 @@ function closeStockForm() {
     showNameDropdown.value = false;
 }
 
-function cascadeCantidad() { nextTick(() => costoInputRef.value?.focus()); }
-function cascadeCosto()    { nextTick(() => fechaInputRef.value?.focus()); }
-function cascadeFecha()    { nextTick(() => notaInputRef.value?.focus()); }
-function cascadeNota()     { if (stockProduct.value) submitStockForm(); }
+function cascadeCantidad() {
+    nextTick(() => costoInputRef.value?.focus());
+}
+function cascadeCosto() {
+    nextTick(() => fechaInputRef.value?.focus());
+}
+function cascadeFecha() {
+    nextTick(() => notaInputRef.value?.focus());
+}
+function cascadeNota() {
+    if (stockProduct.value) submitStockForm();
+}
 
 function submitStockForm() {
     if (!stockProduct.value) return;
@@ -1109,8 +1126,7 @@ const fmt = (v: number) =>
                                             class="flex-1 font-medium text-content-primary dark:text-white"
                                             >{{ p.name }}</span
                                         >
-                                        <span
-                                            class="text-xs text-content-muted"
+                                        <span class="text-xs text-content-muted"
                                             >Stock: {{ p.stock }}</span
                                         >
                                     </button>
@@ -1185,14 +1201,14 @@ const fmt = (v: number) =>
                                         >
                                         <input
                                             ref="costoInputRef"
-                                            v-model.number="
-                                                stockForm.unit_cost
-                                            "
+                                            v-model.number="stockForm.unit_cost"
                                             type="number"
                                             min="0"
                                             step="0.01"
                                             placeholder="0"
-                                            @keydown.enter.prevent="cascadeCosto"
+                                            @keydown.enter.prevent="
+                                                cascadeCosto
+                                            "
                                             class="w-full rounded-2xl border border-gray-200 bg-gray-50 py-2.5 pl-8 pr-4 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                         />
                                     </div>

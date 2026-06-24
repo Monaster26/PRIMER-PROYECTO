@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import DateFilter from '@/Components/DateFilter.vue';
 import { formatDate } from '@/helpers/format';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import DateFilter from '@/Components/DateFilter.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import {
     ArrowUpDown,
@@ -35,7 +35,7 @@ const props = defineProps<{
 
 const todayStr = new Date().toISOString().slice(0, 10);
 const filterDate = ref<string>(
-    `${props.year}-${String(props.month).padStart(2, '0')}-01`
+    `${props.year}-${String(props.month).padStart(2, '0')}-01`,
 );
 const showForm = ref(false);
 const editingId = ref<number | null>(null);
@@ -92,12 +92,15 @@ function getFilterParams() {
 }
 function submitForm() {
     if (editingId.value) {
-        form.put(route('admin.gastos.update', {
-            expense: editingId.value,
-            ...getFilterParams(),
-        }), {
-            onSuccess: closeForm,
-        });
+        form.put(
+            route('admin.gastos.update', {
+                expense: editingId.value,
+                ...getFilterParams(),
+            }),
+            {
+                onSuccess: closeForm,
+            },
+        );
     } else {
         form.post(route('admin.gastos.store'), { onSuccess: closeForm });
     }

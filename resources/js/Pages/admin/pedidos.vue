@@ -11,7 +11,7 @@ import {
     Truck,
     X,
 } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 
 const props = defineProps<{
     orders: {
@@ -50,37 +50,118 @@ const receiveItems = ref<
 const form = useForm({
     supplier_id: null as number | null,
     ordered_at: new Date().toISOString().split('T')[0],
+    delivery_at: '',
     notes: '',
-    items: [] as { product_id: number; quantity: number; unit_cost: number }[],
+    items: [] as {
+        product_id: number | null;
+        sku: string;
+        name: string;
+        quantity: number;
+        unit_cost: number;
+        is_new: boolean;
+        new_name: string;
+        old_cost: number;
+    }[],
 });
 
 function addItem() {
-    form.items.push({ product_id: 0, quantity: 1, unit_cost: 0 });
-    syncRowFilters();
+    form.items.push({
+        product_id: null,
+        sku: '',
+        name: '',
+        quantity: 1,
+        unit_cost: 0,
+        is_new: false,
+        new_name: '',
+        old_cost: 0,
+    });
 }
 
 function removeItem(index: number) {
     form.items.splice(index, 1);
-    rowFilters.value.splice(index, 1);
 }
 
 function openCreate() {
     form.reset();
     form.ordered_at = new Date().toISOString().split('T')[0];
+    form.delivery_at = '';
     form.items = [];
-    rowFilters.value = [];
+    supplierSearch.value = '';
+    showSupplierDropdown.value = false;
     addItem();
     showForm.value = true;
 }
 
-function syncRowFilters() {
-    while (rowFilters.value.length < form.items.length)
-        rowFilters.value.push('');
+function handleSupplierEnter() {
+    nextTick(() => productoInputRefs.value[0]?.focus());
 }
 
-function handleBlur(index: number) {
+function handleProductoEnter(index: number) {
+    nextTick(() => precioInputRefs.value[index]?.focus());
+}
+
+function handlePrecioEnter(index: number) {
+    nextTick(() => cantidadInputRefs.value[index]?.focus());
+}
+
+function handleCantidadEnter(index: number) {
+    nextTick(() => fechaEntregaInputRef.value?.focus());
+}
+
+function handleFechaEntregaEnter() {
+    nextTick(() => notasInputRef.value?.focus());
+}
+
+// ─── Arrow/Enter navigation for supplier dropdown ──────
+function onSupplierArrowDown() {
+    showSupplierDropdown.value = true;
+    const list = filteredSuppliers();
+    if (focusedSupplierIndex.value < list.length - 1)
+        focusedSupplierIndex.value++;
+}
+function onSupplierArrowUp() {
+    if (focusedSupplierIndex.value > 0) focusedSupplierIndex.value--;
+}
+function onSupplierEnter() {
+    const list = filteredSuppliers();
+    if (focusedSupplierIndex.value >= 0 && list[focusedSupplierIndex.value]) {
+        selectSupplier(list[focusedSupplierIndex.value]);
+        handleSupplierEnter();
+    } else {
+        handleSupplierEnter();
+    }
+}
+
+// ─── Arrow/Enter navigation for product dropdown ──────
+function onProductArrowDown(index: number) {
+    showNameDropdown.value = index;
+    const list = filteredByName(index);
+    if (focusedProductIndex.value < list.length - 1)
+        focusedProductIndex.value++;
+}
+function onProductArrowUp() {
+    if (focusedProductIndex.value > 0) focusedProductIndex.value--;
+}
+function onProductEnter(index: number) {
+    const list = filteredByName(index);
+    if (focusedProductIndex.value >= 0 && list[focusedProductIndex.value]) {
+        selectByName(index, list[focusedProductIndex.value]);
+        handleProductoEnter(index);
+    } else {
+        handleProductoEnter(index);
+    }
+}
+
+function handleSupplierBlur() {
     setTimeout(() => {
-        if (activeDropdown.value === index) closeDropdown();
+        showSupplierDropdown.value = false;
+        focusedSupplierIndex.value = -1;
+    }, 200);
+}
+
+function handleNameBlur(index: number) {
+    setTimeout(() => {
+        if (showNameDropdown.value === index) showNameDropdown.value = null;
     }, 200);
 }
 
@@ -150,63 +231,104 @@ const statusLabel: Record<string, string> = {
 const fmt = (v: number) =>
     '$' + (v / 100).toLocaleString('es-CO', { minimumFractionDigits: 0 });
 
-const rowFilters = ref<string[]>([]);
-const activeDropdown = ref<number | null>(null);
+// ─── Supplier search ──────────────────────────
+const supplierSearch = ref('');
+const showSupplierDropdown = ref(false);
 
-watch(
-    () => form.items.length,
-    (len) => {
-        while (rowFilters.value.length < len) rowFilters.value.push('');
-        if (rowFilters.value.length > len) rowFilters.value.splice(len);
-    },
-    { immediate: true },
-);
+const proveedorInputRef = ref<HTMLInputElement | null>(null);
+const productoInputRefs = ref<(HTMLInputElement | null)[]>([]);
+const precioInputRefs = ref<(HTMLInputElement | null)[]>([]);
+const cantidadInputRefs = ref<(HTMLInputElement | null)[]>([]);
+const fechaEntregaInputRef = ref<HTMLInputElement | null>(null);
+const notasInputRef = ref<HTMLTextAreaElement | null>(null);
 
-function rowFiltered(index: number) {
-    const q = (rowFilters.value[index] || '').toLowerCase();
-    if (!q) return props.products;
-    return props.products.filter(
-        (p) =>
-            p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q),
+const focusedSupplierIndex = ref(-1);
+const focusedProductIndex = ref(-1);
+
+watch(showForm, (val) => {
+    if (val) nextTick(() => proveedorInputRef.value?.focus());
+});
+
+function filteredSuppliers() {
+    const q = supplierSearch.value.toLowerCase();
+    if (!q) return props.suppliers;
+    return props.suppliers.filter((s) =>
+        s.company_name.toLowerCase().includes(q),
     );
 }
 
-function selectProduct(
-    index: number,
-    product: {
-        id: number;
-        name: string;
-        sku: string;
-        cost_price: number;
-        stock: number;
-    },
-) {
-    form.items[index].product_id = product.id;
-    rowFilters.value[index] = product.name;
-    activeDropdown.value = null;
-    updateUnitCost(index);
+function selectSupplier(s: { id: number; company_name: string }) {
+    form.supplier_id = s.id;
+    supplierSearch.value = s.company_name;
+    showSupplierDropdown.value = false;
+    focusedSupplierIndex.value = -1;
 }
 
-function onRowInput(index: number) {
-    if (form.items[index].product_id !== 0) {
-        form.items[index].product_id = 0;
-    }
-    activeDropdown.value = index;
-}
+// ─── Name search (per-row dropdown) ──────────
+const showNameDropdown = ref<number | null>(null);
 
-function closeDropdown() {
-    activeDropdown.value = null;
-}
-
-function updateUnitCost(index: number) {
+function filteredByName(index: number) {
     const item = form.items[index];
-    if (!item.product_id) return;
-    const p = props.products.find((p) => p.id === item.product_id);
-    if (p && (!item.unit_cost || item.unit_cost === 0)) {
-        item.unit_cost = p.cost_price / 100;
+    const q = (item.name || '').toLowerCase();
+    if (!q) return [];
+    return props.products.filter((p) => p.name.toLowerCase().includes(q));
+}
+
+function onNameInput(index: number) {
+    const item = form.items[index];
+    item.product_id = null;
+    item.is_new = false;
+    item.new_name = '';
+    focusedProductIndex.value = -1;
+}
+
+function selectByName(
+    index: number,
+    p: { id: number; name: string; sku: string; cost_price: number },
+) {
+    const item = form.items[index];
+    item.product_id = p.id;
+    item.name = p.name;
+    item.sku = p.sku;
+    item.unit_cost = p.cost_price / 100;
+    item.old_cost = p.cost_price / 100;
+    item.is_new = false;
+    showNameDropdown.value = null;
+    focusedProductIndex.value = -1;
+}
+
+function markAsNew(index: number) {
+    const item = form.items[index];
+    if (!item.name) return;
+    item.is_new = true;
+    item.new_name = item.name;
+    item.product_id = null;
+    item.sku = '';
+    showNameDropdown.value = null;
+}
+
+// ─── SKU search (strict match) ────────────────
+function onSkuInput(index: number) {
+    const item = form.items[index];
+    if (!item.sku) {
+        item.product_id = null;
+        return;
+    }
+    const match = props.products.find(
+        (p) => p.sku.toLowerCase() === item.sku.toLowerCase(),
+    );
+    if (match) {
+        item.product_id = match.id;
+        item.name = match.name;
+        item.unit_cost = match.cost_price / 100;
+        item.old_cost = match.cost_price / 100;
+        item.is_new = false;
+    } else {
+        item.product_id = null;
     }
 }
 
+// ─── Total ─────────────────────────────────────
 const computedTotal = () => {
     return form.items.reduce((sum, item) => {
         return sum + Math.round(item.unit_cost * 100) * item.quantity;
@@ -381,10 +503,10 @@ const computedTotal = () => {
         >
             <div
                 v-if="showForm"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm md:p-6"
             >
                 <div
-                    class="relative max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl dark:bg-surface-dark"
+                    class="relative my-auto max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:bg-surface-dark md:ml-20 md:p-8 lg:ml-32"
                 >
                     <div class="mb-6 flex items-center justify-between">
                         <h3
@@ -400,33 +522,65 @@ const computedTotal = () => {
                         </button>
                     </div>
                     <form @submit.prevent="submitForm" class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
+                        <!-- 3-column header -->
+                        <div
+                            class="mb-6 grid grid-cols-1 items-end gap-4 md:grid-cols-3"
+                        >
+                            <div class="relative">
                                 <label
                                     class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
                                     >Proveedor</label
                                 >
-                                <select
-                                    v-model.number="form.supplier_id"
-                                    required
+                                <input
+                                    v-model="supplierSearch"
+                                    ref="proveedorInputRef"
+                                    @keydown.down.prevent="onSupplierArrowDown"
+                                    @keydown.up.prevent="onSupplierArrowUp"
+                                    @keydown.enter.prevent="onSupplierEnter"
+                                    @focus="
+                                        showSupplierDropdown = true;
+                                        focusedSupplierIndex = -1;
+                                    "
+                                    @blur="handleSupplierBlur"
+                                    type="text"
+                                    placeholder="Buscar proveedor..."
                                     class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                />
+                                <div
+                                    v-if="showSupplierDropdown"
+                                    class="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-surface-dark"
                                 >
-                                    <option :value="null" disabled>
-                                        Seleccionar...
-                                    </option>
-                                    <option
-                                        v-for="s in suppliers"
+                                    <button
+                                        v-for="(
+                                            s, sIndex
+                                        ) in filteredSuppliers()"
                                         :key="s.id"
-                                        :value="s.id"
+                                        @mousedown.prevent="selectSupplier(s)"
+                                        :class="[
+                                            'flex w-full items-center gap-2 border-b border-gray-100 px-3 py-2 text-left text-sm text-content-primary last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:text-white dark:hover:bg-gray-800',
+                                            {
+                                                'bg-pink-50 font-medium text-pink-700':
+                                                    sIndex ===
+                                                    focusedSupplierIndex,
+                                            },
+                                        ]"
                                     >
-                                        {{ s.company_name }}
-                                    </option>
-                                </select>
+                                        <span class="font-medium">{{
+                                            s.company_name
+                                        }}</span>
+                                    </button>
+                                    <div
+                                        v-if="!filteredSuppliers().length"
+                                        class="px-3 py-2 text-center text-sm text-content-muted"
+                                    >
+                                        Sin resultados
+                                    </div>
+                                </div>
                             </div>
                             <div>
                                 <label
                                     class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
-                                    >Fecha del Pedido</label
+                                    >Fecha de Pedido</label
                                 >
                                 <input
                                     v-model="form.ordered_at"
@@ -435,8 +589,24 @@ const computedTotal = () => {
                                     class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                 />
                             </div>
+                            <div>
+                                <label
+                                    class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                                    >Fecha de Entrega</label
+                                >
+                                <input
+                                    v-model="form.delivery_at"
+                                    ref="fechaEntregaInputRef"
+                                    @keydown.enter.prevent="
+                                        handleFechaEntregaEnter
+                                    "
+                                    type="date"
+                                    class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                />
+                            </div>
                         </div>
 
+                        <!-- Products section -->
                         <div>
                             <div class="mb-2 flex items-center justify-between">
                                 <label
@@ -446,111 +616,221 @@ const computedTotal = () => {
                                 <button
                                     type="button"
                                     @click="addItem"
-                                    class="flex items-center gap-1 text-xs font-bold text-primary-500 hover:text-primary-600"
+                                    class="flex items-center gap-2 rounded-xl bg-pink-500 px-4 py-2 text-xs font-medium font-semibold text-white shadow-sm transition-all hover:bg-pink-600 active:scale-95 md:text-sm"
                                 >
-                                    <Plus class="h-3 w-3" /> Añadir producto
+                                    <Plus class="h-4 w-4" /> Añadir producto
                                 </button>
                             </div>
-                            <div class="space-y-2">
+                            <div class="space-y-1">
                                 <div
                                     v-for="(item, index) in form.items"
                                     :key="index"
-                                    class="flex items-center gap-2 rounded-2xl bg-gray-50 p-3 dark:bg-gray-900"
                                 >
-                                    <div class="relative min-w-[200px] flex-1">
-                                        <input
-                                            v-model="rowFilters[index]"
-                                            @input="onRowInput(index)"
-                                            @focus="activeDropdown = index"
-                                            @blur="handleBlur(index)"
-                                            type="text"
-                                            placeholder="Buscar producto..."
-                                            class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-content-primary dark:border-gray-700 dark:bg-surface-dark dark:text-white"
-                                        />
+                                    <div
+                                        class="mb-3 flex w-full items-center gap-4 rounded-xl border border-gray-100 bg-white p-2 dark:bg-neutral-900"
+                                    >
+                                        <!-- SKU -->
+                                        <div class="w-40 flex-shrink-0">
+                                            <input
+                                                v-model="item.sku"
+                                                @input="onSkuInput(index)"
+                                                type="text"
+                                                placeholder="SKU"
+                                                class="w-full rounded-xl border-gray-200 text-center text-sm dark:border-gray-700 dark:bg-surface-dark dark:text-white"
+                                            />
+                                        </div>
+
+                                        <!-- Name + dropdown -->
                                         <div
-                                            v-if="activeDropdown === index"
-                                            class="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-surface-dark"
+                                            class="relative min-w-[180px] flex-1"
                                         >
-                                            <button
-                                                v-for="p in rowFiltered(index)"
-                                                :key="p.id"
-                                                @mousedown.prevent="
-                                                    selectProduct(index, p)
+                                            <input
+                                                v-model="item.name"
+                                                :ref="
+                                                    (el) => {
+                                                        productoInputRefs[
+                                                            index
+                                                        ] =
+                                                            el as HTMLInputElement;
+                                                    }
                                                 "
-                                                class="flex w-full items-center gap-2 border-b border-gray-100 px-3 py-2 text-left text-sm text-content-primary last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:text-white dark:hover:bg-gray-800"
-                                            >
-                                                <span class="font-medium">{{
-                                                    p.name
-                                                }}</span>
-                                                <span
-                                                    class="text-xs text-content-muted"
-                                                    >({{ p.sku }})</span
-                                                >
-                                                <span
-                                                    class="ml-auto text-xs"
-                                                    :class="
-                                                        p.stock < 5
-                                                            ? 'text-danger'
-                                                            : 'text-content-muted'
-                                                    "
-                                                    >Stock: {{ p.stock }}</span
-                                                >
-                                            </button>
+                                                @keydown.down.prevent="
+                                                    onProductArrowDown(index)
+                                                "
+                                                @keydown.up.prevent="
+                                                    onProductArrowUp()
+                                                "
+                                                @keydown.enter.prevent="
+                                                    onProductEnter(index)
+                                                "
+                                                @input="onNameInput(index)"
+                                                @focus="
+                                                    showNameDropdown = index;
+                                                    focusedProductIndex = -1;
+                                                "
+                                                @blur="handleNameBlur(index)"
+                                                type="text"
+                                                placeholder="Buscar producto..."
+                                                class="w-full rounded-xl border-gray-200 text-sm dark:border-gray-700 dark:bg-surface-dark dark:text-white"
+                                            />
                                             <div
                                                 v-if="
-                                                    !rowFiltered(index).length
+                                                    showNameDropdown ===
+                                                        index &&
+                                                    !item.product_id &&
+                                                    item.name
                                                 "
-                                                class="px-3 py-2 text-center text-sm text-content-muted"
+                                                class="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-surface-dark"
                                             >
-                                                Sin resultados
+                                                <button
+                                                    v-for="(
+                                                        p, pIndex
+                                                    ) in filteredByName(index)"
+                                                    :key="p.id"
+                                                    @mousedown.prevent="
+                                                        selectByName(index, p)
+                                                    "
+                                                    :class="[
+                                                        'flex w-full items-center gap-2 border-b border-gray-100 px-3 py-2 text-left text-sm text-content-primary last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:text-white dark:hover:bg-gray-800',
+                                                        {
+                                                            'bg-pink-50 font-medium text-pink-700':
+                                                                pIndex ===
+                                                                focusedProductIndex,
+                                                        },
+                                                    ]"
+                                                >
+                                                    <span class="font-medium">{{
+                                                        p.name
+                                                    }}</span>
+                                                    <span
+                                                        class="text-xs text-content-muted"
+                                                        >({{ p.sku }})</span
+                                                    >
+                                                </button>
+                                                <div
+                                                    v-if="
+                                                        !filteredByName(index)
+                                                            .length
+                                                    "
+                                                    class="border-t border-gray-100 px-3 py-2 dark:border-gray-800"
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        @mousedown.prevent="
+                                                            markAsNew(index)
+                                                        "
+                                                        class="text-xs font-bold text-amber-600 hover:text-amber-700"
+                                                    >
+                                                        + Crear "{{
+                                                            item.name
+                                                        }}" como producto nuevo
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <span
+                                                v-if="item.is_new"
+                                                class="mt-1 inline-block rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700"
+                                            >
+                                                Nuevo
+                                            </span>
+                                        </div>
+
+                                        <!-- Costo -->
+                                        <div
+                                            class="flex w-32 flex-shrink-0 flex-col items-center"
+                                        >
+                                            <span
+                                                class="mb-1 text-[11px] font-medium text-gray-400"
+                                            >
+                                                Ref: ${{ item.old_cost || 0 }}
+                                            </span>
+                                            <div class="relative w-full">
+                                                <span
+                                                    class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400"
+                                                    >$</span
+                                                >
+                                                <input
+                                                    v-model.number="
+                                                        item.unit_cost
+                                                    "
+                                                    :ref="
+                                                        (el) => {
+                                                            precioInputRefs[
+                                                                index
+                                                            ] =
+                                                                el as HTMLInputElement;
+                                                        }
+                                                    "
+                                                    @keydown.enter.prevent="
+                                                        handlePrecioEnter(index)
+                                                    "
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    class="w-full rounded-xl border-gray-200 pl-7 pr-2 text-center text-sm dark:border-gray-700 dark:bg-surface-dark dark:text-white"
+                                                />
                                             </div>
                                         </div>
-                                    </div>
-                                    <input
-                                        v-model.number="item.quantity"
-                                        type="number"
-                                        min="1"
-                                        required
-                                        class="w-20 rounded-xl border border-gray-200 bg-white px-3 py-2 text-center text-sm text-content-primary dark:border-gray-700 dark:bg-surface-dark dark:text-white"
-                                        placeholder="Cant."
-                                    />
-                                    <div class="relative w-36">
-                                        <span
-                                            class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-content-muted"
-                                            >$</span
+
+                                        <!-- Cantidad -->
+                                        <div
+                                            class="flex w-20 flex-shrink-0 flex-col items-center"
                                         >
-                                        <input
-                                            v-model.number="item.unit_cost"
-                                            type="number"
-                                            min="0"
-                                            step="0.01"
-                                            required
-                                            class="w-full rounded-xl border border-gray-200 bg-white py-2 pl-7 pr-3 text-right text-sm text-content-primary dark:border-gray-700 dark:bg-surface-dark dark:text-white"
-                                            placeholder="Costo"
-                                        />
+                                            <span
+                                                class="mb-1 block text-center text-[11px] font-medium text-gray-400"
+                                                >Cantidad</span
+                                            >
+                                            <input
+                                                v-model.number="item.quantity"
+                                                :ref="
+                                                    (el) => {
+                                                        cantidadInputRefs[
+                                                            index
+                                                        ] =
+                                                            el as HTMLInputElement;
+                                                    }
+                                                "
+                                                @keydown.enter.prevent="
+                                                    handleCantidadEnter(index)
+                                                "
+                                                type="number"
+                                                min="1"
+                                                required
+                                                class="w-full rounded-xl border-gray-200 text-center text-sm dark:border-gray-700 dark:bg-surface-dark dark:text-white"
+                                            />
+                                        </div>
+
+                                        <!-- Subtotal -->
+                                        <div
+                                            class="w-24 flex-shrink-0 text-right text-sm font-bold text-gray-800 dark:text-gray-200"
+                                        >
+                                            ${{
+                                                (
+                                                    item.unit_cost *
+                                                    item.quantity
+                                                ).toLocaleString('es-CO', {
+                                                    minimumFractionDigits: 0,
+                                                })
+                                            }}
+                                        </div>
+
+                                        <!-- Eliminar -->
+                                        <div
+                                            class="flex w-8 flex-shrink-0 justify-center"
+                                        >
+                                            <button
+                                                @click="removeItem(index)"
+                                                class="text-red-400 transition-colors hover:text-red-600"
+                                            >
+                                                <X class="h-4 w-4" />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <span
-                                        class="w-32 text-right text-sm font-bold text-content-primary dark:text-white"
-                                    >
-                                        {{
-                                            fmt(
-                                                Math.round(
-                                                    item.unit_cost * 100,
-                                                ) * item.quantity,
-                                            )
-                                        }}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        @click="removeItem(index)"
-                                        class="flex-shrink-0 rounded-lg p-1.5 text-danger transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
-                                    >
-                                        <X class="h-4 w-4" />
-                                    </button>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- Total -->
                         <div class="flex justify-end">
                             <span
                                 class="text-sm font-bold text-content-primary dark:text-white"
@@ -562,19 +842,23 @@ const computedTotal = () => {
                             </span>
                         </div>
 
+                        <!-- Notas generales -->
                         <div>
                             <label
                                 class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
-                                >Notas</label
+                                >Notas generales</label
                             >
                             <textarea
                                 v-model="form.notes"
+                                ref="notasInputRef"
+                                @keydown.enter.prevent
                                 rows="2"
                                 maxlength="500"
                                 class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             ></textarea>
                         </div>
 
+                        <!-- Buttons -->
                         <div class="flex gap-3 pt-2">
                             <button
                                 type="button"

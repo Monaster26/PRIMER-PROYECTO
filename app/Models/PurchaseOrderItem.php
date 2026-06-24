@@ -14,6 +14,7 @@ class PurchaseOrderItem extends Model
         'unit_cost',
         'subtotal',
         'received_quantity',
+        'row_notes',
     ];
 
     protected function casts(): array

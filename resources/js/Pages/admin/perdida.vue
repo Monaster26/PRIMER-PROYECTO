@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import DateFilter from '@/Components/DateFilter.vue';
 import { formatDate } from '@/helpers/format';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import DateFilter from '@/Components/DateFilter.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import {
     CalendarRange,
@@ -35,7 +35,7 @@ const props = defineProps<{
 
 const todayStr = new Date().toISOString().slice(0, 10);
 const filterDate = ref<string>(
-    `${props.year}-${String(props.month).padStart(2, '0')}-01`
+    `${props.year}-${String(props.month).padStart(2, '0')}-01`,
 );
 const showForm = ref(false);
 const searchQuery = ref('');
@@ -136,28 +136,31 @@ function confirmDelete(id: number) {
 function executeDelete() {
     if (deleteTarget.value === null || deleting.value) return;
     deleting.value = true;
-    router.delete(route('admin.perdida.destroy', {
-        loss: deleteTarget.value,
-        ...getFilterParams(),
-    }), {
-        preserveScroll: true,
-        onSuccess: () => {
-            const [y, m] = filterDate.value.split('-');
-            router.visit(
-                route('admin.perdida.index', {
-                    month: parseInt(m),
-                    year: parseInt(y),
-                }),
-                { preserveScroll: true },
-            );
+    router.delete(
+        route('admin.perdida.destroy', {
+            loss: deleteTarget.value,
+            ...getFilterParams(),
+        }),
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                const [y, m] = filterDate.value.split('-');
+                router.visit(
+                    route('admin.perdida.index', {
+                        month: parseInt(m),
+                        year: parseInt(y),
+                    }),
+                    { preserveScroll: true },
+                );
+            },
+            onFinish: () => {
+                deleting.value = false;
+            },
+            onError: () => {
+                alert('Error al eliminar la pérdida. Intenta de nuevo.');
+            },
         },
-        onFinish: () => {
-            deleting.value = false;
-        },
-        onError: () => {
-            alert('Error al eliminar la pérdida. Intenta de nuevo.');
-        },
-    });
+    );
     showConfirmDelete.value = false;
     deleteTarget.value = null;
 }
@@ -379,7 +382,7 @@ const fmt = (v: number) =>
                                 {{ l.product?.name || '—' }}
                             </td>
                             <td
-                                class="px-6 py-4 text-sm text-content-secondary font-mono"
+                                class="px-6 py-4 font-mono text-sm text-content-secondary"
                             >
                                 {{ l.product?.sku || '—' }}
                             </td>

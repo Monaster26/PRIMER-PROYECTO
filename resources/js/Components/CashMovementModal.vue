@@ -1,11 +1,5 @@
 <script setup lang="ts">
-import {
-    ArrowDownLeft,
-    ArrowUpRight,
-    Check,
-    DollarSign,
-    X,
-} from 'lucide-vue-next';
+import { ArrowDownLeft, ArrowUpRight, Check, X } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 const props = defineProps<{
@@ -61,7 +55,12 @@ function submit() {
         }),
     })
         .then((res) => {
-            if (!res.ok) return res.json().then((err) => { throw new Error(err.message || 'Error al registrar movimiento'); });
+            if (!res.ok)
+                return res.json().then((err) => {
+                    throw new Error(
+                        err.message || 'Error al registrar movimiento',
+                    );
+                });
             return res.json();
         })
         .then((data) => {
@@ -111,7 +110,11 @@ function submit() {
                         <h3
                             class="font-display text-sm font-bold text-content-primary dark:text-white"
                         >
-                            {{ isIngreso() ? 'Ingresar Dinero' : 'Retirar Dinero' }}
+                            {{
+                                isIngreso()
+                                    ? 'Ingresar Dinero'
+                                    : 'Retirar Dinero'
+                            }}
                         </h3>
                     </div>
                     <button
@@ -219,7 +222,11 @@ function submit() {
                             </template>
                             <template v-else>
                                 <Check class="h-4 w-4" />
-                                {{ isIngreso() ? 'Ingresar Dinero' : 'Retirar Dinero' }}
+                                {{
+                                    isIngreso()
+                                        ? 'Ingresar Dinero'
+                                        : 'Retirar Dinero'
+                                }}
                             </template>
                         </button>
                     </div>
