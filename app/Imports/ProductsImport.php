@@ -47,12 +47,14 @@ class ProductsImport implements ToModel, WithHeadingRow, SkipsEmptyRows, SkipsOn
         $product->stock = (int) ($row['Inventario'] ?? 0);
         $product->min_stock = (int) ($row['Inv. Minimo'] ?? 5);
 
-        if (!empty(trim($row['Departamento'] ?? ''))) {
-            $dept = $this->findOrCreateCategory(trim($row['Departamento']));
-            if ($dept['id']) {
-                $product->category_id = $dept['id'];
-                $product->category_slug = $dept['slug'];
-            }
+        $deptName = trim($row['Departamento'] ?? '');
+        if (empty($deptName)) {
+            $deptName = 'Sin categoría';
+        }
+        $dept = $this->findOrCreateCategory($deptName);
+        if ($dept['id']) {
+            $product->category_id = $dept['id'];
+            $product->category_slug = $dept['slug'];
         }
 
         if (!$product->exists) {
