@@ -134,81 +134,83 @@ function fmtDiff(d: number): string {
             </div>
             <div
                 v-else
-                class="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700"
+                class="rounded-2xl border border-gray-200 dark:border-gray-700"
             >
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr
-                            class="bg-gray-50 text-left text-xs font-bold uppercase tracking-wider text-content-muted dark:bg-gray-800/50"
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[600px] text-sm">
+                        <thead>
+                            <tr
+                                class="bg-gray-50 text-left text-xs font-bold uppercase tracking-wider text-content-muted dark:bg-gray-800/50"
+                            >
+                                <th class="px-4 py-3">ID</th>
+                                <th class="px-4 py-3">Fecha / Hora</th>
+                                <th class="px-4 py-3">Auditor</th>
+                                <th class="px-4 py-3 text-right">Pérdidas</th>
+                                <th class="px-4 py-3 text-right">Sobrantes</th>
+                                <th class="px-4 py-3 text-center">Estado</th>
+                                <th class="px-4 py-3 text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody
+                            class="divide-y divide-gray-100 dark:divide-gray-800"
                         >
-                            <th class="px-4 py-3">ID</th>
-                            <th class="px-4 py-3">Fecha / Hora</th>
-                            <th class="px-4 py-3">Auditor</th>
-                            <th class="px-4 py-3 text-right">Pérdidas</th>
-                            <th class="px-4 py-3 text-right">Sobrantes</th>
-                            <th class="px-4 py-3 text-center">Estado</th>
-                            <th class="px-4 py-3 text-right">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody
-                        class="divide-y divide-gray-100 dark:divide-gray-800"
-                    >
-                        <tr
-                            v-for="adj in adjustments.data"
-                            :key="adj.id"
-                            class="hover:bg-gray-50 dark:hover:bg-gray-800/30"
-                        >
-                            <td
-                                class="px-4 py-3 font-mono text-xs text-content-muted"
+                            <tr
+                                v-for="adj in adjustments.data"
+                                :key="adj.id"
+                                class="hover:bg-gray-50 dark:hover:bg-gray-800/30"
                             >
-                                #{{ adj.id }}
-                            </td>
-                            <td
-                                class="px-4 py-3 font-mono text-sm tabular-nums text-content-primary dark:text-white"
-                            >
-                                {{ fmtDate(adj.created_at) }}
-                            </td>
-                            <td class="px-4 py-3">
-                                {{ adj.user?.name || '—' }}
-                            </td>
-                            <td
-                                class="px-4 py-3 text-right font-mono tabular-nums text-red-600"
-                            >
-                                {{
-                                    fmtCLP(
-                                        itemsTotal(adj.items, (d) => d < 0)
-                                            .cost,
-                                    )
-                                }}
-                            </td>
-                            <td
-                                class="px-4 py-3 text-right font-mono tabular-nums text-green-600"
-                            >
-                                {{
-                                    fmtCLP(
-                                        itemsTotal(adj.items, (d) => d > 0)
-                                            .cost,
-                                    )
-                                }}
-                            </td>
-                            <td class="px-4 py-3 text-center">
-                                <span
-                                    class="inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold uppercase text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400"
-                                    >Completado</span
+                                <td
+                                    class="px-4 py-3 font-mono text-xs text-content-muted"
                                 >
-                            </td>
-                            <td class="px-4 py-3 text-right">
-                                <button
-                                    @click="viewDetail(adj)"
-                                    class="rounded-lg p-1.5 text-content-muted transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30"
-                                    title="Ver detalle"
+                                    #{{ adj.id }}
+                                </td>
+                                <td
+                                    class="px-4 py-3 font-mono text-sm tabular-nums text-content-primary dark:text-white"
                                 >
-                                    <Eye class="h-4 w-4" />
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                                    {{ fmtDate(adj.created_at) }}
+                                </td>
+                                <td class="px-4 py-3">
+                                    {{ adj.user?.name || '—' }}
+                                </td>
+                                <td
+                                    class="px-4 py-3 text-right font-mono tabular-nums text-red-600"
+                                >
+                                    {{
+                                        fmtCLP(
+                                            itemsTotal(adj.items, (d) => d < 0)
+                                                .cost,
+                                        )
+                                    }}
+                                </td>
+                                <td
+                                    class="px-4 py-3 text-right font-mono tabular-nums text-green-600"
+                                >
+                                    {{
+                                        fmtCLP(
+                                            itemsTotal(adj.items, (d) => d > 0)
+                                                .cost,
+                                        )
+                                    }}
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <span
+                                        class="inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold uppercase text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                        >Completado</span
+                                    >
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <button
+                                        @click="viewDetail(adj)"
+                                        class="rounded-lg p-1.5 text-content-muted transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30"
+                                        title="Ver detalle"
+                                    >
+                                        <Eye class="h-4 w-4" />
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Pagination -->
@@ -246,7 +248,7 @@ function fmtDiff(d: number): string {
                 @click.self="showDetail = false"
             >
                 <div
-                    class="relative w-full max-w-2xl rounded-3xl bg-white shadow-xl dark:bg-gray-900"
+                    class="relative w-[95%] max-w-2xl rounded-3xl bg-white shadow-xl dark:bg-gray-900"
                 >
                     <!-- Header -->
                     <div
@@ -272,61 +274,63 @@ function fmtDiff(d: number): string {
                     </div>
                     <!-- Body -->
                     <div class="max-h-[60vh] overflow-y-auto p-6">
-                        <table class="w-full text-sm">
-                            <thead>
-                                <tr
-                                    class="text-left text-xs font-bold uppercase tracking-wider text-content-muted"
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr
+                                        class="text-left text-xs font-bold uppercase tracking-wider text-content-muted"
+                                    >
+                                        <th class="pb-2">Producto</th>
+                                        <th class="pb-2 text-center">Stock Sis.</th>
+                                        <th class="pb-2 text-center">Conteo</th>
+                                        <th class="pb-2 text-center">Dif.</th>
+                                        <th class="pb-2 text-right">Impacto $</th>
+                                    </tr>
+                                </thead>
+                                <tbody
+                                    class="divide-y divide-gray-100 dark:divide-gray-800"
                                 >
-                                    <th class="pb-2">Producto</th>
-                                    <th class="pb-2 text-center">Stock Sis.</th>
-                                    <th class="pb-2 text-center">Conteo</th>
-                                    <th class="pb-2 text-center">Dif.</th>
-                                    <th class="pb-2 text-right">Impacto $</th>
-                                </tr>
-                            </thead>
-                            <tbody
-                                class="divide-y divide-gray-100 dark:divide-gray-800"
-                            >
-                                <tr
-                                    v-for="item in detailAdj.items"
-                                    :key="item.id"
-                                    class="text-sm"
-                                >
-                                    <td
-                                        class="py-2 font-medium text-content-primary dark:text-white"
+                                    <tr
+                                        v-for="item in detailAdj.items"
+                                        :key="item.id"
+                                        class="text-sm"
                                     >
-                                        {{ item.product?.name || '—' }}
-                                    </td>
-                                    <td
-                                        class="py-2 text-center font-mono tabular-nums"
-                                    >
-                                        {{ item.system_stock }}
-                                    </td>
-                                    <td
-                                        class="py-2 text-center font-mono tabular-nums"
-                                    >
-                                        {{ item.counted_stock }}
-                                    </td>
-                                    <td
-                                        class="py-2 text-center font-mono tabular-nums"
-                                        :class="diffClass(item.difference)"
-                                    >
-                                        {{ fmtDiff(item.difference) }}
-                                    </td>
-                                    <td
-                                        class="py-2 text-right font-mono tabular-nums"
-                                        :class="diffClass(item.difference)"
-                                    >
-                                        {{
-                                            fmtCLP(
-                                                item.difference *
-                                                    item.cost_price,
-                                            )
-                                        }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                                        <td
+                                            class="py-2 font-medium text-content-primary dark:text-white"
+                                        >
+                                            {{ item.product?.name || '—' }}
+                                        </td>
+                                        <td
+                                            class="py-2 text-center font-mono tabular-nums"
+                                        >
+                                            {{ item.system_stock }}
+                                        </td>
+                                        <td
+                                            class="py-2 text-center font-mono tabular-nums"
+                                        >
+                                            {{ item.counted_stock }}
+                                        </td>
+                                        <td
+                                            class="py-2 text-center font-mono tabular-nums"
+                                            :class="diffClass(item.difference)"
+                                        >
+                                            {{ fmtDiff(item.difference) }}
+                                        </td>
+                                        <td
+                                            class="py-2 text-right font-mono tabular-nums"
+                                            :class="diffClass(item.difference)"
+                                        >
+                                            {{
+                                                fmtCLP(
+                                                    item.difference *
+                                                        item.cost_price,
+                                                )
+                                            }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     <!-- Footer totals -->
                     <div

@@ -348,7 +348,7 @@ const computedTotal = () => {
         </template>
 
         <div
-            class="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-surface-dark"
+            class="rounded-3xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-surface-dark"
         >
             <div
                 class="flex flex-wrap items-center gap-3 border-b border-gray-100 px-6 py-4 dark:border-gray-800"
@@ -506,7 +506,7 @@ const computedTotal = () => {
                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm md:p-6"
             >
                 <div
-                    class="relative my-auto max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:bg-surface-dark md:ml-20 md:p-8 lg:ml-32"
+                    class="relative my-auto max-h-[90vh] w-[95%] max-w-4xl overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl dark:bg-surface-dark md:p-6 lg:p-8"
                 >
                     <div class="mb-6 flex items-center justify-between">
                         <h3
@@ -616,7 +616,7 @@ const computedTotal = () => {
                                 <button
                                     type="button"
                                     @click="addItem"
-                                    class="flex items-center gap-2 rounded-xl bg-pink-500 px-4 py-2 text-xs font-medium font-semibold text-white shadow-sm transition-all hover:bg-pink-600 active:scale-95 md:text-sm"
+                                    class="flex w-full items-center justify-center gap-2 rounded-xl bg-pink-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-pink-600 active:scale-95 md:w-auto md:text-sm"
                                 >
                                     <Plus class="h-4 w-4" /> Añadir producto
                                 </button>
@@ -627,10 +627,12 @@ const computedTotal = () => {
                                     :key="index"
                                 >
                                     <div
-                                        class="mb-3 flex w-full items-center gap-4 rounded-xl border border-gray-100 bg-white p-2 dark:bg-neutral-900"
+                                        class="mb-3 flex flex-col gap-2 rounded-xl border border-gray-100 bg-white p-3 dark:bg-neutral-900 md:flex-row md:items-center md:gap-4 md:p-2"
                                     >
                                         <!-- SKU -->
-                                        <div class="w-40 flex-shrink-0">
+                                        <div
+                                            class="w-full md:w-40 md:flex-shrink-0"
+                                        >
                                             <input
                                                 v-model="item.sku"
                                                 @input="onSkuInput(index)"
@@ -642,7 +644,7 @@ const computedTotal = () => {
 
                                         <!-- Name + dropdown -->
                                         <div
-                                            class="relative min-w-[180px] flex-1"
+                                            class="relative w-full md:min-w-[180px] md:flex-1"
                                         >
                                             <input
                                                 v-model="item.name"
@@ -737,7 +739,7 @@ const computedTotal = () => {
 
                                         <!-- Costo -->
                                         <div
-                                            class="flex w-32 flex-shrink-0 flex-col items-center"
+                                            class="flex w-full flex-col md:w-32 md:flex-shrink-0 md:items-center"
                                         >
                                             <span
                                                 class="mb-1 text-[11px] font-medium text-gray-400"
@@ -774,7 +776,7 @@ const computedTotal = () => {
 
                                         <!-- Cantidad -->
                                         <div
-                                            class="flex w-20 flex-shrink-0 flex-col items-center"
+                                            class="flex w-full flex-col md:w-20 md:flex-shrink-0 md:items-center"
                                         >
                                             <span
                                                 class="mb-1 block text-center text-[11px] font-medium text-gray-400"
@@ -802,7 +804,7 @@ const computedTotal = () => {
 
                                         <!-- Subtotal -->
                                         <div
-                                            class="w-24 flex-shrink-0 text-right text-sm font-bold text-gray-800 dark:text-gray-200"
+                                            class="w-full text-sm font-bold text-gray-800 dark:text-gray-200 md:w-24 md:flex-shrink-0 md:text-right"
                                         >
                                             ${{
                                                 (
@@ -816,7 +818,7 @@ const computedTotal = () => {
 
                                         <!-- Eliminar -->
                                         <div
-                                            class="flex w-8 flex-shrink-0 justify-center"
+                                            class="flex w-8 flex-shrink-0 justify-center self-end md:self-auto"
                                         >
                                             <button
                                                 @click="removeItem(index)"
@@ -894,7 +896,7 @@ const computedTotal = () => {
                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
             >
                 <div
-                    class="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl dark:bg-surface-dark"
+                    class="relative w-[95%] max-w-lg rounded-3xl bg-white p-4 shadow-xl dark:bg-surface-dark md:p-6"
                 >
                     <div class="mb-6 flex items-center justify-between">
                         <h3
@@ -1021,7 +1023,7 @@ const computedTotal = () => {
                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
             >
                 <div
-                    class="relative w-full max-w-xl rounded-3xl bg-white p-6 shadow-xl dark:bg-surface-dark"
+                    class="relative w-[95%] max-w-xl rounded-3xl bg-white p-4 shadow-xl dark:bg-surface-dark md:p-6"
                 >
                     <div class="mb-6 flex items-center justify-between">
                         <h3
@@ -1059,52 +1061,54 @@ const computedTotal = () => {
                         </div>
                     </div>
 
-                    <table class="mb-6 w-full text-left">
-                        <thead
-                            class="rounded-xl bg-gray-50 text-xs uppercase tracking-wider text-content-muted dark:bg-gray-900/50 dark:text-gray-500"
-                        >
-                            <tr>
-                                <th class="px-3 py-2 font-bold">Producto</th>
-                                <th class="px-3 py-2 text-center font-bold">
-                                    Pedido
-                                </th>
-                                <th class="px-3 py-2 text-center font-bold">
-                                    Recibido
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody
-                            class="divide-y divide-gray-100 dark:divide-gray-800"
-                        >
-                            <tr
-                                v-for="ri in receiveItems"
-                                :key="ri.id"
-                                class="hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    <div class="overflow-x-auto">
+                        <table class="mb-6 w-full text-left">
+                            <thead
+                                class="rounded-xl bg-gray-50 text-xs uppercase tracking-wider text-content-muted dark:bg-gray-900/50 dark:text-gray-500"
                             >
-                                <td
-                                    class="px-3 py-3 text-sm font-medium text-content-primary dark:text-white"
+                                <tr>
+                                    <th class="px-3 py-2 font-bold">Producto</th>
+                                    <th class="px-3 py-2 text-center font-bold">
+                                        Pedido
+                                    </th>
+                                    <th class="px-3 py-2 text-center font-bold">
+                                        Recibido
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody
+                                class="divide-y divide-gray-100 dark:divide-gray-800"
+                            >
+                                <tr
+                                    v-for="ri in receiveItems"
+                                    :key="ri.id"
+                                    class="hover:bg-gray-50 dark:hover:bg-gray-800/50"
                                 >
-                                    {{ ri.name }}
-                                    <span class="text-xs text-content-muted"
-                                        >({{ ri.sku }})</span
+                                    <td
+                                        class="px-3 py-3 text-sm font-medium text-content-primary dark:text-white"
                                     >
-                                </td>
-                                <td
-                                    class="px-3 py-3 text-center text-sm text-content-secondary"
-                                >
-                                    {{ ri.ordered }}
-                                </td>
-                                <td class="px-3 py-3 text-center">
-                                    <input
-                                        v-model.number="ri.received"
-                                        type="number"
-                                        min="0"
-                                        class="w-20 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-center text-sm text-content-primary dark:border-gray-700 dark:bg-surface-dark dark:text-white"
-                                    />
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                        {{ ri.name }}
+                                        <span class="text-xs text-content-muted"
+                                            >({{ ri.sku }})</span
+                                        >
+                                    </td>
+                                    <td
+                                        class="px-3 py-3 text-center text-sm text-content-secondary"
+                                    >
+                                        {{ ri.ordered }}
+                                    </td>
+                                    <td class="px-3 py-3 text-center">
+                                        <input
+                                            v-model.number="ri.received"
+                                            type="number"
+                                            min="0"
+                                            class="w-20 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-center text-sm text-content-primary dark:border-gray-700 dark:bg-surface-dark dark:text-white"
+                                        />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
                     <div class="flex gap-3">
                         <button

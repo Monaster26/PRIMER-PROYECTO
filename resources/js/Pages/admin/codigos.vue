@@ -670,8 +670,8 @@ const fmt = (v: number) =>
                     </div>
 
                     <form @submit.prevent="submitForm">
-                        <div class="flex gap-6">
-                            <div class="w-64 flex-shrink-0 space-y-5">
+                        <div class="flex flex-col lg:flex-row gap-6">
+                            <div class="w-full lg:w-64 lg:flex-shrink-0 space-y-5">
                                 <div>
                                     <label
                                         class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
@@ -1067,7 +1067,7 @@ const fmt = (v: number) =>
                         </button>
                     </div>
                     <form @submit.prevent="submitStockForm" class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="relative">
                                 <div
                                     class="relative flex items-center rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900"
@@ -1173,7 +1173,7 @@ const fmt = (v: number) =>
                                 >
                             </div>
 
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label
                                         class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"

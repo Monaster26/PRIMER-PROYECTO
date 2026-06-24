@@ -16,10 +16,12 @@ import {
     UserCog,
     Users,
     Wallet,
+    X,
 } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
 
 defineProps<{ isOpen: boolean }>();
+const emit = defineEmits(['close']);
 
 const roles = computed<string[]>(() => {
     const auth = (usePage().props as any).auth;
@@ -199,8 +201,8 @@ const navGroups = computed(() => {
 
 <template>
     <aside
-        class="fixed inset-y-0 left-0 z-30 flex flex-col border-r border-gray-100 bg-white shadow-sm transition-all duration-300 ease-in-out dark:border-gray-800 dark:bg-surface-dark lg:relative"
-        :class="isOpen ? 'w-64' : 'w-20'"
+        class="fixed inset-y-0 left-0 z-50 flex flex-col border-r border-gray-100 bg-white shadow-sm transition-all duration-300 ease-in-out dark:border-gray-800 dark:bg-surface-dark lg:relative"
+        :class="isOpen ? 'w-64 translate-x-0 opacity-100' : '-translate-x-full lg:translate-x-0 lg:w-0 lg:opacity-0 lg:overflow-hidden lg:border-none'"
     >
         <div
             class="flex h-16 flex-shrink-0 items-center bg-gradient-to-r from-primary-500 to-secondary-400 px-6"
@@ -216,20 +218,22 @@ const navGroups = computed(() => {
                     >Admin</span
                 >
             </Link>
+            <button
+                v-if="isOpen"
+                @click="emit('close')"
+                class="ml-auto rounded-xl p-1.5 text-white/80 transition-colors hover:bg-white/10 lg:hidden"
+            >
+                <X class="h-5 w-5" />
+            </button>
         </div>
 
         <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-4">
             <template v-for="group in navGroups" :key="group.label">
                 <p
-                    v-if="isOpen"
                     class="select-none px-4 pb-1 pt-4 text-[10px] font-extrabold uppercase tracking-widest text-content-muted dark:text-gray-500"
                 >
                     {{ group.label }}
                 </p>
-                <div
-                    v-else
-                    class="my-2 border-t border-gray-100 dark:border-gray-800"
-                />
 
                 <Link
                     v-for="item in group.items"
@@ -252,9 +256,7 @@ const navGroups = computed(() => {
                     >
                         {{ unreadObservaciones }}
                     </span>
-                    <span v-if="isOpen" class="select-none truncate">{{
-                        item.label
-                    }}</span>
+                    <span class="select-none truncate">{{ item.label }}</span>
                     <div
                         v-if="route().current(item.name)"
                         class="absolute right-0 h-6 w-1.5 rounded-l-full bg-primary-500"

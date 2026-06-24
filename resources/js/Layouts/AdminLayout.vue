@@ -3,9 +3,9 @@ import AdminSidebar from '@/Components/Layout/AdminSidebar.vue';
 import Header from '@/Components/Layout/Header.vue';
 import { usePage } from '@inertiajs/vue3';
 import { CheckCircle, X, XCircle } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 
-const sidebarOpen = ref(true);
+const sidebarOpen = ref(false);
 const isDark = ref(false);
 const showToast = ref(false);
 const toastType = ref<'success' | 'error'>('success');
@@ -18,6 +18,35 @@ function toggleDark() {
     isDark.value = !isDark.value;
     document.documentElement.classList.toggle('dark', isDark.value);
 }
+
+function handleResize() {
+    // Keep sidebar open by default only on desktop
+    if (window.innerWidth >= 1024) {
+        sidebarOpen.value = true;
+    } else {
+        sidebarOpen.value = false;
+    }
+}
+
+// Close sidebar on navigation if we are in mobile/tablet viewport
+const page = usePage();
+watch(
+    () => page.url,
+    () => {
+        if (window.innerWidth < 1024) {
+            sidebarOpen.value = false;
+        }
+    }
+);
+
+onMounted(() => {
+    handleResize();
+    window.addEventListener('resize', handleResize);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('resize', handleResize);
+});
 
 watch(
     () => usePage().props.flash as any,
@@ -46,7 +75,23 @@ watch(
     <div
         class="relative flex h-screen overflow-hidden bg-gray-50 font-sans dark:bg-bg-dark"
     >
-        <AdminSidebar :isOpen="sidebarOpen" class="flex-shrink-0" />
+        <!-- Mobile Backdrop Overlay -->
+        <Transition
+            enter-active-class="transition-opacity duration-300 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition-opacity duration-200 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="sidebarOpen"
+                @click="sidebarOpen = false"
+                class="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+            />
+        </Transition>
+
+        <AdminSidebar :isOpen="sidebarOpen" @close="sidebarOpen = false" class="flex-shrink-0" />
 
         <div class="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
             <Header
@@ -55,7 +100,7 @@ watch(
                 @toggleDark="toggleDark"
             />
 
-            <main class="relative flex-1 overflow-y-auto p-6">
+            <main class="relative flex-1 overflow-y-auto p-4 md:p-6">
                 <Transition
                     enter-active-class="transition duration-300 ease-out"
                     enter-from-class="translate-y-[-100%] opacity-0"
