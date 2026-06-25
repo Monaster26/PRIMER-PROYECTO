@@ -185,7 +185,7 @@ function getIcon(name: string) {
                             <Link
                                 v-for="sub in activeCategory.children"
                                 :key="sub.id"
-                                :href="`/catalog?category=${activeCategory.id}&sub=${encodeURIComponent(sub.slug)}`"
+                                :href="`/categoria/${activeCategory.slug}/${sub.slug}`"
                                 @click="isMegaMenuOpen = false"
                                 class="group flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-content-secondary transition-all duration-150 hover:bg-accent-100 hover:text-content-primary dark:text-gray-400 dark:hover:bg-accent-900/30 dark:hover:text-accent-300"
                             >
@@ -201,7 +201,7 @@ function getIcon(name: string) {
                             class="mt-6 border-t border-gray-100 pt-4 dark:border-gray-800"
                         >
                             <Link
-                                :href="`/catalog?category=${activeCategory.id}`"
+                                :href="`/categoria/${activeCategory.slug}`"
                                 @click="isMegaMenuOpen = false"
                                 class="inline-flex items-center gap-2 text-sm font-bold text-primary-500 transition-colors hover:text-primary-600"
                             >
@@ -331,7 +331,7 @@ function getIcon(name: string) {
                                 <Link
                                     v-for="sub in cat.children"
                                     :key="sub.id"
-                                    :href="`/catalog?category=${cat.id}&sub=${encodeURIComponent(sub.slug)}`"
+                                    :href="`/categoria/${cat.slug}/${sub.slug}`"
                                     @click="isMobileMenuOpen = false"
                                     class="flex items-center gap-3 px-7 py-2.5 text-sm text-content-secondary transition-colors hover:bg-accent-50 hover:text-primary-500 dark:text-gray-400 dark:hover:bg-accent-900/20"
                                 >
@@ -341,7 +341,7 @@ function getIcon(name: string) {
                                     {{ sub.name }}
                                 </Link>
                                 <Link
-                                    :href="`/catalog?category=${cat.id}`"
+                                    :href="`/categoria/${cat.slug}`"
                                     @click="isMobileMenuOpen = false"
                                     class="mt-1 flex items-center gap-2 px-7 py-3 text-sm font-bold text-primary-500 transition-colors hover:text-primary-600"
                                 >

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\StorefrontController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\CreditInvoiceController;
 use App\Http\Controllers\CustomerController;
@@ -38,6 +39,12 @@ Route::get('/pos-test', function () {
 // Categorías públicas (lectura) para Navbar, menú, etc.
 Route::get('/public-categorias', [AdminCategoryController::class, 'index'])
     ->name('public.categorias');
+
+// ── Vitrina pública de la tienda por categoría / subcategoría ─────────────
+Route::get('/categoria/{categorySlug}/{subcategorySlug}', [StorefrontController::class, 'byCategory'])
+    ->name('storefront.subcategory');
+Route::get('/categoria/{categorySlug}', [StorefrontController::class, 'byCategory'])
+    ->name('storefront.category');
 
 /*
 |--------------------------------------------------------------------------

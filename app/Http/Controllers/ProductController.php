@@ -165,6 +165,77 @@ class ProductController extends Controller
     }
 
     /**
+     * Filtrado público de productos para la vitrina de categorías.
+     * GET /api/products/filter?category_slug=bebidas&subcategory_slug=gaseosas
+     */
+    public function filter(Request $request)
+    {
+        $request->validate([
+            'category_slug'    => 'nullable|string|max:100',
+            'subcategory_slug' => 'nullable|string|max:100',
+            'q'                => 'nullable|string|max:100',
+            'sort'             => 'nullable|in:name,price,created_at',
+            'dir'              => 'nullable|in:asc,desc',
+            'per_page'         => 'nullable|integer|min:4|max:100',
+        ]);
+
+        $query = Product::with('category')->active();
+
+        // Prioridad: subcategoría > categoría raíz
+        if ($slug = $request->input('subcategory_slug')) {
+            $cat = \App\Models\Category::where('slug', $slug)->first();
+            if ($cat) $query->where('category_id', $cat->id);
+        } elseif ($slug = $request->input('category_slug')) {
+            $root = \App\Models\Category::with('children')
+                ->whereNull('parent_id')
+                ->where('slug', $slug)
+                ->first();
+            if ($root) {
+                $ids = $root->children->pluck('id')->push($root->id)->all();
+                $query->whereIn('category_id', $ids);
+            }
+        }
+
+        if ($term = $request->input('q')) {
+            $query->search($term);
+        }
+
+        $sort    = in_array($request->input('sort'), ['name', 'price', 'created_at'])
+                    ? $request->input('sort') : 'name';
+        $sortDir = $request->input('dir', 'asc');
+        $perPage = (int) $request->input('per_page', 20);
+
+        $paginated = $query->orderBy($sort, $sortDir)->paginate($perPage)->withQueryString();
+
+        return response()->json([
+            'data' => $paginated->getCollection()->map(fn($p) => [
+                'id'           => $p->id,
+                'name'         => $p->name,
+                'slug'         => $p->slug,
+                'sku'          => $p->sku,
+                'price'        => $p->price,
+                'stock'        => $p->effective_stock,
+                'is_low_stock' => $p->is_low_stock,
+                'image_url'    => $p->image_path ? asset('storage/' . $p->image_path) : null,
+                'category'     => $p->category ? ['id' => $p->category->id, 'name' => $p->category->name] : null,
+                'description'  => $p->description,
+                'brand'        => $p->brand,
+                'unit'         => $p->unit,
+            ]),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'total'        => $paginated->total(),
+                'per_page'     => $paginated->perPage(),
+            ],
+            'links' => [
+                'prev' => $paginated->previousPageUrl(),
+                'next' => $paginated->nextPageUrl(),
+            ],
+        ]);
+    }
+
+    /**
      * Búsqueda rápida por SKU o barcode (para el POS).
      */
     public function lookup(Request $request)

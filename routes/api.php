@@ -16,6 +16,21 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
+// ── Ruta pública — filtrado de productos para vitrina (sin auth) ──────────
+Route::get('/products/filter', [ProductController::class, 'filter'])
+    ->name('api.products.filter');
+
+
+/*
+|--------------------------------------------------------------------------
+| API Routes — Mini-Market
+|--------------------------------------------------------------------------
+| Prefijo: /api
+| Auth:    Laravel Sanctum (tokens)
+| POS:     Middleware PosAuthentication (X-POS-Token header)
+|--------------------------------------------------------------------------
+*/
+
 /*
 |--------------------------------------------------------------------------
 | Rutas POS (autenticación por PIN + Session Token)
