@@ -75,6 +75,7 @@ const selectedLabel = computed(() => {
 
 function toggleRoot(id: number) {
     expandedRoot.value = expandedRoot.value === id ? null : id;
+    selectCategory(id);
 }
 
 function selectCategory(id: number | null) {
@@ -119,16 +120,12 @@ const units = [
     'docena',
 ];
 
-const selectedCategory = computed(
-    () =>
-        localCategories.value.find((c) => c.slug === form.category_slug) ??
-        null,
+const selectedCategory = computed(() =>
+    props.categoryTree.find((c) => c.slug === form.category_slug) ?? null,
 );
 
 const subcategories = computed(() =>
-    localCategories.value.filter(
-        (c) => c.parent_id === selectedCategory.value?.id,
-    ),
+    selectedCategory.value?.children ?? [],
 );
 
 const form = useForm({
@@ -1107,10 +1104,10 @@ const fmt = (v: number) =>
                                             class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                         >
                                             <option value="">
-                                                Sin categoría
+                                                Seleccionar departamento
                                             </option>
                                             <option
-                                                v-for="cat in localCategories"
+                                                v-for="cat in props.categoryTree"
                                                 :key="cat.id"
                                                 :value="cat.slug"
                                             >

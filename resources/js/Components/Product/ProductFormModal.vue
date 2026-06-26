@@ -6,7 +6,7 @@ import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
     show: boolean;
-    product: any | null; // Null para nuevo, objeto para editar
+    product: any | null;
     categories: any[];
 }>();
 
@@ -47,6 +47,24 @@ function handleImageChange(e: Event) {
     }
 }
 
+// ─── Selector jerárquico Categoría → Subcategoría ─────────────────
+const selectedParentId = ref<number | string>('');
+
+const filteredSubcategories = computed(() => {
+    if (!selectedParentId.value) return [];
+    const parent = categoryStore.categories.find(
+        (c) => c.id === Number(selectedParentId.value),
+    );
+    return parent?.children ?? [];
+});
+
+function onSubcategoryChange() {
+    const sub = filteredSubcategories.value.find(
+        (s) => s.id === Number(form.category_id),
+    );
+    form.sub_category = sub?.name ?? '';
+}
+
 // ─── Sincronizar datos al abrir ──────────────────────────────────
 watch(
     () => props.show,
@@ -63,7 +81,6 @@ watch(
                 form.cost_price = (props.product.cost_price || 0) / 100;
                 form.stock = props.product.stock;
                 form.min_stock = props.product.min_stock || 5;
-                form.category_id = props.product.category_id.toString();
                 form.sub_category = props.product.sub_category || '';
                 form.is_active = props.product.is_active;
                 form.is_featured = props.product.is_featured ?? false;
@@ -75,8 +92,12 @@ watch(
                 imagePreview.value = props.product.image_path
                     ? `/storage/${props.product.image_path}`
                     : null;
+
+                selectedParentId.value = '';
+                form.category_id = '';
             } else {
                 form.reset();
+                selectedParentId.value = '';
                 form._method = 'POST';
                 imagePreview.value = null;
             }
@@ -84,13 +105,25 @@ watch(
     },
 );
 
-// ─── Lógica de Subcategorías Jerárquicas ──────────────────────────
-const filteredSubcategories = computed(() => {
-    if (!form.category_id) return [];
-    const catId = Number(form.category_id);
-    const selectedCat = categoryStore.categories.find((c) => c.id === catId);
-    return selectedCat?.children ?? [];
-});
+// Cuando se cargan las categorías, derivar padre desde el producto activo
+watch(
+    [() => props.product, () => categoryStore.categories],
+    ([product, cats]) => {
+        if (!product || !cats.length) return;
+        const catId = Number(product.category_id);
+        if (!catId) return;
+        const allCats = cats.flatMap((p) => p.children ?? []);
+        const child = allCats.find((c) => c.id === catId);
+        if (child) {
+            selectedParentId.value = child.parent_id;
+            form.category_id = catId;
+        } else {
+            selectedParentId.value = catId;
+            form.category_id = '';
+        }
+    },
+    { immediate: true },
+);
 
 function submit() {
     const url = props.product
@@ -327,15 +360,15 @@ function submit() {
                                     <div>
                                         <label
                                             class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-muted"
-                                            >Departamento (Padre)</label
+                                            >Categoría</label
                                         >
                                         <select
-                                            v-model="form.category_id"
+                                            v-model="selectedParentId"
                                             class="w-full rounded-2xl border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold dark:border-gray-800 dark:bg-gray-900"
                                             required
                                         >
                                             <option value="">
-                                                Seleccione Departamento
+                                                Seleccione Categoría
                                             </option>
                                             <option
                                                 v-for="cat in categoryStore.categories"
@@ -350,18 +383,21 @@ function submit() {
                                     <div>
                                         <label
                                             class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-muted"
-                                            >Sub-categoría</label
+                                            >Subcategoría</label
                                         >
                                         <select
-                                            v-model="form.sub_category"
+                                            v-model="form.category_id"
                                             class="w-full rounded-2xl border border-gray-100 bg-gray-50 px-5 py-3 text-sm dark:border-gray-800 dark:bg-gray-900"
-                                            :disabled="!form.category_id"
+                                            :disabled="!selectedParentId"
+                                            @change="onSubcategoryChange"
                                         >
-                                            <option value="">Ninguna</option>
+                                            <option value="">
+                                                Seleccione Subcategoría
+                                            </option>
                                             <option
                                                 v-for="sub in filteredSubcategories"
                                                 :key="sub.id"
-                                                :value="sub.name"
+                                                :value="sub.id"
                                             >
                                                 {{ sub.name }}
                                             </option>

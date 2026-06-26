@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { useCategoryStore } from '@/Stores/categoryStore';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import {
     AlertCircle,
@@ -13,17 +14,21 @@ import {
     Save,
     Tag,
 } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
     product: any | null;
     categories: any[];
 }>();
 
+const categoryStore = useCategoryStore();
+categoryStore.fetchCategories();
+
 // ─── Estado del Formulario ────────────────────────────────────────
 const form = useForm({
     _method: props.product ? 'PUT' : 'POST',
-    category_id: props.product?.category_id?.toString() || '',
+    category_id: '',
+    sub_category: '',
     name: props.product?.name || '',
     description: props.product?.description || '',
     sku: props.product?.sku || '',
@@ -52,6 +57,46 @@ function handleImageChange(e: Event) {
     }
 }
 
+// ─── Selector jerárquico Categoría → Subcategoría ─────────────────
+const selectedParentId = ref<number | string>('');
+
+const filteredSubcategories = computed(() => {
+    if (!selectedParentId.value) return [];
+    const parent = categoryStore.categories.find(
+        (c) => c.id === Number(selectedParentId.value),
+    );
+    return parent?.children ?? [];
+});
+
+function onSubcategoryChange() {
+    const sub = filteredSubcategories.value.find(
+        (s) => s.id === Number(form.category_id),
+    );
+    form.sub_category = sub?.name ?? '';
+}
+
+// Inicializar selects si es edición
+watch(
+    () => categoryStore.categories,
+    (cats) => {
+        if (props.product && cats.length > 0) {
+            const catId = Number(props.product.category_id);
+            const allCats = cats.flatMap((p) => p.children ?? []);
+            const child = allCats.find((c) => c.id === catId);
+            if (child) {
+                selectedParentId.value = child.parent_id;
+                form.category_id = catId;
+                form.sub_category = props.product.sub_category || child.name;
+            } else {
+                selectedParentId.value = catId;
+                form.category_id = '';
+                form.sub_category = '';
+            }
+        }
+    },
+    { immediate: true },
+);
+
 // ─── Envío de Datos ──────────────────────────────────────────────
 function submit() {
     const url = props.product
@@ -61,9 +106,7 @@ function submit() {
     form.post(url, {
         forceFormData: true,
         preserveScroll: true,
-        onSuccess: () => {
-            // Manejado por el controlador
-        },
+        onSuccess: () => {},
     });
 }
 </script>
@@ -275,25 +318,25 @@ function submit() {
                             <div>
                                 <label
                                     class="mb-2 block text-xs font-bold text-content-secondary dark:text-gray-400"
-                                    >Departamento / Categoría</label
+                                    >Categoría</label
                                 >
                                 <div class="relative">
                                     <Layers
                                         class="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-content-muted"
                                     />
                                     <select
-                                        v-model="form.category_id"
+                                        v-model="selectedParentId"
                                         class="w-full appearance-none rounded-2xl border border-gray-100 bg-gray-50 py-4 pl-12 pr-5 text-sm font-bold focus:ring-2 focus:ring-primary-500 dark:border-gray-800 dark:bg-gray-900"
                                     >
                                         <option value="">
-                                            Selecciona una categoría
+                                            Seleccione Categoría
                                         </option>
                                         <option
-                                            v-for="cat in categories"
+                                            v-for="cat in categoryStore.categories"
                                             :key="cat.id"
                                             :value="cat.id"
                                         >
-                                            {{ cat.name }}
+                                            {{ cat.icon }} {{ cat.name }}
                                         </option>
                                     </select>
                                 </div>
@@ -303,6 +346,30 @@ function submit() {
                                 >
                                     {{ form.errors.category_id }}
                                 </p>
+                            </div>
+
+                            <div>
+                                <label
+                                    class="mb-2 block text-xs font-bold text-content-secondary dark:text-gray-400"
+                                    >Subcategoría</label
+                                >
+                                <select
+                                    v-model="form.category_id"
+                                    class="w-full rounded-2xl border border-gray-100 bg-gray-50 px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-primary-500 dark:border-gray-800 dark:bg-gray-900"
+                                    :disabled="!selectedParentId"
+                                    @change="onSubcategoryChange"
+                                >
+                                    <option value="">
+                                        Seleccione Subcategoría
+                                    </option>
+                                    <option
+                                        v-for="sub in filteredSubcategories"
+                                        :key="sub.id"
+                                        :value="sub.id"
+                                    >
+                                        {{ sub.name }}
+                                    </option>
+                                </select>
                             </div>
 
                             <div>

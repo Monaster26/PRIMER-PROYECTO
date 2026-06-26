@@ -39,7 +39,7 @@ class ProductsImport implements ToModel, WithHeadingRow, SkipsEmptyRows, SkipsOn
             return null;
         }
 
-        $product = Product::firstOrNew(['sku' => $sku]);
+        $product = Product::withTrashed()->firstOrNew(['sku' => $sku]);
 
         $product->name = trim($row['Descripcion'] ?? '');
         $product->cost_price = (int) round($costPrice * 100);
@@ -47,14 +47,18 @@ class ProductsImport implements ToModel, WithHeadingRow, SkipsEmptyRows, SkipsOn
         $product->stock = (int) ($row['Inventario'] ?? 0);
         $product->min_stock = (int) ($row['Inv. Minimo'] ?? 5);
 
-        $deptName = trim($row['Departamento'] ?? '');
-        if (empty($deptName)) {
-            $deptName = 'Sin categoría';
+        $product->sub_category = trim($row['Subcategoria'] ?? $row['Subcategoría'] ?? '');
+
+        $categoryId = $this->resolveCategory(
+            trim($row['Categoria'] ?? $row['Categoría'] ?? ''),
+            $product->sub_category
+        );
+        if ($categoryId) {
+            $product->category_id = $categoryId;
         }
-        $dept = $this->findOrCreateCategory($deptName);
-        if ($dept['id']) {
-            $product->category_id = $dept['id'];
-            $product->category_slug = $dept['slug'];
+
+        if ($product->trashed()) {
+            $product->restore();
         }
 
         if (!$product->exists) {
@@ -93,21 +97,46 @@ class ProductsImport implements ToModel, WithHeadingRow, SkipsEmptyRows, SkipsOn
         return null;
     }
 
-    private function findOrCreateCategory(string $name): array
+    private function resolveCategory(string $categoryName, string $subcategoryName): ?int
     {
-        $slug = Str::slug($name);
-        if (empty($slug)) {
-            return ['id' => null, 'slug' => null];
+        if (empty($categoryName)) {
+            return null;
         }
-        $category = Category::where('slug', $slug)->first();
-        if ($category) {
-            return ['id' => $category->id, 'slug' => $category->slug];
+
+        $parentSlug = Str::slug($categoryName);
+        // ponytail: direct slug lookup, seeder uses Str::slug which matches
+        $parent = Category::where('slug', $parentSlug)->whereNull('parent_id')->first();
+
+        if (!$parent && !empty($categoryName)) {
+            $parent = Category::create([
+                'name' => mb_strtoupper($categoryName),
+                'slug' => $parentSlug,
+                'is_active' => true,
+            ]);
         }
-        $category = Category::create([
-            'name' => $name,
-            'slug' => $slug,
-            'is_active' => true,
-        ]);
-        return ['id' => $category->id, 'slug' => $category->slug];
+
+        if (!$parent) {
+            return null;
+        }
+
+        if (empty($subcategoryName)) {
+            return $parent->id;
+        }
+
+        $childSlug = Str::slug($subcategoryName);
+        $child = Category::where('slug', $childSlug)
+            ->where('parent_id', $parent->id)
+            ->first();
+
+        if (!$child) {
+            $child = Category::create([
+                'name' => $subcategoryName,
+                'slug' => $childSlug,
+                'parent_id' => $parent->id,
+                'is_active' => true,
+            ]);
+        }
+
+        return $child->id;
     }
 }

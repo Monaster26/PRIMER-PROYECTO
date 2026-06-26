@@ -14,6 +14,7 @@ class CategoryController extends Controller
     public function index(): JsonResponse
     {
         $categories = Category::with('children')
+            ->active()
             ->roots()
             ->ordered()
             ->get(['id', 'name', 'slug', 'icon', 'parent_id']);

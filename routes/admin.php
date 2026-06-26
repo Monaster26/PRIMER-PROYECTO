@@ -107,6 +107,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 
         // Pedidos a proveedores
         Route::resource('pedidos', PurchaseOrderController::class)
+            ->parameters(['pedidos' => 'purchaseOrder'])
             ->except(['show', 'create', 'edit']);
         Route::post('pedidos/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])
             ->name('pedidos.receive');

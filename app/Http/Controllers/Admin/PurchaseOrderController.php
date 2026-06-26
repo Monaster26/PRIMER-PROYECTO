@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\StockMovement;
 use App\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -24,11 +26,13 @@ class PurchaseOrderController extends Controller
 
         $suppliers = Supplier::orderBy('company_name')->get(['id', 'company_name']);
         $products = Product::active()->orderBy('name')->get(['id', 'name', 'sku', 'cost_price', 'stock']);
+        $categories = Category::with('children')->roots()->ordered()->get(['id', 'name', 'slug']);
 
         return Inertia::render('admin/pedidos', [
-            'orders'    => $orders,
-            'suppliers' => $suppliers,
-            'products'  => $products,
+            'orders'     => $orders,
+            'suppliers'  => $suppliers,
+            'products'   => $products,
+            'categories' => $categories,
         ]);
     }
 
@@ -45,6 +49,8 @@ class PurchaseOrderController extends Controller
             'items.*.unit_cost'      => 'required|numeric|min:0',
             'items.*.is_new'         => 'required|boolean',
             'items.*.new_name'       => 'required_if:items.*.is_new,true|nullable|string|max:255',
+            'items.*.category_id'    => 'required_if:items.*.is_new,true|exists:categories,id',
+            'items.*.sub_category'   => 'nullable|string|max:255',
         ]);
 
         $order = DB::transaction(function () use ($validated) {
@@ -70,12 +76,15 @@ class PurchaseOrderController extends Controller
                 if (!empty($item['is_new'])) {
                     $sku = !empty($item['sku']) ? $item['sku'] : 'TEMP-' . uniqid();
                     $newProduct = Product::create([
-                        'name'       => $item['new_name'] ?? $item['name'] ?? 'Producto Nuevo',
-                        'sku'        => $sku,
-                        'cost_price' => (int) (round((float) ($item['unit_cost'] ?? 0), 2) * 100),
-                        'price'      => (int) (round((float) ($item['unit_cost'] ?? 0), 2) * 100),
-                        'stock'      => 0,
-                        'is_active'  => true,
+                        'category_id'  => $item['category_id'],
+                        'sub_category' => $item['sub_category'] ?? null,
+                        'name'         => $item['new_name'] ?? $item['name'] ?? 'Producto Nuevo',
+                        'slug'         => Str::slug($item['new_name'] ?? 'producto') . '-' . uniqid(),
+                        'sku'          => $sku,
+                        'cost_price'   => (int) (round((float) ($item['unit_cost'] ?? 0), 2) * 100),
+                        'price'        => (int) (round((float) ($item['unit_cost'] ?? 0), 2) * 100),
+                        'stock'        => 0,
+                        'is_active'    => false,
                     ]);
                     $productId = $newProduct->id;
                 }
@@ -105,6 +114,98 @@ class PurchaseOrderController extends Controller
 
         return redirect()->route('admin.pedidos.index')
             ->with('success', "Pedido {$order->order_number} registrado.");
+    }
+
+    public function update(Request $request, PurchaseOrder $purchaseOrder): RedirectResponse
+    {
+        if ($purchaseOrder->status !== 'pending') {
+            return back()->with('error', 'Solo se pueden editar pedidos pendientes.');
+        }
+
+        $validated = $request->validate([
+            'supplier_id'            => 'required|exists:suppliers,id',
+            'ordered_at'             => 'required|date',
+            'delivery_at'            => 'nullable|date|after_or_equal:ordered_at',
+            'notes'                  => 'nullable|string|max:500',
+            'items'                  => 'required|array|min:1',
+            'items.*.id'             => 'nullable|exists:purchase_order_items,id',
+            'items.*.product_id'     => 'nullable|exists:products,id',
+            'items.*.quantity'       => 'required|integer|min:1',
+            'items.*.unit_cost'      => 'required|numeric|min:0',
+            'items.*.is_new'         => 'required|boolean',
+            'items.*.new_name'       => 'required_if:items.*.is_new,true|nullable|string|max:255',
+            'items.*.category_id'    => 'required_if:items.*.is_new,true|exists:categories,id',
+            'items.*.sub_category'   => 'nullable|string|max:255',
+        ]);
+
+        DB::transaction(function () use ($validated, $purchaseOrder) {
+            $purchaseOrder->update([
+                'supplier_id' => $validated['supplier_id'],
+                'ordered_at'  => $validated['ordered_at'],
+                'delivery_at' => $validated['delivery_at'] ?? null,
+                'notes'       => $validated['notes'] ?? null,
+            ]);
+
+            $newItemIds = collect($validated['items'])->pluck('id')->filter();
+            $purchaseOrder->items()->whereNotIn('id', $newItemIds)->delete();
+
+            $totalCost = 0;
+
+            foreach ($validated['items'] as $item) {
+                $productId = $item['product_id'] ?? null;
+
+                if (!empty($item['is_new'])) {
+                    $sku = !empty($item['sku']) ? $item['sku'] : 'TEMP-' . uniqid();
+                    $newProduct = Product::create([
+                        'category_id'  => $item['category_id'],
+                        'sub_category' => $item['sub_category'] ?? null,
+                        'name'         => $item['new_name'] ?? $item['name'] ?? 'Producto Nuevo',
+                        'slug'         => Str::slug($item['new_name'] ?? 'producto') . '-' . uniqid(),
+                        'sku'          => $sku,
+                        'cost_price'   => (int) (round((float) ($item['unit_cost'] ?? 0), 2) * 100),
+                        'price'        => (int) (round((float) ($item['unit_cost'] ?? 0), 2) * 100),
+                        'stock'        => 0,
+                        'is_active'    => false,
+                    ]);
+                    $productId = $newProduct->id;
+                }
+
+                if (empty($productId)) {
+                    \Log::warning('Pedido update: ítem saltado sin product_id', $item);
+                    continue;
+                }
+
+                $unitCost = (int) (round((float) ($item['unit_cost'] ?? 0), 2) * 100);
+                $subtotal = $unitCost * (int) ($item['quantity'] ?? 1);
+                $totalCost += $subtotal;
+
+                $existingItem = !empty($item['id'])
+                    ? $purchaseOrder->items()->find($item['id'])
+                    : null;
+
+                if ($existingItem) {
+                    $existingItem->update([
+                        'product_id' => $productId,
+                        'quantity'   => (int) $item['quantity'],
+                        'unit_cost'  => $unitCost,
+                        'subtotal'   => $subtotal,
+                    ]);
+                } else {
+                    PurchaseOrderItem::create([
+                        'purchase_order_id' => $purchaseOrder->id,
+                        'product_id'        => $productId,
+                        'quantity'          => (int) $item['quantity'],
+                        'unit_cost'         => $unitCost,
+                        'subtotal'          => $subtotal,
+                    ]);
+                }
+            }
+
+            $purchaseOrder->update(['total_cost' => $totalCost]);
+        });
+
+        return redirect()->route('admin.pedidos.index')
+            ->with('success', "Pedido {$purchaseOrder->order_number} actualizado.");
     }
 
     public function receive(Request $request, PurchaseOrder $purchaseOrder): RedirectResponse

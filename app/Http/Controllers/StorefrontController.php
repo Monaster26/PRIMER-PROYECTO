@@ -25,6 +25,7 @@ class StorefrontController extends Controller
 
         // ── 1. Resolver la categoría raíz ─────────────────────────────
         $rootCategory = Category::with('children')
+            ->active()
             ->whereNull('parent_id')
             ->where('slug', $categorySlug)
             ->firstOrFail();
@@ -32,7 +33,8 @@ class StorefrontController extends Controller
         // ── 2. Resolver subcategoría activa (opcional) ────────────────
         $activeSubcategory = null;
         if ($subcategorySlug) {
-            $activeSubcategory = Category::where('slug', $subcategorySlug)
+            $activeSubcategory = Category::active()
+                ->where('slug', $subcategorySlug)
                 ->where('parent_id', $rootCategory->id)
                 ->firstOrFail();
         }
@@ -80,6 +82,7 @@ class StorefrontController extends Controller
 
         // ── 5. Árbol completo de categorías para el sidebar ───────────
         $allCategories = Category::with('children')
+            ->active()
             ->whereNull('parent_id')
             ->ordered()
             ->get(['id', 'name', 'slug', 'icon', 'parent_id']);

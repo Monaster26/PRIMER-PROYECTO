@@ -39,7 +39,7 @@ class ProductController extends Controller
             'name'          => 'required|string|max:255',
             'sku'           => 'required|string|max:255|unique:products,sku',
             'barcode'       => 'nullable|string|max:255|unique:products,barcode',
-            'category_slug' => 'nullable|string|max:50',
+            'category_slug' => 'required|string|max:50|exists:categories,slug',
             'sub_category'  => 'nullable|string|max:255',
             'unit'          => 'nullable|string|max:50',
             'cost_price'    => 'nullable|numeric|min:0',
@@ -55,39 +55,7 @@ class ProductController extends Controller
             'image'         => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
-        $categorySlug = $validated['category_slug'] ?? 'sin-categoria';
-        if (empty($categorySlug)) {
-            $categorySlug = 'sin-categoria';
-        }
-
-        $category = Category::where('slug', $categorySlug)->first();
-        if (!$category) {
-            $slugToName = [
-                'abarrotes' => 'ABARROTES',
-                'bebidas' => 'BEBIDAS',
-                'cecinas' => 'CECINAS',
-                'confites' => 'CONFITES',
-                'congelados' => 'CONGELADOS',
-                'hogar' => 'HOGAR',
-                'lacteos' => 'LÁCTEOS',
-                'limpieza' => 'LIMPIEZA',
-                'mascotas' => 'MASCOTAS',
-                'mundo-bebe' => 'MUNDO BEBÉ',
-                'panaderia' => 'PANADERÍA',
-                'perfumeria' => 'PERFUMERÍA',
-                'snacks' => 'SNACKS',
-                'tabaqueria' => 'TABAQUERÍA',
-                'tecnologia' => 'TECNOLOGÍA',
-                'sin-categoria' => 'Sin categoría',
-            ];
-            $name = $slugToName[$categorySlug] ?? Str::headline($categorySlug);
-            $category = Category::create([
-                'name' => $name,
-                'slug' => $categorySlug,
-                'is_active' => true,
-            ]);
-        }
-
+        $category = Category::where('slug', $validated['category_slug'])->firstOrFail();
         $validated['category_id'] = $category->id;
         $validated['category_slug'] = $category->slug;
 
@@ -115,7 +83,7 @@ class ProductController extends Controller
             'name'          => 'required|string|max:255',
             'sku'           => 'required|string|max:255|unique:products,sku,' . $product->id,
             'barcode'       => 'nullable|string|max:255|unique:products,barcode,' . $product->id,
-            'category_slug' => 'nullable|string|max:50',
+            'category_slug' => 'required|string|max:50|exists:categories,slug',
             'sub_category'  => 'nullable|string|max:255',
             'unit'          => 'nullable|string|max:50',
             'cost_price'    => 'nullable|numeric|min:0',
@@ -131,39 +99,7 @@ class ProductController extends Controller
             'image'         => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
-        $categorySlug = $validated['category_slug'] ?? 'sin-categoria';
-        if (empty($categorySlug)) {
-            $categorySlug = 'sin-categoria';
-        }
-
-        $category = Category::where('slug', $categorySlug)->first();
-        if (!$category) {
-            $slugToName = [
-                'abarrotes' => 'ABARROTES',
-                'bebidas' => 'BEBIDAS',
-                'cecinas' => 'CECINAS',
-                'confites' => 'CONFITES',
-                'congelados' => 'CONGELADOS',
-                'hogar' => 'HOGAR',
-                'lacteos' => 'LÁCTEOS',
-                'limpieza' => 'LIMPIEZA',
-                'mascotas' => 'MASCOTAS',
-                'mundo-bebe' => 'MUNDO BEBÉ',
-                'panaderia' => 'PANADERÍA',
-                'perfumeria' => 'PERFUMERÍA',
-                'snacks' => 'SNACKS',
-                'tabaqueria' => 'TABAQUERÍA',
-                'tecnologia' => 'TECNOLOGÍA',
-                'sin-categoria' => 'Sin categoría',
-            ];
-            $name = $slugToName[$categorySlug] ?? Str::headline($categorySlug);
-            $category = Category::create([
-                'name' => $name,
-                'slug' => $categorySlug,
-                'is_active' => true,
-            ]);
-        }
-
+        $category = Category::where('slug', $validated['category_slug'])->firstOrFail();
         $validated['category_id'] = $category->id;
         $validated['category_slug'] = $category->slug;
 
