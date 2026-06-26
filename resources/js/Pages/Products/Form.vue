@@ -27,7 +27,7 @@ categoryStore.fetchCategories();
 // ─── Estado del Formulario ────────────────────────────────────────
 const form = useForm({
     _method: props.product ? 'PUT' : 'POST',
-    category_id: '',
+    category_id: null as number | null,
     sub_category: '',
     name: props.product?.name || '',
     description: props.product?.description || '',
@@ -58,7 +58,7 @@ function handleImageChange(e: Event) {
 }
 
 // ─── Selector jerárquico Categoría → Subcategoría ─────────────────
-const selectedParentId = ref<number | string>('');
+const selectedParentId = ref<number | null>(null);
 
 const filteredSubcategories = computed(() => {
     if (!selectedParentId.value) return [];
@@ -89,7 +89,7 @@ watch(
                 form.sub_category = props.product.sub_category || child.name;
             } else {
                 selectedParentId.value = catId;
-                form.category_id = '';
+                form.category_id = null;
                 form.sub_category = '';
             }
         }
@@ -328,7 +328,7 @@ function submit() {
                                         v-model="selectedParentId"
                                         class="w-full appearance-none rounded-2xl border border-gray-100 bg-gray-50 py-4 pl-12 pr-5 text-sm font-bold focus:ring-2 focus:ring-primary-500 dark:border-gray-800 dark:bg-gray-900"
                                     >
-                                        <option value="">
+                                        <option :value="null">
                                             Seleccione Categoría
                                         </option>
                                         <option
@@ -359,7 +359,7 @@ function submit() {
                                     :disabled="!selectedParentId"
                                     @change="onSubcategoryChange"
                                 >
-                                    <option value="">
+                                    <option :value="null">
                                         Seleccione Subcategoría
                                     </option>
                                     <option

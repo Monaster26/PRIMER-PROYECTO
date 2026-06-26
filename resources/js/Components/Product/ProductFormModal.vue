@@ -24,7 +24,7 @@ const form = useForm({
     cost_price: 0,
     stock: 0,
     min_stock: 5,
-    category_id: '',
+    category_id: null as number | null,
     sub_category: '',
     is_active: true,
     is_featured: false,
@@ -48,7 +48,7 @@ function handleImageChange(e: Event) {
 }
 
 // ─── Selector jerárquico Categoría → Subcategoría ─────────────────
-const selectedParentId = ref<number | string>('');
+const selectedParentId = ref<number | null>(null);
 
 const filteredSubcategories = computed(() => {
     if (!selectedParentId.value) return [];
@@ -93,11 +93,11 @@ watch(
                     ? `/storage/${props.product.image_path}`
                     : null;
 
-                selectedParentId.value = '';
-                form.category_id = '';
+                selectedParentId.value = null;
+                form.category_id = null;
             } else {
                 form.reset();
-                selectedParentId.value = '';
+                selectedParentId.value = null;
                 form._method = 'POST';
                 imagePreview.value = null;
             }
@@ -119,7 +119,7 @@ watch(
             form.category_id = catId;
         } else {
             selectedParentId.value = catId;
-            form.category_id = '';
+            form.category_id = null;
         }
     },
     { immediate: true },
@@ -367,7 +367,7 @@ function submit() {
                                             class="w-full rounded-2xl border border-gray-100 bg-gray-50 px-5 py-3 text-sm font-bold dark:border-gray-800 dark:bg-gray-900"
                                             required
                                         >
-                                            <option value="">
+                                            <option :value="null">
                                                 Seleccione Categoría
                                             </option>
                                             <option
@@ -391,7 +391,7 @@ function submit() {
                                             :disabled="!selectedParentId"
                                             @change="onSubcategoryChange"
                                         >
-                                            <option value="">
+                                            <option :value="null">
                                                 Seleccione Subcategoría
                                             </option>
                                             <option
