@@ -131,7 +131,7 @@ function cascadeNota() {
                                     v-for="p in props.nameResults"
                                     :key="p.id"
                                     type="button"
-                                    @click="emit('selectSearchProduct', p)"
+                                    @mousedown.prevent="emit('selectSearchProduct', p)"
                                     class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
                                 >
                                     <span
