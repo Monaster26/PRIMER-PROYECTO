@@ -46,7 +46,7 @@ class PromotionSeeder extends Seeder
         ];
 
         foreach ($promotions as $promo) {
-            Promotion::create($promo);
+            Promotion::updateOrCreate(['name' => $promo['name']], $promo);
         }
 
         $this->command->info('✅ ' . Promotion::count() . ' promociones sembradas.');

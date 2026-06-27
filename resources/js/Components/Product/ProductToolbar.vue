@@ -119,6 +119,12 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
                             >
                                 {{ child.name }}
                             </button>
+                            <button
+                                @click="emit('selectCategory', cat.id)"
+                                class="flex w-full items-center gap-2 pl-4 pr-4 py-2 text-left text-sm font-semibold text-primary-500 transition hover:bg-primary-50 dark:hover:bg-gray-800"
+                            >
+                                Ver todo en {{ cat.name }}
+                            </button>
                         </div>
                     </div>
                 </template>

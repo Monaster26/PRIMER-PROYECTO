@@ -64,7 +64,6 @@ const selectedLabel = computed(() => {
 
 function toggleRoot(id: number) {
     expandedRoot.value = expandedRoot.value === id ? null : id;
-    selectCategory(id);
 }
 
 function selectCategory(id: number | null) {

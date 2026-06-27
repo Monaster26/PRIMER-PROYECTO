@@ -17,7 +17,6 @@ export const useCategoryStore = defineStore('category', () => {
     const selectedSubcategory = ref<string | null>(null);
 
     async function fetchCategories() {
-        if (categories.value.length > 0) return;
         isLoading.value = true;
         try {
             const { data } = await window.axios.get('/public-categorias');

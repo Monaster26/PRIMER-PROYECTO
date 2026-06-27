@@ -17,10 +17,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Usuario administrador web
-        User::factory()->create([
-            'name'  => 'Administrador Monasterios',
-            'email' => 'admin@monasterios.co',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'admin@monasterios.co'],
+            ['name'  => 'Administrador Monasterios', 'password' => bcrypt('password')],
+        );
 
         $this->call([
             RoleSeeder::class,           // 0. Roles admin, cashier, web_client
