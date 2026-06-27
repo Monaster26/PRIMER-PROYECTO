@@ -14,6 +14,9 @@ interface Product {
     stock: number;
     min_stock: number | null;
     is_active: boolean;
+    expiration_date: string | null;
+    batches_expiring_count?: number;
+    batches_expired_count?: number;
     [key: string]: any;
 }
 
@@ -32,6 +35,7 @@ const emit = defineEmits<{
     openEdit: [product: Product];
     openStockForm: [product: Product];
     deleteProduct: [id: number];
+    openBatches: [product: Product];
 }>();
 
 const fmt = (v: number) =>
@@ -140,14 +144,43 @@ const fmt = (v: number) =>
                             {{ fmt(p.price / 100) }}
                         </td>
                         <td
-                            class="px-6 py-4 text-center text-sm font-bold"
-                            :class="
-                                p.stock <= (p.min_stock || 5)
-                                    ? 'text-danger'
-                                    : 'text-content-primary dark:text-white'
-                            "
+                            class="px-6 py-4 text-center"
                         >
-                            {{ p.stock }}
+                            <div class="flex flex-col items-center gap-0.5">
+                                <span
+                                    class="text-sm font-bold"
+                                    :class="
+                                        p.stock <= (p.min_stock || 5)
+                                            ? 'text-danger'
+                                            : 'text-content-primary dark:text-white'
+                                    "
+                                >
+                                    {{ p.stock }}
+                                </span>
+                                <div
+                                    v-if="p.expiration_date"
+                                    class="flex items-center gap-1"
+                                >
+                                    <button
+                                        v-if="(p.batches_expired_count ?? 0) > 0"
+                                        @click="emit('openBatches', p)"
+                                        class="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-bold text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
+                                        title="Ver lotes vencidos"
+                                    >
+                                        <span>🔴</span>
+                                        {{ p.batches_expired_count }}
+                                    </button>
+                                    <button
+                                        v-if="(p.batches_expiring_count ?? 0) > 0"
+                                        @click="emit('openBatches', p)"
+                                        class="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-bold text-amber-600 transition-colors hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                                        title="Ver lotes por vencer"
+                                    >
+                                        <span>⚠️</span>
+                                        {{ p.batches_expiring_count }}
+                                    </button>
+                                </div>
+                            </div>
                         </td>
                         <td
                             class="px-6 py-4 text-center text-sm text-content-secondary dark:text-gray-400"

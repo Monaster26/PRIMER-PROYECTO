@@ -465,6 +465,32 @@ function submitStockForm() {
     });
 }
 
+const showBatchesModal = ref(false);
+const batchesProduct = ref<any>(null);
+const batchesData = ref<any[]>([]);
+const batchesLoading = ref(false);
+
+async function openBatches(product: any) {
+    batchesProduct.value = product;
+    batchesData.value = [];
+    batchesLoading.value = true;
+    showBatchesModal.value = true;
+    try {
+        const res = await window.axios.get(route('admin.codigos.batches', product.id));
+        batchesData.value = res.data;
+    } catch {
+        batchesData.value = [];
+    } finally {
+        batchesLoading.value = false;
+    }
+}
+
+function closeBatches() {
+    showBatchesModal.value = false;
+    batchesProduct.value = null;
+    batchesData.value = [];
+}
+
 const showImportForm = ref(false);
 const importFile = ref<File | null>(null);
 const importProcessing = ref(false);
@@ -545,6 +571,7 @@ function submitImport() {
                 @open-edit="openEdit"
                 @open-stock-form="openStockForm"
                 @delete-product="deleteProduct"
+                @open-batches="openBatches"
             />
         </div>
 
@@ -581,6 +608,78 @@ function submitImport() {
             @select-search-product="selectSearchProduct"
             @hide-name-dropdown="hideNameDropdown"
         />
+
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="showBatchesModal"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+            >
+                <div
+                    class="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl dark:bg-surface-dark"
+                >
+                    <div class="mb-4 flex items-center justify-between">
+                        <h3
+                            class="font-display text-lg font-bold text-content-primary dark:text-white"
+                        >
+                            Lotes — {{ batchesProduct?.name }}
+                        </h3>
+                        <button
+                            @click="closeBatches"
+                            class="rounded-xl p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                        >
+                            <X class="h-5 w-5 text-content-muted" />
+                        </button>
+                    </div>
+
+                    <div v-if="batchesLoading" class="flex justify-center py-8">
+                        <div
+                            class="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"
+                        ></div>
+                    </div>
+
+                    <div v-else-if="!batchesData.length" class="py-8 text-center text-sm text-content-muted">
+                        No hay lotes activos para este producto.
+                    </div>
+
+                    <div v-else class="space-y-2">
+                        <div
+                            v-for="b in batchesData"
+                            :key="b.id"
+                            class="flex items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/50"
+                        >
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-sm font-bold text-content-primary dark:text-white">
+                                    {{ b.quantity }} uds
+                                </span>
+                                <span class="text-xs text-content-muted">
+                                    Vence: {{ b.expiration_date ?? 'Sin fecha' }}
+                                </span>
+                                <span v-if="b.notes" class="text-xs text-content-muted">
+                                    {{ b.notes }}
+                                </span>
+                            </div>
+                            <span
+                                class="rounded-full px-2.5 py-1 text-[11px] font-bold uppercase"
+                                :class="{
+                                    'bg-red-100 text-red-700': b.status === 'expired',
+                                    'bg-amber-100 text-amber-700': b.status === 'warning',
+                                    'bg-green-100 text-green-700': b.status === 'ok',
+                                }"
+                            >
+                                {{ b.status === 'expired' ? 'Vencido' : b.status === 'warning' ? 'Por vencer' : 'Ok' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Transition>
 
         <Transition
             enter-active-class="transition duration-200 ease-out"

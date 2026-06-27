@@ -61,6 +61,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
             ->name('codigos.search-sku');
         Route::get('codigos/search-name', [AdminProductController::class, 'searchNameAjax'])
             ->name('codigos.search-name');
+        Route::get('codigos/{product}/lotes', [AdminProductController::class, 'batches'])
+            ->name('codigos.batches');
         Route::post('codigos/importar', [AdminProductController::class, 'import'])
             ->name('codigos.import');
 

@@ -21,6 +21,8 @@ class ProductController extends Controller
     public function index(Request $request): Response
     {
         $products = Product::with('category')
+            ->withCount(['batches as batches_expiring_count' => fn($q) => $q->active()->expiringSoon()])
+            ->withCount(['batches as batches_expired_count' => fn($q) => $q->active()->expired()])
             ->when($request->search, fn($q) => $q->search($request->search))
             ->when($request->category_id, fn($q, $id) => $q->where('category_id', $id))
             ->orderBy('name')
@@ -56,7 +58,15 @@ class ProductController extends Controller
         ]);
 
         $category = Category::where('slug', $validated['category_slug'])->firstOrFail();
-        $validated['category_id'] = $category->id;
+
+        if (!empty($validated['sub_category'])) {
+            $child = Category::where('parent_id', $category->id)
+                ->where('name', $validated['sub_category'])
+                ->first();
+            $validated['category_id'] = $child?->id ?? $category->id;
+        } else {
+            $validated['category_id'] = $category->id;
+        }
         $validated['category_slug'] = $category->slug;
 
         $validated['slug'] = Str::slug($validated['name']) . '-' . Str::random(6);
@@ -100,7 +110,15 @@ class ProductController extends Controller
         ]);
 
         $category = Category::where('slug', $validated['category_slug'])->firstOrFail();
-        $validated['category_id'] = $category->id;
+
+        if (!empty($validated['sub_category'])) {
+            $child = Category::where('parent_id', $category->id)
+                ->where('name', $validated['sub_category'])
+                ->first();
+            $validated['category_id'] = $child?->id ?? $category->id;
+        } else {
+            $validated['category_id'] = $category->id;
+        }
         $validated['category_slug'] = $category->slug;
 
         $validated['is_active'] = $request->boolean('is_active');
@@ -206,6 +224,16 @@ class ProductController extends Controller
             employeeId: auth()->id(),
         );
 
+        if (!empty($validated['expiration_date'])) {
+            $product->batches()->create([
+                'quantity'        => (int) $validated['quantity'],
+                'cost_price'      => $product->cost_price,
+                'expiration_date' => $validated['expiration_date'],
+                'received_at'     => now(),
+                'notes'           => $validated['notes'] ?? null,
+            ]);
+        }
+
         if ($validated['unit_cost'] !== null) {
             $newCost = (int) ((float) $validated['unit_cost'] * 100);
             $product->update(['cost_price' => $newCost]);
@@ -213,5 +241,20 @@ class ProductController extends Controller
 
         return redirect()->route('admin.codigos.index')
             ->with('success', "Stock añadido: {$validated['quantity']} unidades.");
+    }
+
+    public function batches(Product $product): JsonResponse
+    {
+        return response()->json(
+            $product->batches()->active()->get()->map(fn($b) => [
+                'id'              => $b->id,
+                'quantity'        => $b->quantity,
+                'cost_price'      => $b->cost_price,
+                'expiration_date' => $b->expiration_date?->format('Y-m-d'),
+                'received_at'     => $b->received_at->format('Y-m-d'),
+                'status'          => $b->status,
+                'notes'           => $b->notes,
+            ])
+        );
     }
 }

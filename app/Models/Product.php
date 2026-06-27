@@ -75,6 +75,11 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function batches(): HasMany
+    {
+        return $this->hasMany(ProductBatch::class);
+    }
+
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class);
@@ -133,6 +138,11 @@ class Product extends Model
               ->orWhere('brand', 'like', "%{$term}%")
               ->orWhereHas('category', fn($cq) => $cq->where('name', 'like', "%{$term}%"));
         });
+    }
+
+    public function scopeWithExpiringBatches($query)
+    {
+        return $query->whereHas('batches', fn($q) => $q->active()->expiringSoon());
     }
 
     // ─── Boot ──────────────────────────────────────────────
