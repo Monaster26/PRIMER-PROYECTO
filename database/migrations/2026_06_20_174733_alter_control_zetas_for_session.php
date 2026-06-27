@@ -14,8 +14,10 @@ return new class extends Migration
             $table->renameColumn('fecha', 'fecha_apertura');
         });
 
-        DB::statement('ALTER TABLE control_zetas MODIFY fecha_apertura DATETIME NOT NULL');
-        DB::statement('ALTER TABLE control_zetas MODIFY esperado_caja INT NULL');
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE control_zetas MODIFY fecha_apertura DATETIME NOT NULL');
+            DB::statement('ALTER TABLE control_zetas MODIFY esperado_caja INT NULL');
+        }
     }
 
     public function down(): void
@@ -26,7 +28,9 @@ return new class extends Migration
             $table->renameColumn('fecha_apertura', 'fecha');
         });
 
-        DB::statement('ALTER TABLE control_zetas MODIFY fecha DATE NOT NULL');
-        DB::statement('ALTER TABLE control_zetas MODIFY esperado_caja INT NOT NULL');
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE control_zetas MODIFY fecha DATE NOT NULL');
+            DB::statement('ALTER TABLE control_zetas MODIFY esperado_caja INT NOT NULL');
+        }
     }
 };

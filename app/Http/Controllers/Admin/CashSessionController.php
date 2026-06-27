@@ -91,6 +91,12 @@ class CashSessionController extends Controller
         $validated['total_retiros'] ??= 0;
         $validated['total_ingresos'] ??= 0;
 
+        $user = User::findOrFail($validated['user_id']);
+        $openSession = $this->cashSessionService->findOpenSession($user);
+        if ($openSession) {
+            return back()->withErrors(['error' => 'Ya existe una sesión abierta para este usuario.'])->withInput();
+        }
+
         $validated['apertura_desglose'] = [
             '20k' => $validated['cant_20k_apertura'],
             '10k' => $validated['cant_10k_apertura'],

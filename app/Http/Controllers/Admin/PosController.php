@@ -200,6 +200,12 @@ class PosController extends Controller
             'cash_session_id' => $session->id,
             'fecha_apertura'  => now(),
             'cajero'          => $request->user()->name,
+            'esperado_caja'   => 0,
+            'efectivo_neto'   => 0,
+            'red_compra_neto' => 0,
+            'transferencia'   => 0,
+            'red_compra_total' => 0,
+            'porcentaje_banco' => 0,
         ]);
 
         return response()->json([
