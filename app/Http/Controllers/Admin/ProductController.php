@@ -24,7 +24,11 @@ class ProductController extends Controller
             ->withCount(['batches as batches_expiring_count' => fn($q) => $q->active()->expiringSoon()])
             ->withCount(['batches as batches_expired_count' => fn($q) => $q->active()->expired()])
             ->when($request->search, fn($q) => $q->search($request->search))
-            ->when($request->category_id, fn($q, $id) => $q->where('category_id', $id))
+            ->when($request->category_id, function ($q, $id) {
+                $category = \App\Models\Category::find($id);
+                $ids = $category?->children()->pluck('id')->prepend($category->id) ?? [$id];
+                $q->whereIn('category_id', $ids);
+            })
             ->orderBy('name')
             ->paginate(30);
 
@@ -154,7 +158,7 @@ class ProductController extends Controller
     public function import(Request $request): RedirectResponse
     {
         $request->validate([
-            'file' => 'required|file|mimes:xlsx,xls,csv',
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
         ]);
 
         $import = new ProductsImport();

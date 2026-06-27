@@ -10,12 +10,13 @@ use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\SkipsOnFailure;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\WithValidation;
 use Maatwebsite\Excel\Imports\HeadingRowFormatter;
 use Maatwebsite\Excel\Validators\Failure;
 
 HeadingRowFormatter::default('none');
 
-class ProductsImport implements ToModel, WithHeadingRow, SkipsEmptyRows, SkipsOnFailure
+class ProductsImport implements ToModel, WithHeadingRow, SkipsEmptyRows, SkipsOnFailure, WithValidation
 {
     use Importable;
 
@@ -23,30 +24,37 @@ class ProductsImport implements ToModel, WithHeadingRow, SkipsEmptyRows, SkipsOn
     public int $updated = 0;
     public array $failures = [];
 
+    public function rules(): array
+    {
+        return [
+            'Codigo'       => 'required|string',
+            'Descripcion'  => 'required|string|min:1',
+            'Precio Venta' => 'required|numeric|min:0',
+            'Precio Costo' => 'required|numeric|min:0',
+            'Inventario'   => 'nullable|integer|min:0',
+            'Inv. Minimo'  => 'nullable|integer|min:0',
+            'Categoria'    => 'nullable|string',
+            'Subcategoria' => 'nullable|string',
+        ];
+    }
+
     public function model(array $row)
     {
-        $sku = trim($row['Codigo'] ?? '');
-        if (empty($sku)) {
-            $this->failures[] = 'SKU vacío (columna Codigo) en fila';
+        $sku = trim($row['Codigo']);
+
+        $trashed = Product::onlyTrashed()->where('sku', $sku)->first();
+        if ($trashed) {
+            $this->failures[] = "El producto con SKU {$sku} está eliminado/archivado y no puede ser alterado por Excel.";
             return null;
         }
 
-        $costPrice = $this->parseNumeric($row['Precio Costo'] ?? 0);
-        $price = $this->parseNumeric($row['Precio Venta'] ?? 0);
+        $product = Product::firstOrNew(['sku' => $sku]);
 
-        if ($costPrice === null || $price === null) {
-            $this->failures[] = "SKU {$sku}: Precio Costo o Precio Venta no numérico";
-            return null;
-        }
-
-        $product = Product::withTrashed()->firstOrNew(['sku' => $sku]);
-
-        $product->name = trim($row['Descripcion'] ?? '');
-        $product->cost_price = (int) round($costPrice * 100);
-        $product->price = (int) round($price * 100);
+        $product->name = trim($row['Descripcion']);
+        $product->cost_price = (int) round((float) $row['Precio Costo'] * 100);
+        $product->price = (int) round((float) $row['Precio Venta'] * 100);
         $product->stock = (int) ($row['Inventario'] ?? 0);
         $product->min_stock = (int) ($row['Inv. Minimo'] ?? 5);
-
         $product->sub_category = trim($row['Subcategoria'] ?? $row['Subcategoría'] ?? '');
 
         $categoryId = $this->resolveCategory(
@@ -55,10 +63,6 @@ class ProductsImport implements ToModel, WithHeadingRow, SkipsEmptyRows, SkipsOn
         );
         if ($categoryId) {
             $product->category_id = $categoryId;
-        }
-
-        if ($product->trashed()) {
-            $product->restore();
         }
 
         if (!$product->exists) {
@@ -84,59 +88,42 @@ class ProductsImport implements ToModel, WithHeadingRow, SkipsEmptyRows, SkipsOn
         }
     }
 
-    private function parseNumeric(mixed $value): ?float
-    {
-        if (is_numeric($value)) {
-            return (float) $value;
-        }
-        $cleaned = preg_replace('/[^0-9.,\-]/', '', (string) $value);
-        $cleaned = str_replace(',', '.', $cleaned);
-        if (is_numeric($cleaned)) {
-            return (float) $cleaned;
-        }
-        return null;
-    }
-
     private function resolveCategory(string $categoryName, string $subcategoryName): ?int
     {
-        if (empty($categoryName)) {
-            return null;
-        }
+        if (empty($categoryName)) return null;
 
-        $parentSlug = Str::slug($categoryName);
-        // ponytail: direct slug lookup, seeder uses Str::slug which matches
-        $parent = Category::where('slug', $parentSlug)->whereNull('parent_id')->first();
+        $normalized = $this->normalizeName($categoryName);
+        $parent = Category::whereNull('parent_id')->get()
+            ->first(fn($c) => $this->normalizeName($c->name) === $normalized);
 
-        if (!$parent && !empty($categoryName)) {
+        if (!$parent) {
             $parent = Category::create([
-                'name' => mb_strtoupper($categoryName),
-                'slug' => $parentSlug,
+                'name' => mb_strtoupper(trim($categoryName)),
+                'slug' => Str::slug(trim($categoryName)),
                 'is_active' => true,
             ]);
         }
 
-        if (!$parent) {
-            return null;
-        }
+        if (empty($subcategoryName)) return $parent->id;
 
-        if (empty($subcategoryName)) {
-            return $parent->id;
-        }
-
-        $childSlug = Str::slug($subcategoryName);
-        $child = Category::where('slug', $childSlug)
-            ->where('parent_id', $parent->id)
-            ->first();
+        $subNormalized = $this->normalizeName($subcategoryName);
+        $child = Category::where('parent_id', $parent->id)->get()
+            ->first(fn($c) => $this->normalizeName($c->name) === $subNormalized);
 
         if (!$child) {
             $child = Category::create([
-                'name' => $subcategoryName,
-                'slug' => $childSlug,
+                'name' => trim($subcategoryName),
+                'slug' => Str::slug(trim($subcategoryName)),
                 'parent_id' => $parent->id,
                 'is_active' => true,
             ]);
         }
 
         return $child->id;
+    }
+
+    private function normalizeName(string $name): string
+    {
+        return mb_strtolower(preg_replace('/\s+/', ' ', trim($name)));
     }
 }
