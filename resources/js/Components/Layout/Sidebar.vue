@@ -49,7 +49,7 @@ const navGroups = [
     {
         label: 'Finanzas',
         items: [
-            { label: 'Gastos', name: 'expenses.index', icon: ReceiptText },
+            { label: 'Registro de Egresos', name: 'expenses.index', icon: ReceiptText },
             {
                 label: 'Créditos',
                 name: 'credit-invoices.index',

@@ -79,6 +79,25 @@ class Promotion extends Model
             return ['applies' => false, 'rewards' => [], 'discount' => 0];
         }
 
+        if (!empty($cond['special_price_total'])) {
+            $buyProduct = Product::find($cond['buy_product_id']);
+            if (!$buyProduct) {
+                return ['applies' => false, 'rewards' => [], 'discount' => 0];
+            }
+            $normalTotal = ($cond['buy_qty'] * $buyProduct->price) + ($getProduct->price * $rwd['get_qty']);
+            $fixedCents = (int) $cond['special_price_total'] * 100;
+            $discount = max(0, $normalTotal - $fixedCents);
+            return [
+                'applies'  => true,
+                'rewards'  => [
+                    'product_id' => $rwd['get_product_id'],
+                    'qty'        => $rwd['get_qty'],
+                    'discount_pct' => 100,
+                ],
+                'discount' => $discount,
+            ];
+        }
+
         $discountPct = $rwd['discount_pct'] ?? 100;
         $discount = (int) round($getProduct->price * $rwd['get_qty'] * ($discountPct / 100));
 
@@ -137,7 +156,11 @@ class Promotion extends Model
     {
         $cond    = $this->conditions; // {product_ids: [1,2,3], discount_pct: 15}
 
-        if (empty($cond['product_ids']) || empty($cond['discount_pct'])) {
+        if (empty($cond['product_ids'])) {
+            return ['applies' => false, 'rewards' => [], 'discount' => 0];
+        }
+
+        if (empty($cond['discount_pct']) && empty($cond['special_price_total'])) {
             return ['applies' => false, 'rewards' => [], 'discount' => 0];
         }
 
@@ -154,7 +177,12 @@ class Promotion extends Model
             ->whereIn('product_id', $required)
             ->sum(fn($item) => $item['qty'] * $item['price']);
 
-        $discount = (int) round($bundleTotal * ($cond['discount_pct'] / 100));
+        if (!empty($cond['special_price_total'])) {
+            $fixedCents = (int) $cond['special_price_total'] * 100;
+            $discount = max(0, $bundleTotal - $fixedCents);
+        } else {
+            $discount = (int) round($bundleTotal * ($cond['discount_pct'] / 100));
+        }
 
         return ['applies' => true, 'rewards' => [], 'discount' => $discount];
     }

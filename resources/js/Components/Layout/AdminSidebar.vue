@@ -150,7 +150,7 @@ const navGroups = computed(() => {
                         icon: BarChart3,
                     },
                     {
-                        label: 'Gastos',
+                        label: 'Registro de Egresos',
                         name: 'admin.gastos.index',
                         icon: ReceiptText,
                     },

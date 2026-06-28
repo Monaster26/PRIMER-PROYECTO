@@ -240,4 +240,172 @@ class PromotionTest extends TestCase
         $this->assertFalse($result2['applies']);
         $this->assertSame(0, $result2['discount']);
     }
+
+    public function test_buy_x_get_y_precio_fijo_total_aplica_correctamente(): void
+    {
+        $catSlug = Category::first()->slug;
+        $catId = Category::first()->id;
+
+        $buy = Product::create([
+            'name' => 'Laptop', 'sku' => 'BUY-LAP',
+            'slug' => 'laptop-buy-lap',
+            'category_id' => $catId, 'category_slug' => $catSlug,
+            'price' => 5000000, 'cost_price' => 200, 'stock' => 10,
+        ]);
+        $get = Product::create([
+            'name' => 'Mouse', 'sku' => 'GET-MSE',
+            'slug' => 'mouse-get-mse',
+            'category_id' => $catId, 'category_slug' => $catSlug,
+            'price' => 50000, 'cost_price' => 50, 'stock' => 50,
+        ]);
+
+        $promotion = Promotion::create([
+            'name' => 'Laptop + Mouse a $50.000',
+            'type' => 'buy_x_get_y',
+            'conditions' => [
+                'buy_product_id' => $buy->id,
+                'buy_qty' => 1,
+                'special_price_total' => 50000,
+            ],
+            'rewards' => [
+                'get_product_id' => $get->id,
+                'get_qty' => 1,
+                'discount_pct' => 100,
+            ],
+            'is_active' => true,
+            'priority' => 0,
+        ]);
+
+        // (1*5000000 + 1*50000) - (50000*100) = 50000
+        $result = $promotion->evaluateCart([
+            ['product_id' => $buy->id, 'variant_id' => null, 'qty' => 1, 'price' => 5000000],
+            ['product_id' => $get->id, 'variant_id' => null, 'qty' => 1, 'price' => 50000],
+        ]);
+
+        $this->assertTrue($result['applies']);
+        $this->assertSame(50000, $result['discount']);
+    }
+
+    public function test_buy_x_get_y_precio_fijo_no_negativo(): void
+    {
+        $catSlug = Category::first()->slug;
+        $catId = Category::first()->id;
+
+        $buy = Product::create([
+            'name' => 'Laptop', 'sku' => 'BUY-LAP2',
+            'slug' => 'laptop-buy-lap2',
+            'category_id' => $catId, 'category_slug' => $catSlug,
+            'price' => 5000000, 'cost_price' => 200, 'stock' => 10,
+        ]);
+        $get = Product::create([
+            'name' => 'Mouse', 'sku' => 'GET-MSE2',
+            'slug' => 'mouse-get-mse2',
+            'category_id' => $catId, 'category_slug' => $catSlug,
+            'price' => 50000, 'cost_price' => 50, 'stock' => 50,
+        ]);
+
+        $promotion = Promotion::create([
+            'name' => 'Combo carísimo',
+            'type' => 'buy_x_get_y',
+            'conditions' => [
+                'buy_product_id' => $buy->id,
+                'buy_qty' => 1,
+                'special_price_total' => 99999999,
+            ],
+            'rewards' => [
+                'get_product_id' => $get->id,
+                'get_qty' => 1,
+                'discount_pct' => 100,
+            ],
+            'is_active' => true,
+            'priority' => 0,
+        ]);
+
+        $result = $promotion->evaluateCart([
+            ['product_id' => $buy->id, 'variant_id' => null, 'qty' => 1, 'price' => 5000000],
+            ['product_id' => $get->id, 'variant_id' => null, 'qty' => 1, 'price' => 50000],
+        ]);
+
+        $this->assertTrue($result['applies']);
+        $this->assertSame(0, $result['discount']);
+    }
+
+    public function test_bundle_discount_precio_fijo_total_aplica_correctamente(): void
+    {
+        $catSlug = Category::first()->slug;
+        $catId = Category::first()->id;
+
+        $camisa = Product::create([
+            'name' => 'Camisa', 'sku' => 'BND-SHIRT',
+            'slug' => 'camisa-bnd-shirt',
+            'category_id' => $catId, 'category_slug' => $catSlug,
+            'price' => 40000, 'cost_price' => 100, 'stock' => 20,
+        ]);
+        $pantalon = Product::create([
+            'name' => 'Pantalón', 'sku' => 'BND-PANT',
+            'slug' => 'pantalon-bnd-pant',
+            'category_id' => $catId, 'category_slug' => $catSlug,
+            'price' => 60000, 'cost_price' => 150, 'stock' => 15,
+        ]);
+
+        $promotion = Promotion::create([
+            'name' => 'Camisa + Pantalón a $80.000',
+            'type' => 'bundle_discount',
+            'conditions' => [
+                'product_ids' => [$camisa->id, $pantalon->id],
+                'special_price_total' => 800,
+            ],
+            'rewards' => [],
+            'is_active' => true,
+            'priority' => 0,
+        ]);
+
+        // (40000+60000) - (800*100) = 20000
+        $result = $promotion->evaluateCart([
+            ['product_id' => $camisa->id, 'variant_id' => null, 'qty' => 1, 'price' => 40000],
+            ['product_id' => $pantalon->id, 'variant_id' => null, 'qty' => 1, 'price' => 60000],
+        ]);
+
+        $this->assertTrue($result['applies']);
+        $this->assertSame(20000, $result['discount']);
+    }
+
+    public function test_bundle_discount_precio_fijo_no_negativo(): void
+    {
+        $catSlug = Category::first()->slug;
+        $catId = Category::first()->id;
+
+        $camisa = Product::create([
+            'name' => 'Camisa', 'sku' => 'BND-SHIRT2',
+            'slug' => 'camisa-bnd-shirt2',
+            'category_id' => $catId, 'category_slug' => $catSlug,
+            'price' => 40000, 'cost_price' => 100, 'stock' => 20,
+        ]);
+        $pantalon = Product::create([
+            'name' => 'Pantalón', 'sku' => 'BND-PANT2',
+            'slug' => 'pantalon-bnd-pant2',
+            'category_id' => $catId, 'category_slug' => $catSlug,
+            'price' => 60000, 'cost_price' => 150, 'stock' => 15,
+        ]);
+
+        $promotion = Promotion::create([
+            'name' => 'Bundle inflado',
+            'type' => 'bundle_discount',
+            'conditions' => [
+                'product_ids' => [$camisa->id, $pantalon->id],
+                'special_price_total' => 99999999,
+            ],
+            'rewards' => [],
+            'is_active' => true,
+            'priority' => 0,
+        ]);
+
+        $result = $promotion->evaluateCart([
+            ['product_id' => $camisa->id, 'variant_id' => null, 'qty' => 1, 'price' => 40000],
+            ['product_id' => $pantalon->id, 'variant_id' => null, 'qty' => 1, 'price' => 60000],
+        ]);
+
+        $this->assertTrue($result['applies']);
+        $this->assertSame(0, $result['discount']);
+    }
 }

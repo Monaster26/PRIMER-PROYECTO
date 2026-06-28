@@ -103,7 +103,9 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::get('z-mensual', [ControlZetaController::class, 'index'])->name('z-mensual.index');
         Route::put('z-mensual/{controlZeta}', [ControlZetaController::class, 'update'])->name('z-mensual.update');
 
-        // Gastos
+        // Gastos / Registro de Egresos
+        Route::get('gastos/export', [ExpenseController::class, 'export'])->name('gastos.export');
+        Route::get('gastos/chart', [ExpenseController::class, 'chartData'])->name('gastos.chart');
         Route::resource('gastos', ExpenseController::class)
             ->except(['show', 'create', 'edit']);
 

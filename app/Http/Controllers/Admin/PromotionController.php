@@ -149,11 +149,12 @@ class PromotionController extends Controller
 
         $conditional = match ($request->type) {
             'buy_x_get_y' => [
-                'conditions.buy_product_id' => 'required|integer|exists:products,id',
-                'conditions.buy_qty'        => 'required|integer|min:1',
-                'rewards.get_product_id'    => 'required|integer|exists:products,id',
-                'rewards.get_qty'           => 'required|integer|min:1',
-                'rewards.discount_pct'      => 'nullable|integer|min:0|max:100',
+                'conditions.buy_product_id'       => 'required|integer|exists:products,id',
+                'conditions.buy_qty'              => 'required|integer|min:1',
+                'conditions.special_price_total'  => 'required_without:rewards.discount_pct|nullable|numeric|min:1',
+                'rewards.get_product_id'          => 'required|integer|exists:products,id',
+                'rewards.get_qty'                 => 'required|integer|min:1',
+                'rewards.discount_pct'            => 'required_without:conditions.special_price_total|nullable|integer|min:0|max:100',
             ],
             'min_qty_discount' => [
                 'conditions.product_id'    => 'required|integer|exists:products,id',
@@ -162,9 +163,10 @@ class PromotionController extends Controller
                 'conditions.special_price' => 'required_without:conditions.discount_pct|nullable|numeric|min:1',
             ],
             'bundle_discount' => [
-                'conditions.product_ids'   => 'required|array|min:2',
-                'conditions.product_ids.*' => 'integer|exists:products,id',
-                'conditions.discount_pct'  => 'required|integer|min:1|max:100',
+                'conditions.product_ids'        => 'required|array|min:2',
+                'conditions.product_ids.*'      => 'integer|exists:products,id',
+                'conditions.discount_pct'        => 'required_without:conditions.special_price_total|nullable|integer|min:1|max:100',
+                'conditions.special_price_total' => 'required_without:conditions.discount_pct|nullable|numeric|min:1',
             ],
             default => [],
         };
@@ -176,8 +178,9 @@ class PromotionController extends Controller
     {
         return match ($validated['type']) {
             'buy_x_get_y' => [
-                'buy_product_id' => $validated['conditions']['buy_product_id'],
-                'buy_qty'        => (int) $validated['conditions']['buy_qty'],
+                'buy_product_id'      => $validated['conditions']['buy_product_id'],
+                'buy_qty'             => (int) $validated['conditions']['buy_qty'],
+                'special_price_total' => isset($validated['conditions']['special_price_total']) ? (int) $validated['conditions']['special_price_total'] : null,
             ],
             'min_qty_discount' => [
                 'product_id'    => $validated['conditions']['product_id'],
@@ -186,8 +189,9 @@ class PromotionController extends Controller
                 'special_price' => isset($validated['conditions']['special_price']) ? (int) $validated['conditions']['special_price'] : null,
             ],
             'bundle_discount' => [
-                'product_ids'  => $validated['conditions']['product_ids'],
-                'discount_pct' => (int) $validated['conditions']['discount_pct'],
+                'product_ids'         => $validated['conditions']['product_ids'],
+                'discount_pct'        => isset($validated['conditions']['discount_pct']) ? (int) $validated['conditions']['discount_pct'] : null,
+                'special_price_total' => isset($validated['conditions']['special_price_total']) ? (int) $validated['conditions']['special_price_total'] : null,
             ],
             default => [],
         };
@@ -200,7 +204,7 @@ class PromotionController extends Controller
         return [
             'get_product_id' => $validated['rewards']['get_product_id'],
             'get_qty'        => (int) $validated['rewards']['get_qty'],
-            'discount_pct'   => (int) ($validated['rewards']['discount_pct'] ?? 100),
+            'discount_pct'   => isset($validated['rewards']['discount_pct']) ? (int) $validated['rewards']['discount_pct'] : 100,
         ];
     }
 }

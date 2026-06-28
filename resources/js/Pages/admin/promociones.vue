@@ -39,7 +39,7 @@ const filters = ref({ ...props.filters });
 const showForm = ref(false);
 const editingId = ref<number | null>(null);
 
-// — Product search refs per field (min_qty, buy_x_get_y buy, buy_x_get_y reward) —
+// — Product search refs per field (min_qty, buy_x_get_y buy, buy_x_get_y reward, bundle) —
 const minQtySearchResults = ref<any[]>([]);
 const minQtySkuResults = ref<any[]>([]);
 const minQtyProductName = ref('');
@@ -52,15 +52,45 @@ const getProductSearchResults = ref<any[]>([]);
 const getProductSkuResults = ref<any[]>([]);
 
 const bundleProductSearchResults = ref<any[]>([]);
+const bundleProductSkuResults = ref<any[]>([]);
 const searchProductId = ref<number | null>(null);
 const bundleSearchQuery = ref('');
 const bundleSearchLoading = ref(false);
 const discountMode = ref<'pct' | 'fixed'>('pct');
 
-function clearMinQtySearch() { minQtySearchResults.value = []; minQtySkuResults.value = []; }
-function clearBuyProductSearch() { buyProductSearchResults.value = []; buyProductSkuResults.value = []; }
-function clearGetProductSearch() { getProductSearchResults.value = []; getProductSkuResults.value = []; }
-function clearBundleSearch() { bundleProductSearchResults.value = []; }
+// ── Clear timers for blur/focus pattern ──
+let minQtyClearTimer: ReturnType<typeof setTimeout> | null = null;
+let buyProductClearTimer: ReturnType<typeof setTimeout> | null = null;
+let getProductClearTimer: ReturnType<typeof setTimeout> | null = null;
+let bundleClearTimer: ReturnType<typeof setTimeout> | null = null;
+
+function onBlurMinQty() {
+    minQtyClearTimer = setTimeout(() => { minQtySearchResults.value = []; minQtySkuResults.value = []; }, 200);
+}
+function onFocusMinQty() {
+    if (minQtyClearTimer) { clearTimeout(minQtyClearTimer); minQtyClearTimer = null; }
+}
+
+function onBlurBuyProduct() {
+    buyProductClearTimer = setTimeout(() => { buyProductSearchResults.value = []; buyProductSkuResults.value = []; }, 200);
+}
+function onFocusBuyProduct() {
+    if (buyProductClearTimer) { clearTimeout(buyProductClearTimer); buyProductClearTimer = null; }
+}
+
+function onBlurGetProduct() {
+    getProductClearTimer = setTimeout(() => { getProductSearchResults.value = []; getProductSkuResults.value = []; }, 200);
+}
+function onFocusGetProduct() {
+    if (getProductClearTimer) { clearTimeout(getProductClearTimer); getProductClearTimer = null; }
+}
+
+function onBlurBundle() {
+    bundleClearTimer = setTimeout(() => { bundleProductSearchResults.value = []; bundleProductSkuResults.value = []; }, 200);
+}
+function onFocusBundle() {
+    if (bundleClearTimer) { clearTimeout(bundleClearTimer); bundleClearTimer = null; }
+}
 
 function handleSearchInput() {
     clearTimeout(searchTimer);
@@ -123,6 +153,7 @@ function resetForm() {
     buyProductSkuResults.value = [];
     bundleSearchQuery.value = '';
     bundleProductSearchResults.value = [];
+    bundleProductSkuResults.value = [];
 }
 
 function openNew() {
@@ -147,6 +178,9 @@ function openEdit(promotion: PromotionItem) {
 
     if (promotion.type === 'min_qty_discount') {
         discountMode.value = promotion.conditions.special_price ? 'fixed' : 'pct';
+    }
+    if (promotion.type === 'buy_x_get_y' || promotion.type === 'bundle_discount') {
+        discountMode.value = promotion.conditions.special_price_total ? 'fixed' : 'pct';
     }
     if (promotion.type === 'min_qty_discount' && promotion.conditions.product_id) {
         searchProductId.value = promotion.conditions.product_id;
@@ -221,13 +255,22 @@ function submitForm() {
         payload.rewards = {
             get_product_id: form.rewards.get_product_id,
             get_qty: form.rewards.get_qty,
-            discount_pct: form.rewards.discount_pct ?? 100,
         };
+        if (discountMode.value === 'pct') {
+            payload.rewards.discount_pct = form.rewards.discount_pct ?? 100;
+        } else {
+            payload.conditions.special_price_total = form.conditions.special_price_total;
+            payload.rewards.discount_pct = 100;
+        }
     } else if (form.type === 'bundle_discount') {
         payload.conditions = {
             product_ids: form.conditions.product_ids,
-            discount_pct: form.conditions.discount_pct,
         };
+        if (discountMode.value === 'pct') {
+            payload.conditions.discount_pct = form.conditions.discount_pct;
+        } else {
+            payload.conditions.special_price_total = form.conditions.special_price_total;
+        }
     }
 
     const options = {
@@ -288,12 +331,18 @@ const statusColor = (p: PromotionItem) => {
 const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString('es-CL') : '—';
 
 const discountText = (p: PromotionItem) => {
-    if (p.type === 'buy_x_get_y') return `${p.rewards?.discount_pct ?? 100}%`;
+    if (p.type === 'buy_x_get_y') {
+        if (p.conditions?.special_price_total) return `$${p.conditions.special_price_total}`;
+        return `${p.rewards?.discount_pct ?? 100}%`;
+    }
     if (p.type === 'min_qty_discount') {
         if (p.conditions?.special_price) return `$${p.conditions.special_price}`;
         return `${p.conditions?.discount_pct}%`;
     }
-    if (p.type === 'bundle_discount') return `${p.conditions?.discount_pct}%`;
+    if (p.type === 'bundle_discount') {
+        if (p.conditions?.special_price_total) return `$${p.conditions.special_price_total}`;
+        return `${p.conditions?.discount_pct}%`;
+    }
     return '—';
 };
 
@@ -396,6 +445,19 @@ function selectGetProduct(product: any) {
     getProductSkuResults.value = [];
 }
 
+// ── bundle product search ──
+let bundleSkuSearchTimer: ReturnType<typeof setTimeout>;
+function onSearchBundleSku(query: string) {
+    clearTimeout(bundleSkuSearchTimer);
+    if (!query.trim()) { bundleProductSkuResults.value = []; return; }
+    bundleSkuSearchTimer = setTimeout(async () => {
+        try {
+            const res = await window.axios.get(route('admin.codigos.search-sku'), { params: { query } });
+            bundleProductSkuResults.value = res.data ? [res.data] : [];
+        } catch { bundleProductSkuResults.value = []; }
+    }, 300);
+}
+
 function selectBundleProduct(product: any) {
     const ids = form.conditions.product_ids || [];
     if (!ids.includes(product.id)) {
@@ -403,6 +465,7 @@ function selectBundleProduct(product: any) {
     }
     bundleSearchQuery.value = '';
     bundleProductSearchResults.value = [];
+    bundleProductSkuResults.value = [];
 }
 
 function removeBundleProduct(productId: number) {
@@ -592,7 +655,7 @@ const bundleProductNames = computed(() => {
                                         <div class="relative">
                                             <input :value="minQtyProductName"
                                                 @input="onSearchMinQtyName(($event.target as HTMLInputElement).value)"
-                                                @blur="clearMinQtySearch"
+                                                @blur="onBlurMinQty" @focus="onFocusMinQty"
                                                 type="text" placeholder="Buscar por nombre..."
                                                 class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                                             <input v-model="form.conditions.product_id" type="hidden" />
@@ -609,7 +672,7 @@ const bundleProductNames = computed(() => {
                                         <div class="relative">
                                             <input
                                                 @input="onSearchMinQtySku(($event.target as HTMLInputElement).value)"
-                                                @blur="clearMinQtySearch"
+                                                @blur="onBlurMinQty" @focus="onFocusMinQty"
                                                 type="text" placeholder="SKU / Código de barras..."
                                                 class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                                             <div v-if="minQtySkuResults.length"
@@ -669,7 +732,7 @@ const bundleProductNames = computed(() => {
                                         <div class="relative">
                                             <input :value="buyProductName"
                                                 @input="onSearchBuyName(($event.target as HTMLInputElement).value)"
-                                                @blur="clearBuyProductSearch"
+                                                @blur="onBlurBuyProduct" @focus="onFocusBuyProduct"
                                                 type="text" placeholder="Buscar por nombre..."
                                                 class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                                             <input v-model="form.conditions.buy_product_id" type="hidden" />
@@ -686,7 +749,7 @@ const bundleProductNames = computed(() => {
                                         <div class="relative">
                                             <input
                                                 @input="onSearchBuySku(($event.target as HTMLInputElement).value)"
-                                                @blur="clearBuyProductSearch"
+                                                @blur="onBlurBuyProduct" @focus="onFocusBuyProduct"
                                                 type="text" placeholder="SKU / Código de barras..."
                                                 class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                                             <div v-if="buyProductSkuResults.length"
@@ -715,7 +778,7 @@ const bundleProductNames = computed(() => {
                                         <div class="relative">
                                             <input :value="form.rewards?.get_product_name || ''"
                                                 @input="onSearchGetName(($event.target as HTMLInputElement).value); form.rewards.get_product_name = ($event.target as HTMLInputElement).value"
-                                                @blur="clearGetProductSearch"
+                                                @blur="onBlurGetProduct" @focus="onFocusGetProduct"
                                                 type="text" placeholder="Buscar por nombre..."
                                                 class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                                             <input v-model="form.rewards.get_product_id" type="hidden" />
@@ -732,7 +795,7 @@ const bundleProductNames = computed(() => {
                                         <div class="relative">
                                             <input
                                                 @input="onSearchGetSku(($event.target as HTMLInputElement).value)"
-                                                @blur="clearGetProductSearch"
+                                                @blur="onBlurGetProduct" @focus="onFocusGetProduct"
                                                 type="text" placeholder="SKU / Código de barras..."
                                                 class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                                             <div v-if="getProductSkuResults.length"
@@ -752,10 +815,30 @@ const bundleProductNames = computed(() => {
                                     <input v-model.number="form.rewards.get_qty" type="number" min="1" required
                                         class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                                 </div>
-                                <div>
+                                <div v-if="discountMode === 'pct'">
                                     <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted">% Descuento</label>
                                     <input v-model.number="form.rewards.discount_pct" type="number" min="0" max="100"
                                         class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                                </div>
+                                <div v-else>
+                                    <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted">Precio fijo total ($)</label>
+                                    <input v-model.number="form.conditions.special_price_total" type="number" min="1" required
+                                        class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted">Modo de descuento</label>
+                                <div class="flex gap-4 pt-1">
+                                    <label class="flex cursor-pointer items-center gap-2 text-sm text-content-primary dark:text-white">
+                                        <input type="radio" v-model="discountMode" value="pct"
+                                            class="text-primary-500 focus:ring-primary-500" />
+                                        Porcentaje (%)
+                                    </label>
+                                    <label class="flex cursor-pointer items-center gap-2 text-sm text-content-primary dark:text-white">
+                                        <input type="radio" v-model="discountMode" value="fixed"
+                                            class="text-primary-500 focus:ring-primary-500" />
+                                        Precio fijo total ($)
+                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -767,20 +850,38 @@ const bundleProductNames = computed(() => {
                             <h3 class="mb-3 text-xs font-bold uppercase tracking-wider text-content-muted">Condiciones — Combo</h3>
                             <div class="mb-4">
                                 <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted">Productos del combo</label>
-                                <div class="relative">
-                                    <input v-model="bundleSearchQuery"
-                                        @input="handleSearchInput"
-                                        @blur="clearBundleSearch"
-                                        type="text" placeholder="Buscar y agregar productos al combo..."
-                                        class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
-                                    <div v-if="bundleProductSearchResults.length"
-                                        class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
-                                        <button v-for="pr in bundleProductSearchResults" :key="pr.id" type="button"
-                                            @mousedown.prevent="selectBundleProduct(pr)"
-                                            class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
-                                            <span class="flex-1 font-medium text-content-primary dark:text-white">{{ pr.name }}</span>
-                                            <span class="text-xs text-content-muted">Stock: {{ pr.stock }}</span>
-                                        </button>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="relative">
+                                        <input v-model="bundleSearchQuery"
+                                            @input="handleSearchInput"
+                                            @blur="onBlurBundle" @focus="onFocusBundle"
+                                            type="text" placeholder="Buscar por nombre..."
+                                            class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                                        <div v-if="bundleProductSearchResults.length"
+                                            class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                                            <button v-for="pr in bundleProductSearchResults" :key="pr.id" type="button"
+                                                @mousedown.prevent="selectBundleProduct(pr)"
+                                                class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
+                                                <span class="flex-1 font-medium text-content-primary dark:text-white">{{ pr.name }}</span>
+                                                <span class="text-xs text-content-muted">Stock: {{ pr.stock }}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="relative">
+                                        <input
+                                            @input="onSearchBundleSku(($event.target as HTMLInputElement).value)"
+                                            @blur="onBlurBundle" @focus="onFocusBundle"
+                                            type="text" placeholder="SKU / Código de barras..."
+                                            class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                                        <div v-if="bundleProductSkuResults.length"
+                                            class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                                            <button v-for="pr in bundleProductSkuResults" :key="pr.id" type="button"
+                                                @mousedown.prevent="selectBundleProduct(pr)"
+                                                class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
+                                                <span class="flex-1 font-medium text-content-primary dark:text-white">{{ pr.name }}</span>
+                                                <span class="text-xs text-content-muted">Stock: {{ pr.stock }}</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                                 <div v-if="(form.conditions.product_ids || []).length" class="mt-2 flex flex-wrap gap-2">
@@ -793,8 +894,28 @@ const bundleProductNames = computed(() => {
                             </div>
                             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div>
+                                    <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted">Modo de descuento</label>
+                                    <div class="flex gap-4 pt-1">
+                                        <label class="flex cursor-pointer items-center gap-2 text-sm text-content-primary dark:text-white">
+                                            <input type="radio" v-model="discountMode" value="pct"
+                                                class="text-primary-500 focus:ring-primary-500" />
+                                            Porcentaje (%)
+                                        </label>
+                                        <label class="flex cursor-pointer items-center gap-2 text-sm text-content-primary dark:text-white">
+                                            <input type="radio" v-model="discountMode" value="fixed"
+                                                class="text-primary-500 focus:ring-primary-500" />
+                                            Precio fijo total ($)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div v-if="discountMode === 'pct'">
                                     <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted">% Descuento</label>
                                     <input v-model.number="form.conditions.discount_pct" type="number" min="1" max="100" required
+                                        class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                                </div>
+                                <div v-else>
+                                    <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted">Precio fijo total ($)</label>
+                                    <input v-model.number="form.conditions.special_price_total" type="number" min="1" required
                                         class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                                 </div>
                             </div>
