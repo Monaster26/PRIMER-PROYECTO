@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Imports\ProductsImport;
 use App\Models\Category;
+use App\Models\Loss;
 use App\Models\Product;
+use App\Models\ProductBatch;
 use App\Models\StockMovement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -250,15 +252,79 @@ class ProductController extends Controller
     public function batches(Product $product): JsonResponse
     {
         return response()->json(
-            $product->batches()->active()->get()->map(fn($b) => [
-                'id'              => $b->id,
-                'quantity'        => $b->quantity,
-                'cost_price'      => $b->cost_price,
-                'expiration_date' => $b->expiration_date?->format('Y-m-d'),
-                'received_at'     => $b->received_at->format('Y-m-d'),
-                'status'          => $b->status,
-                'notes'           => $b->notes,
-            ])
+            $product->batches()->active()->get()->map(fn($b) => $this->formatBatch($b))
         );
+    }
+
+    public function updateBatch(Request $request, Product $product, ProductBatch $batch): JsonResponse
+    {
+        $validated = $request->validate([
+            'quantity' => 'required|integer|min:0',
+        ]);
+
+        $oldQty = $batch->quantity;
+        $newQty = (int) $validated['quantity'];
+
+        if ($newQty === $oldQty) {
+            return response()->json($product->batches()->active()->get()->map(fn($b) => $this->formatBatch($b)));
+        }
+
+        $diff = $newQty - $oldQty;
+
+        StockMovement::record(
+            $product,
+            $diff,
+            'adjustment',
+            reference: $batch,
+            unitCost: $batch->cost_price,
+            notes: "Ajuste manual de lote #{$batch->id}",
+        );
+
+        $batch->update(['quantity' => $newQty]);
+
+        return response()->json($product->batches()->active()->get()->map(fn($b) => $this->formatBatch($b)));
+    }
+
+    public function destroyBatch(Product $product, ProductBatch $batch): JsonResponse
+    {
+        if ($batch->quantity <= 0) {
+            return response()->json(['error' => 'El lote ya está inactivo.'], 422);
+        }
+
+        $qty = $batch->quantity;
+
+        Loss::create([
+            'date'         => now(),
+            'product_id'   => $product->id,
+            'quantity'     => $qty,
+            'cost_at_loss' => $batch->cost_price / 100,
+            'reason'       => 'Vencimiento de lote',
+        ]);
+
+        StockMovement::record(
+            $product,
+            -$qty,
+            'loss',
+            reference: $batch,
+            unitCost: $batch->cost_price,
+            notes: "Baja por vencimiento de lote #{$batch->id}",
+        );
+
+        $batch->update(['quantity' => 0]);
+
+        return response()->json($product->batches()->active()->get()->map(fn($b) => $this->formatBatch($b)));
+    }
+
+    private function formatBatch(ProductBatch $batch): array
+    {
+        return [
+            'id'              => $batch->id,
+            'quantity'        => $batch->quantity,
+            'cost_price'      => $batch->cost_price,
+            'expiration_date' => $batch->expiration_date?->format('Y-m-d'),
+            'received_at'     => $batch->received_at->format('Y-m-d'),
+            'status'          => $batch->status,
+            'notes'           => $batch->notes,
+        ];
     }
 }

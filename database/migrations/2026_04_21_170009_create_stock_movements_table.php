@@ -24,6 +24,7 @@ return new class extends Migration
                 'return_out',  // Devolución a proveedor
                 'adjustment',  // Ajuste manual de inventario
                 'damage',      // Merma / producto dañado
+                'loss',        // Pérdida / vencimiento
                 'transfer',    // Transferencia entre sucursales
             ])->index();
 

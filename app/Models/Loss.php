@@ -26,7 +26,7 @@ class Loss extends Model
     protected static function booted(): void
     {
         static::saving(function (Loss $loss) {
-            if ($loss->isDirty('product_id') || !$loss->exists) {
+            if (empty($loss->cost_at_loss)) {
                 $product = $loss->product()->first();
                 if ($product) {
                     $loss->cost_at_loss = $product->cost_price / 100;

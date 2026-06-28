@@ -113,6 +113,7 @@ class StockMovement extends Model
             'return_out' => 'Devolución salida',
             'adjustment' => 'Ajuste manual',
             'damage'     => 'Merma',
+            'loss'       => 'Pérdida',
             'transfer'   => 'Transferencia',
             default      => $this->type,
         };

@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\Loss;
 use App\Models\Product;
+use App\Models\ProductBatch;
 use App\Models\StockMovement;
 use App\Models\User;
 use Database\Seeders\CategorySeeder;
@@ -98,5 +100,92 @@ class ProductTest extends TestCase
             'stock_before' => 50,
             'stock_after' => 45,
         ]);
+    }
+
+    public function test_ajustar_cantidad_lote(): void
+    {
+        $categorySlug = Category::first()->slug;
+
+        $this->post(route('admin.codigos.store'), [
+            'name' => 'Leche Entera 1L',
+            'sku' => 'LECHE-001',
+            'category_slug' => $categorySlug,
+            'cost_price' => 2000,
+            'price' => 2500,
+            'stock' => 50,
+        ]);
+
+        $product = Product::where('sku', 'LECHE-001')->first();
+        $batch = ProductBatch::create([
+            'product_id'      => $product->id,
+            'quantity'        => 10,
+            'cost_price'      => 2000,
+            'expiration_date' => now()->addDays(60),
+            'received_at'     => now(),
+        ]);
+
+        $this->patch(route('admin.codigos.batches.update', [$product->id, $batch->id]), [
+            'quantity' => 7,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('product_batches', [
+            'id'       => $batch->id,
+            'quantity' => 7,
+        ]);
+
+        $this->assertDatabaseHas('stock_movements', [
+            'product_id'      => $product->id,
+            'type'            => 'adjustment',
+            'quantity_change' => -3,
+        ]);
+
+        $this->assertSame(47, $product->fresh()->stock);
+    }
+
+    public function test_baja_por_vencimiento_lote(): void
+    {
+        $categorySlug = Category::first()->slug;
+
+        $this->post(route('admin.codigos.store'), [
+            'name' => 'Yogurt Natural 1kg',
+            'sku' => 'YOGURT-001',
+            'category_slug' => $categorySlug,
+            'cost_price' => 3000,
+            'price' => 4500,
+            'stock' => 20,
+        ]);
+
+        $product = Product::where('sku', 'YOGURT-001')->first();
+        $batch = ProductBatch::create([
+            'product_id'      => $product->id,
+            'quantity'        => 5,
+            'cost_price'      => 3000,
+            'expiration_date' => now()->subDay(),
+            'received_at'     => now(),
+        ]);
+
+        $this->delete(route('admin.codigos.batches.destroy', [$product->id, $batch->id]))
+            ->assertOk();
+
+        $this->assertDatabaseHas('product_batches', [
+            'id'       => $batch->id,
+            'quantity' => 0,
+        ]);
+
+        $this->assertDatabaseHas('losses', [
+            'product_id'   => $product->id,
+            'quantity'     => 5,
+            'cost_at_loss' => 30.00,
+            'total_loss_value' => 150.00,
+            'reason'       => 'Vencimiento de lote',
+        ]);
+
+        $this->assertDatabaseHas('stock_movements', [
+            'product_id'      => $product->id,
+            'type'            => 'loss',
+            'quantity_change' => -5,
+        ]);
+
+        $this->assertSame(15, $product->fresh()->stock);
     }
 }

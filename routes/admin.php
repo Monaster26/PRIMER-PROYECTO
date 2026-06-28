@@ -63,6 +63,10 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
             ->name('codigos.search-name');
         Route::get('codigos/{product}/lotes', [AdminProductController::class, 'batches'])
             ->name('codigos.batches');
+        Route::patch('codigos/{product}/lotes/{batch}', [AdminProductController::class, 'updateBatch'])
+            ->name('codigos.batches.update');
+        Route::delete('codigos/{product}/lotes/{batch}', [AdminProductController::class, 'destroyBatch'])
+            ->name('codigos.batches.destroy');
         Route::post('codigos/importar', [AdminProductController::class, 'import'])
             ->name('codigos.import');
 

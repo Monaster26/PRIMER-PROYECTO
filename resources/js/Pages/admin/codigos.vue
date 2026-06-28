@@ -469,15 +469,23 @@ const showBatchesModal = ref(false);
 const batchesProduct = ref<any>(null);
 const batchesData = ref<any[]>([]);
 const batchesLoading = ref(false);
+const editingBatchId = ref<number | null>(null);
+const editQuantity = ref<number>(0);
+const batchSaving = ref(false);
+
+async function fetchBatches(productId: number) {
+    const res = await window.axios.get(route('admin.codigos.batches', productId));
+    batchesData.value = res.data;
+}
 
 async function openBatches(product: any) {
     batchesProduct.value = product;
     batchesData.value = [];
+    editingBatchId.value = null;
     batchesLoading.value = true;
     showBatchesModal.value = true;
     try {
-        const res = await window.axios.get(route('admin.codigos.batches', product.id));
-        batchesData.value = res.data;
+        await fetchBatches(product.id);
     } catch {
         batchesData.value = [];
     } finally {
@@ -489,6 +497,50 @@ function closeBatches() {
     showBatchesModal.value = false;
     batchesProduct.value = null;
     batchesData.value = [];
+    editingBatchId.value = null;
+}
+
+function startEditBatch(batch: any) {
+    editingBatchId.value = batch.id;
+    editQuantity.value = batch.quantity;
+}
+
+function cancelEditBatch() {
+    editingBatchId.value = null;
+}
+
+async function saveBatchAdjustment(batch: any) {
+    if (editQuantity.value === batch.quantity) { editingBatchId.value = null; return; }
+    batchSaving.value = true;
+    try {
+        const res = await window.axios.patch(
+            route('admin.codigos.batches.update', [batchesProduct.value!.id, batch.id]),
+            { quantity: editQuantity.value }
+        );
+        batchesData.value = res.data;
+        editingBatchId.value = null;
+        router.reload({ only: ['products'] });
+    } catch (e: any) {
+        alert(e.response?.data?.error ?? 'Error al ajustar cantidad.');
+    } finally {
+        batchSaving.value = false;
+    }
+}
+
+async function writeOffBatch(batch: any) {
+    if (!confirm(`¿Confirmas dar de baja ${batch.quantity} unidades vencidas de ${batchesProduct.value?.name}?`)) return;
+    batchSaving.value = true;
+    try {
+        const res = await window.axios.delete(
+            route('admin.codigos.batches.destroy', [batchesProduct.value!.id, batch.id])
+        );
+        batchesData.value = res.data;
+        router.reload({ only: ['products'] });
+    } catch (e: any) {
+        alert(e.response?.data?.error ?? 'Error al dar de baja.');
+    } finally {
+        batchSaving.value = false;
+    }
 }
 
 const showImportForm = ref(false);
@@ -655,26 +707,74 @@ function submitImport() {
                             class="flex items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/50"
                         >
                             <div class="flex flex-col gap-0.5">
-                                <span class="text-sm font-bold text-content-primary dark:text-white">
-                                    {{ b.quantity }} uds
-                                </span>
-                                <span class="text-xs text-content-muted">
-                                    Vence: {{ b.expiration_date ?? 'Sin fecha' }}
-                                </span>
-                                <span v-if="b.notes" class="text-xs text-content-muted">
-                                    {{ b.notes }}
-                                </span>
+                                <template v-if="editingBatchId === b.id">
+                                    <div class="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            v-model.number="editQuantity"
+                                            class="w-24 rounded-xl border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800"
+                                            :disabled="batchSaving"
+                                        />
+                                        <span class="text-xs text-content-muted">uds</span>
+                                    </div>
+                                    <div class="flex gap-1.5 mt-1">
+                                        <button
+                                            @click="saveBatchAdjustment(b)"
+                                            :disabled="batchSaving"
+                                            class="rounded-lg bg-primary-500 px-3 py-1 text-xs font-bold text-white hover:bg-primary-600 disabled:opacity-50"
+                                        >
+                                            Guardar
+                                        </button>
+                                        <button
+                                            @click="cancelEditBatch"
+                                            :disabled="batchSaving"
+                                            class="rounded-lg border border-gray-300 px-3 py-1 text-xs font-bold text-content-secondary hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    <span class="text-sm font-bold text-content-primary dark:text-white">
+                                        {{ b.quantity }} uds
+                                    </span>
+                                    <span class="text-xs text-content-muted">
+                                        Vence: {{ b.expiration_date ?? 'Sin fecha' }}
+                                    </span>
+                                    <span v-if="b.notes" class="text-xs text-content-muted">
+                                        {{ b.notes }}
+                                    </span>
+                                </template>
                             </div>
-                            <span
-                                class="rounded-full px-2.5 py-1 text-[11px] font-bold uppercase"
-                                :class="{
-                                    'bg-red-100 text-red-700': b.status === 'expired',
-                                    'bg-amber-100 text-amber-700': b.status === 'warning',
-                                    'bg-green-100 text-green-700': b.status === 'ok',
-                                }"
-                            >
-                                {{ b.status === 'expired' ? 'Vencido' : b.status === 'warning' ? 'Por vencer' : 'Ok' }}
-                            </span>
+                            <div class="flex flex-col items-end gap-1.5">
+                                <span
+                                    class="rounded-full px-2.5 py-1 text-[11px] font-bold uppercase"
+                                    :class="{
+                                        'bg-red-100 text-red-700': b.status === 'expired',
+                                        'bg-amber-100 text-amber-700': b.status === 'warning',
+                                        'bg-green-100 text-green-700': b.status === 'ok',
+                                    }"
+                                >
+                                    {{ b.status === 'expired' ? 'Vencido' : b.status === 'warning' ? 'Por vencer' : 'Ok' }}
+                                </span>
+                                <div v-if="editingBatchId !== b.id" class="flex gap-1.5">
+                                    <button
+                                        @click="startEditBatch(b)"
+                                        class="rounded-lg border border-gray-300 px-2.5 py-1 text-[11px] font-bold text-content-secondary hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
+                                    >
+                                        Ajustar
+                                    </button>
+                                    <button
+                                        v-if="b.status === 'expired' || b.status === 'warning'"
+                                        @click="writeOffBatch(b)"
+                                        :disabled="batchSaving"
+                                        class="rounded-lg bg-red-500 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-red-600 disabled:opacity-50"
+                                    >
+                                        Dar de baja
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
