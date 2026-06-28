@@ -67,7 +67,7 @@ function handleRemoveImage() {
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
         >
             <div
-                class="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl dark:bg-surface-dark"
+                class="relative max-h-[95vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl dark:bg-surface-dark"
             >
                 <div class="mb-6 flex items-center justify-between">
                     <h3
