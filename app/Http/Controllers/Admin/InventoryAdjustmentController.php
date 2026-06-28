@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\InventoryAdjustment;
 use App\Models\Product;
-use Illuminate\Http\JsonResponse;
+use App\Models\StockMovement;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -92,7 +92,12 @@ class InventoryAdjustmentController extends Controller
                         'cost_price'    => $product->cost_price,
                     ]);
 
-                    $product->update(['stock' => $countedStock]);
+                    StockMovement::record(
+                        product: $product,
+                        quantityChange: $difference,
+                        type: 'adjustment',
+                        notes: "Conteo cíclico: sistema {$systemStock}, conteo {$countedStock}",
+                    );
 
                     $totalDiff += $difference * $product->cost_price;
                 }

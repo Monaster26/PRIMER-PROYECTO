@@ -124,6 +124,18 @@ class SaleController extends Controller
 
     public function destroy(Sale $sale): RedirectResponse
     {
+        $sale->load('items.product');
+
+        foreach ($sale->items as $item) {
+            StockMovement::record(
+                product: $item->product,
+                quantityChange: $item->quantity,
+                type: 'return_in',
+                reference: $sale,
+                notes: "Reversión de venta #{$sale->id}",
+            );
+        }
+
         $sale->delete();
 
         return redirect()->route('admin.ventas.index')->with('success', 'Venta eliminada y stock restaurado.');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Loss;
 use App\Models\Product;
+use App\Models\StockMovement;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -58,7 +59,12 @@ class LossController extends Controller
         $loss = Loss::create($validated);
 
         $product = Product::findOrFail($validated['product_id']);
-        $product->decrement('stock', $validated['quantity']);
+        StockMovement::record(
+            product: $product,
+            quantityChange: -$validated['quantity'],
+            type: 'loss',
+            notes: $validated['reason'] ?? 'Pérdida registrada',
+        );
 
         return redirect()->route('admin.perdida.index', [
             'month' => now()->month,
@@ -71,7 +77,12 @@ class LossController extends Controller
         $product = $loss->product;
 
         if ($product) {
-            $product->increment('stock', $loss->quantity);
+            StockMovement::record(
+                product: $product,
+                quantityChange: $loss->quantity,
+                type: 'return_in',
+                notes: "Reversión de pérdida #{$loss->id}",
+            );
         }
 
         $month = (int) (request('month') ?? now()->month);
@@ -86,7 +97,12 @@ class LossController extends Controller
                 'msg' => $e->getMessage(),
             ]);
             if ($product) {
-                $product->decrement('stock', $loss->quantity);
+                StockMovement::record(
+                    product: $product,
+                    quantityChange: -$loss->quantity,
+                    type: 'loss',
+                    notes: "Rollback reversión de pérdida #{$loss->id}",
+                );
             }
             session()->flash('error', 'No se pudo eliminar la pérdida.');
         }
@@ -110,7 +126,12 @@ class LossController extends Controller
 
         $diff = $loss->quantity - $oldQty;
         if ($diff !== 0 && ($product = $loss->product)) {
-            $diff > 0 ? $product->decrement('stock', $diff) : $product->increment('stock', abs($diff));
+            StockMovement::record(
+                product: $product,
+                quantityChange: -$diff,
+                type: 'adjustment',
+                notes: "Corrección de pérdida #{$loss->id}: cantidad {$oldQty} → {$loss->quantity}",
+            );
         }
 
         return redirect()->route('admin.perdida.index', [

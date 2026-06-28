@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -20,6 +21,12 @@ class StockMovement extends Model
         'reference_type',
         'employee_id',
         'notes',
+    ];
+
+    protected $appends = [
+        'type_name',
+        'type_color',
+        'quantity_change_formatted',
     ];
 
     protected $casts = [
@@ -117,5 +124,44 @@ class StockMovement extends Model
             'transfer'   => 'Transferencia',
             default      => $this->type,
         };
+    }
+
+    public function getTypeColorAttribute(): string
+    {
+        return match ($this->type) {
+            'purchase'   => 'blue',
+            'sale'       => 'red',
+            'return_in'  => 'green',
+            'return_out' => 'orange',
+            'adjustment' => 'yellow',
+            'damage'     => 'purple',
+            'loss'       => 'gray',
+            'transfer'   => 'indigo',
+            default      => 'gray',
+        };
+    }
+
+    public function getQuantityChangeFormattedAttribute(): string
+    {
+        return ($this->quantity_change >= 0 ? '+' : '') . number_format($this->quantity_change);
+    }
+
+    public function scopeSearch(Builder $query, ?string $term): Builder
+    {
+        if (blank($term)) return $query;
+        return $query->where(function (Builder $q) use ($term) {
+            $q->where('notes', 'like', "%{$term}%")
+              ->orWhereHas('product', fn(Builder $p) => $p
+                  ->where('name', 'like', "%{$term}%")
+                  ->orWhere('sku', 'like', "%{$term}%")
+              );
+        });
+    }
+
+    public function scopeInDateRange(Builder $query, ?string $from, ?string $to): Builder
+    {
+        if ($from) $query->whereDate('created_at', '>=', $from);
+        if ($to)   $query->whereDate('created_at', '<=', $to);
+        return $query;
     }
 }

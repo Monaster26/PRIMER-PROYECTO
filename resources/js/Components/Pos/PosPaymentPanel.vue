@@ -124,7 +124,7 @@ function emitAmount(key: string, val: string) {
                     title="Historial de Ventas"
                 >
                     <Clock class="h-3.5 w-3.5" />
-                    <span>Historial de venta</span>
+                    <span>Historial</span>
                 </button>
                 <button
                     @click.stop="showMenu = !showMenu"

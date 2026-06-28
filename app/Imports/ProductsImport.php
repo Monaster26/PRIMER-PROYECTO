@@ -4,6 +4,7 @@ namespace App\Imports;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\StockMovement;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\Importable;
 use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
@@ -23,6 +24,7 @@ class ProductsImport implements ToModel, WithHeadingRow, SkipsEmptyRows, SkipsOn
     public int $created = 0;
     public int $updated = 0;
     public array $failures = [];
+    public array $stockChanges = [];
 
     public function rules(): array
     {
@@ -49,6 +51,7 @@ class ProductsImport implements ToModel, WithHeadingRow, SkipsEmptyRows, SkipsOn
         }
 
         $product = Product::firstOrNew(['sku' => $sku]);
+        $oldStock = $product->exists ? $product->stock : 0;
 
         $product->name = trim($row['Descripcion']);
         $product->cost_price = (int) round((float) $row['Precio Costo'] * 100);
@@ -76,6 +79,14 @@ class ProductsImport implements ToModel, WithHeadingRow, SkipsEmptyRows, SkipsOn
             $this->created++;
         } else {
             $this->updated++;
+        }
+
+        $diff = $product->stock - $oldStock;
+        if ($diff !== 0) {
+            $this->stockChanges[] = [
+                'product' => $product,
+                'diff'    => $diff,
+            ];
         }
 
         return $product;

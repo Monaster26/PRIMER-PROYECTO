@@ -142,7 +142,17 @@ class ProductController extends Controller
             $validated['image_path'] = $request->file('image')->store('products', 'public');
         }
 
+        $oldStock = $product->stock;
         $product->update($validated);
+
+        if ($product->wasChanged('stock')) {
+            StockMovement::record(
+                product: $product,
+                quantityChange: $product->stock - $oldStock,
+                type: 'adjustment',
+                notes: "Corrección manual: stock {$oldStock} → {$product->stock}",
+            );
+        }
 
         return redirect()->route('admin.codigos.index')->with('success', 'Producto actualizado.');
     }
@@ -165,6 +175,15 @@ class ProductController extends Controller
 
         $import = new ProductsImport();
         Excel::import($import, $request->file('file'));
+
+        foreach ($import->stockChanges as $change) {
+            StockMovement::record(
+                product: $change['product'],
+                quantityChange: $change['diff'],
+                type: 'adjustment',
+                notes: 'Importación Excel',
+            );
+        }
 
         $message = 'Importación completada: ';
         $message .= "{$import->created} creados, {$import->updated} actualizados.";

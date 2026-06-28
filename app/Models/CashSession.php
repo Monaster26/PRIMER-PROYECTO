@@ -45,7 +45,8 @@ class CashSession extends Model
         'total_ingresos',
         // Resumen
         'total_caja_esperado',
-        'diferencia_descuadre',
+        'efectivo_esperado',
+        'diferencia_efectivo',
         // Desglose JSON
         'apertura_desglose',
         'cierre_desglose',
@@ -86,7 +87,8 @@ class CashSession extends Model
             'total_retiros' => 'integer',
             'total_ingresos' => 'integer',
             'total_caja_esperado' => 'integer',
-            'diferencia_descuadre' => 'integer',
+            'efectivo_esperado' => 'integer',
+            'diferencia_efectivo' => 'integer',
             'apertura_desglose' => 'array',
             'cierre_desglose' => 'array',
         ];
@@ -138,8 +140,7 @@ class CashSession extends Model
                     $session->total_ingresos -
                     $session->total_retiros;
 
-                $session->diferencia_descuadre =
-                    $session->total_caja_esperado - $session->total_efectivo_apertura;
+
             }
         });
     }

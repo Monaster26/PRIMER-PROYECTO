@@ -154,6 +154,13 @@ class CashSessionController extends Controller
             'cierre_desglose' => $cierreDesglose,
         ]);
 
+        $cashSession->refresh();
+        $financial = $this->cashSessionService->calcularResumenFinanciero($cashSession);
+        $cashSession->update([
+            'efectivo_esperado' => $financial['esperado'],
+            'diferencia_efectivo' => $financial['diferencia'],
+        ]);
+
         return redirect()->route('admin.arqueo-caja.index')->with('success', 'Sesión cerrada correctamente.');
     }
 
@@ -205,6 +212,8 @@ class CashSessionController extends Controller
                 'total_ingresos' => $financial['totalIngresos'],
                 'total_retiros'  => $financial['totalRetiros'],
                 'cierre_desglose' => $cierreDesglose,
+                'efectivo_esperado' => $financial['esperado'],
+                'diferencia_efectivo' => $financial['diferencia'],
             ]);
 
             $session->refresh();
@@ -225,7 +234,8 @@ class CashSessionController extends Controller
                     'total_ingresos'   => $financial['totalIngresos'],
                     'total_retiros'    => $financial['totalRetiros'],
                     'total_caja_esperado' => $session->total_caja_esperado,
-                    'diferencia_descuadre' => $session->diferencia_descuadre,
+                    'efectivo_esperado' => $session->efectivo_esperado,
+                    'diferencia_efectivo' => $session->diferencia_efectivo,
                 ],
                 'summary' => [
                     'cashSales'     => $financial['cashSales'],

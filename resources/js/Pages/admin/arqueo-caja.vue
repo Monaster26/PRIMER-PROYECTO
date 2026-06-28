@@ -426,7 +426,16 @@ const auditTotalCierre = computed(() => {
                                 Efvo. Cierre
                             </th>
                             <th class="px-4 py-2 text-right font-bold">
-                                Diferencia
+                                Redcompra
+                            </th>
+                            <th class="px-4 py-2 text-right font-bold">
+                                Transferencia
+                            </th>
+                            <th class="px-4 py-2 text-right font-bold">
+                                Esperado Caja
+                            </th>
+                            <th class="px-4 py-2 text-center font-bold">
+                                Resultado
                             </th>
                             <th class="px-4 py-2 text-center font-bold">
                                 Estado
@@ -441,7 +450,7 @@ const auditTotalCierre = computed(() => {
                     >
                         <tr v-if="!sessions.data?.length">
                             <td
-                                colspan="9"
+                                colspan="12"
                                 class="px-4 py-8 text-center text-xs text-content-muted dark:text-gray-500"
                             >
                                 No hay sesiones de caja registradas.
@@ -499,20 +508,43 @@ const auditTotalCierre = computed(() => {
                                 }}
                             </td>
                             <td
-                                class="px-4 py-2 text-right text-xs font-bold"
-                                :class="
-                                    s.diferencia_descuadre != null
-                                        ? s.diferencia_descuadre < 0
-                                            ? 'text-danger'
-                                            : 'text-success'
-                                        : 'text-content-muted'
-                                "
+                                class="px-4 py-2 text-right text-xs font-medium"
                             >
-                                {{
-                                    s.diferencia_descuadre != null
-                                        ? fmtCLP(s.diferencia_descuadre)
-                                        : '—'
-                                }}
+                                {{ s.total_red_compra != null ? fmtCLP(s.total_red_compra) : '—' }}
+                            </td>
+                            <td
+                                class="px-4 py-2 text-right text-xs font-medium"
+                            >
+                                {{ s.total_transferencia != null ? fmtCLP(s.total_transferencia) : '—' }}
+                            </td>
+                            <td
+                                class="px-4 py-2 text-right text-xs font-bold text-primary-500"
+                            >
+                                {{ s.total_caja_esperado != null ? fmtCLP(s.total_caja_esperado) : '—' }}
+                            </td>
+                            <td class="px-4 py-2 text-center">
+                                <span
+                                    v-if="s.diferencia_efectivo != null && s.closed_at"
+                                    :class="
+                                        s.diferencia_efectivo < 0
+                                            ? 'bg-danger/10 text-danger'
+                                            : s.diferencia_efectivo > 0
+                                                ? 'bg-success/10 text-success'
+                                                : 'bg-gray-100 text-gray-500'
+                                    "
+                                    class="inline-block rounded-lg px-2 py-0.5 text-[9px] font-bold uppercase"
+                                >
+                                    <template v-if="s.diferencia_efectivo < 0">
+                                        Faltó {{ fmtCLP(Math.abs(s.diferencia_efectivo)) }}
+                                    </template>
+                                    <template v-else-if="s.diferencia_efectivo > 0">
+                                        Sobró {{ fmtCLP(s.diferencia_efectivo) }}
+                                    </template>
+                                    <template v-else>
+                                        Cuadrado
+                                    </template>
+                                </span>
+                                <span v-else class="text-[9px] text-content-muted">—</span>
                             </td>
                             <td class="px-4 py-2 text-center">
                                 <span
@@ -1405,28 +1437,28 @@ const auditTotalCierre = computed(() => {
                         class="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-gray-100 bg-white px-4 py-2.5 dark:border-gray-800 dark:bg-surface-dark"
                     >
                         <div class="flex items-center gap-2">
-                            <Eye class="h-4 w-4 text-primary-500" />
+                            <Eye class="h-5 w-5 text-primary-500" />
                             <h3
-                                class="font-display text-sm font-bold text-content-primary dark:text-white"
+                                class="font-display text-base font-bold text-content-primary dark:text-white"
                             >
                                 Auditoría de Caja
                             </h3>
                         </div>
                         <button
                             @click="closeAudit"
-                            class="rounded-lg p-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                            class="rounded-lg p-1.5 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
                         >
-                            <X class="h-4 w-4 text-content-muted" />
+                            <X class="h-5 w-5 text-content-muted" />
                         </button>
                     </div>
 
                     <!-- Audit Info Header -->
                     <div
                         v-if="auditSession"
-                        class="border-b border-gray-100 bg-gray-50/50 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/30"
+                        class="border-b border-gray-100 bg-gray-50/50 px-4 py-3 dark:border-gray-800 dark:bg-gray-900/30"
                     >
                         <div
-                            class="flex flex-wrap items-center gap-x-6 gap-y-1 text-[11px]"
+                            class="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm"
                         >
                             <span
                                 class="font-bold text-content-primary dark:text-white"
@@ -1471,34 +1503,34 @@ const auditTotalCierre = computed(() => {
                     </div>
 
                     <!-- Audit Body: Two Columns -->
-                    <div class="grid grid-cols-1 gap-3 p-4 lg:grid-cols-2">
+                    <div class="grid grid-cols-1 gap-4 p-5 lg:grid-cols-2">
                         <!-- ═══ LEFT: APERTURA ═══ -->
                         <div
                             class="overflow-hidden rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/50"
                         >
                             <div
-                                class="flex items-center gap-1.5 bg-primary-500 px-3 py-1.5"
+                                class="flex items-center gap-1.5 bg-primary-500 px-4 py-2"
                             >
-                                <Wallet class="h-3.5 w-3.5 text-white" />
+                                <Wallet class="h-4 w-4 text-white" />
                                 <h4
-                                    class="font-display text-[11px] font-bold text-white"
+                                    class="font-display text-sm font-bold text-white"
                                 >
                                     Apertura de Caja
                                 </h4>
                             </div>
-                            <div class="p-3">
+                            <div class="p-4">
                                 <table class="w-full">
                                     <thead>
                                         <tr
-                                            class="border-b border-gray-200 text-[9px] font-bold uppercase tracking-wider text-content-muted dark:border-gray-700 dark:text-gray-500"
+                                            class="border-b border-gray-200 text-xs font-bold uppercase tracking-wider text-content-muted dark:border-gray-700 dark:text-gray-500"
                                         >
-                                            <th class="pb-1 text-left">
+                                            <th class="pb-1.5 text-left">
                                                 Denominación
                                             </th>
-                                            <th class="pb-1 text-center">
+                                            <th class="pb-1.5 text-center">
                                                 Cant.
                                             </th>
-                                            <th class="pb-1 text-right">
+                                            <th class="pb-1.5 text-right">
                                                 Total
                                             </th>
                                         </tr>
@@ -1511,12 +1543,12 @@ const auditTotalCierre = computed(() => {
                                             :key="'aa-' + d.key"
                                         >
                                             <td
-                                                class="py-1 text-[11px] font-semibold text-content-primary dark:text-white"
+                                                class="py-1.5 text-sm font-semibold text-content-primary dark:text-white"
                                             >
                                                 {{ d.label }}
                                             </td>
                                             <td
-                                                class="py-1 text-center font-mono text-[11px] font-bold text-content-primary"
+                                                class="py-1.5 text-center font-mono text-sm font-bold text-content-primary"
                                             >
                                                 {{
                                                     auditSession
@@ -1526,7 +1558,7 @@ const auditTotalCierre = computed(() => {
                                                 }}
                                             </td>
                                             <td
-                                                class="py-1 text-right font-mono text-[11px] font-bold text-primary-500"
+                                                class="py-1.5 text-right font-mono text-sm font-bold text-primary-500"
                                             >
                                                 {{
                                                     fmtCLP(
@@ -1544,13 +1576,13 @@ const auditTotalCierre = computed(() => {
                                             class="border-t-2 border-primary-500"
                                         >
                                             <td
-                                                class="pt-1.5 text-[11px] font-bold text-content-primary dark:text-white"
+                                                class="pt-2 text-sm font-bold text-content-primary dark:text-white"
                                             >
                                                 Total Apertura
                                             </td>
-                                            <td class="pt-1.5"></td>
+                                            <td class="pt-2"></td>
                                             <td
-                                                class="pt-1.5 text-right font-mono text-sm font-bold text-primary-600"
+                                                class="pt-2 text-right font-mono text-base font-bold text-primary-600"
                                             >
                                                 {{ fmtCLP(auditTotalApertura) }}
                                             </td>
@@ -1565,28 +1597,28 @@ const auditTotalCierre = computed(() => {
                             class="overflow-hidden rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/50"
                         >
                             <div
-                                class="flex items-center gap-1.5 bg-gray-800 px-3 py-1.5 dark:bg-gray-700"
+                                class="flex items-center gap-1.5 bg-gray-800 px-4 py-2 dark:bg-gray-700"
                             >
-                                <Wallet class="h-3.5 w-3.5 text-white" />
+                                <Wallet class="h-4 w-4 text-white" />
                                 <h4
-                                    class="font-display text-[11px] font-bold text-white"
+                                    class="font-display text-sm font-bold text-white"
                                 >
                                     Cierre de Caja
                                 </h4>
                             </div>
-                            <div class="p-3">
+                            <div class="p-4">
                                 <table class="w-full">
                                     <thead>
                                         <tr
-                                            class="border-b border-gray-200 text-[9px] font-bold uppercase tracking-wider text-content-muted dark:border-gray-700 dark:text-gray-500"
+                                            class="border-b border-gray-200 text-xs font-bold uppercase tracking-wider text-content-muted dark:border-gray-700 dark:text-gray-500"
                                         >
-                                            <th class="pb-1 text-left">
+                                            <th class="pb-1.5 text-left">
                                                 Denominación
                                             </th>
-                                            <th class="pb-1 text-center">
+                                            <th class="pb-1.5 text-center">
                                                 Cant.
                                             </th>
-                                            <th class="pb-1 text-right">
+                                            <th class="pb-1.5 text-right">
                                                 Total
                                             </th>
                                         </tr>
@@ -1599,12 +1631,12 @@ const auditTotalCierre = computed(() => {
                                             :key="'ac-' + d.key"
                                         >
                                             <td
-                                                class="py-1 text-[11px] font-semibold text-content-primary dark:text-white"
+                                                class="py-1.5 text-sm font-semibold text-content-primary dark:text-white"
                                             >
                                                 {{ d.label }}
                                             </td>
                                             <td
-                                                class="py-1 text-center font-mono text-[11px] font-bold text-content-primary"
+                                                class="py-1.5 text-center font-mono text-sm font-bold text-content-primary"
                                             >
                                                 {{
                                                     auditSession
@@ -1614,7 +1646,7 @@ const auditTotalCierre = computed(() => {
                                                 }}
                                             </td>
                                             <td
-                                                class="py-1 text-right font-mono text-[11px] font-bold text-primary-500"
+                                                class="py-1.5 text-right font-mono text-sm font-bold text-primary-500"
                                             >
                                                 {{
                                                     fmtCLP(
@@ -1632,13 +1664,13 @@ const auditTotalCierre = computed(() => {
                                             class="border-t-2 border-gray-800 dark:border-gray-500"
                                         >
                                             <td
-                                                class="pt-1.5 text-[11px] font-bold text-content-primary dark:text-white"
+                                                class="pt-2 text-sm font-bold text-content-primary dark:text-white"
                                             >
                                                 Total Cierre
                                             </td>
-                                            <td class="pt-1.5"></td>
+                                            <td class="pt-2"></td>
                                             <td
-                                                class="pt-1.5 text-right font-mono text-sm font-bold text-content-primary"
+                                                class="pt-2 text-right font-mono text-base font-bold text-content-primary"
                                             >
                                                 {{ fmtCLP(auditTotalCierre) }}
                                             </td>
@@ -1647,17 +1679,17 @@ const auditTotalCierre = computed(() => {
                                 </table>
 
                                 <!-- Payment methods -->
-                                <div class="mt-3 grid grid-cols-2 gap-2">
+                                <div class="mt-4 grid grid-cols-2 gap-3">
                                     <div
-                                        class="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800"
+                                        class="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
                                     >
                                         <div
-                                            class="text-[9px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                                            class="text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
                                         >
                                             Redcompra Declarada
                                         </div>
                                         <div
-                                            class="font-mono text-xs font-bold text-content-primary"
+                                            class="font-mono text-sm font-bold text-content-primary"
                                         >
                                             {{
                                                 fmtCLP(
@@ -1668,15 +1700,15 @@ const auditTotalCierre = computed(() => {
                                         </div>
                                     </div>
                                     <div
-                                        class="rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800"
+                                        class="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
                                     >
                                         <div
-                                            class="text-[9px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                                            class="text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
                                         >
                                             Transferencia Declarada
                                         </div>
                                         <div
-                                            class="font-mono text-xs font-bold text-content-primary"
+                                            class="font-mono text-sm font-bold text-content-primary"
                                         >
                                             {{
                                                 fmtCLP(
@@ -1686,6 +1718,34 @@ const auditTotalCierre = computed(() => {
                                             }}
                                         </div>
                                     </div>
+                                    <div
+                                        class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-900/10"
+                                    >
+                                        <div
+                                            class="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400"
+                                        >
+                                            Ingreso del día
+                                        </div>
+                                        <div
+                                            class="font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400"
+                                        >
+                                            +{{ fmtCLP(auditSession?.total_ingresos || 0) }}
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="rounded-lg border border-orange-200 bg-orange-50 p-3 dark:border-orange-800 dark:bg-orange-900/10"
+                                    >
+                                        <div
+                                            class="text-xs font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400"
+                                        >
+                                            Salida del día
+                                        </div>
+                                        <div
+                                            class="font-mono text-sm font-bold text-orange-600 dark:text-orange-400"
+                                        >
+                                            -{{ fmtCLP(auditSession?.total_retiros || 0) }}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1693,11 +1753,11 @@ const auditTotalCierre = computed(() => {
 
                     <!-- Modal footer -->
                     <div
-                        class="flex justify-end border-t border-gray-100 px-4 py-2 dark:border-gray-800"
+                        class="flex justify-end border-t border-gray-100 px-4 py-3 dark:border-gray-800"
                     >
                         <button
                             @click="closeAudit"
-                            class="rounded-xl bg-gray-100 px-4 py-1.5 text-[11px] font-bold text-content-secondary transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                            class="rounded-xl bg-gray-100 px-5 py-2 text-sm font-bold text-content-secondary transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
                         >
                             Cerrar
                         </button>

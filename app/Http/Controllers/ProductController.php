@@ -148,7 +148,17 @@ class ProductController extends Controller
         $validated['cost_price'] = $validated['cost_price'] ? (int) (round((float) $validated['cost_price'], 2) * 100) : 0;
         $validated['price'] = (int) (round((float) $validated['price'], 2) * 100);
 
+        $oldStock = $product->stock;
         $product->update($validated);
+
+        if ($product->wasChanged('stock')) {
+            StockMovement::record(
+                product: $product,
+                quantityChange: $product->stock - $oldStock,
+                type: 'adjustment',
+                notes: "Corrección manual: stock {$oldStock} → {$product->stock}",
+            );
+        }
 
         return redirect()->route('products.show', $product)
             ->with('success', 'Producto actualizado exitosamente.');

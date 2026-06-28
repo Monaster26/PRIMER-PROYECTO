@@ -130,7 +130,7 @@ const navGroups = computed(() => {
                 label: 'Ventas',
                 items: [
                     {
-                        label: 'Ventas',
+                        label: 'Historial',
                         name: 'admin.ventas.index',
                         icon: ShoppingCart,
                     },

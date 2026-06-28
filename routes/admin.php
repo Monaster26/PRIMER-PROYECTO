@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\PurchaseOrderController;
 use App\Http\Controllers\Admin\ReporteDiarioController;
+use App\Http\Controllers\Admin\MovementHistoryController;
 use App\Http\Controllers\Admin\SaleController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\SupplierProductPriceController;
@@ -82,9 +83,12 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::delete('categorias/{category}', [AdminCategoryController::class, 'destroy'])
             ->name('categorias.destroy');
 
-        // Ventas
-        Route::resource('ventas', SaleController::class)
-            ->except(['show', 'create', 'edit']);
+        // Ventas / Historial de Movimientos
+        Route::get('ventas', [MovementHistoryController::class, 'index'])->name('ventas.index');
+        Route::get('ventas/export', [MovementHistoryController::class, 'exportExcel'])->name('ventas.export');
+        Route::post('ventas', [SaleController::class, 'store'])->name('ventas.store');
+        Route::put('ventas/{sale}', [SaleController::class, 'update'])->name('ventas.update');
+        Route::delete('ventas/{sale}', [SaleController::class, 'destroy'])->name('ventas.destroy');
 
         // Proveedores
         Route::resource('proveedores', SupplierController::class)
