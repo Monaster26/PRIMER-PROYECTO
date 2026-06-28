@@ -89,6 +89,7 @@ const {
     couponCode, couponError, checkoutLoading, lastSaleId, lastDiscount,
     lastAppliedPromotions, showSuccess, total, remaining, balanceState,
     balanceClasses, canCheckout, onPaymentFocus, finalizeSale, resetCheckoutState,
+    rawTotal, promoDiscount, previewPromosLoading,
 } = usePayments(activeTab as any);
 
 const cashAmount = computed(() => activeTab.value.payments.find((p) => p.method === 'cash')?.amount ?? null);
@@ -249,6 +250,9 @@ function handleKeydown(e: KeyboardEvent) {
 
                 <PosPaymentPanel
                     :total="total"
+                    :raw-total="rawTotal"
+                    :promo-discount="promoDiscount"
+                    :preview-promos-loading="previewPromosLoading"
                     :remaining="remaining"
                     :balance-state="balanceState"
                     :balance-classes="balanceClasses"

@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\PendingInvoiceController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\PromotionController;
 use App\Http\Controllers\Admin\PurchaseOrderController;
 use App\Http\Controllers\Admin\ReporteDiarioController;
 use App\Http\Controllers\Admin\SaleController;
@@ -27,6 +28,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::get('pos', [PosController::class, 'index'])->name('pos');
         Route::get('pos/lookup/{code}', [PosController::class, 'lookup'])->name('pos.lookup');
         Route::post('pos/checkout', [PosController::class, 'checkout'])->name('pos.checkout');
+        Route::post('pos/preview-promos', [PosController::class, 'previewPromos'])->name('pos.preview-promos');
         Route::post('pos/cash-movement', [CashMovementController::class, 'store'])->name('pos.cash-movement');
         Route::post('pos/open-session', [PosController::class, 'openSession'])->name('pos.open-session');
         Route::post('pos/close-session', [CashSessionController::class, 'closeFromPos'])->name('pos.close-session');
@@ -110,6 +112,15 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::resource('perdida', LossController::class)
             ->parameters(['perdida' => 'loss'])
             ->except(['show', 'create', 'edit']);
+
+        // Promociones
+        Route::resource('promociones', PromotionController::class)
+            ->parameters(['promociones' => 'promotion'])
+            ->except(['show', 'create', 'edit']);
+        Route::patch('promociones/{promotion}/toggle', [PromotionController::class, 'toggleActive'])
+            ->name('promociones.toggle');
+        Route::post('promociones/{promotion}/evaluar', [PromotionController::class, 'evaluate'])
+            ->name('promociones.evaluate');
 
         // Pedidos a proveedores
         Route::resource('pedidos', PurchaseOrderController::class)

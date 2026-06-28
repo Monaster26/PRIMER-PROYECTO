@@ -16,6 +16,7 @@ use App\Models\StockMovement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class PosController extends Controller
@@ -242,6 +243,36 @@ class PosController extends Controller
         }
 
         return response()->json(['product' => $product]);
+    }
+
+    public function previewPromos(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'items'              => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity'   => 'required|integer|min:1',
+        ]);
+
+        $cartForPromo = collect($validated['items'])->map(fn($i) => [
+            'product_id' => $i['product_id'],
+            'variant_id' => null,
+            'qty'        => $i['quantity'],
+            'price'      => Product::find($i['product_id'])->price,
+        ])->toArray();
+
+        $discount = 0;
+        $applied  = [];
+
+        foreach (Promotion::active()->get() as $promo) {
+            $r = $promo->evaluateCart($cartForPromo);
+            if ($r['applies']) {
+                $discount += $r['discount'];
+                $applied[] = $promo->name;
+                if ($promo->is_exclusive) break;
+            }
+        }
+
+        return response()->json(['discount' => $discount, 'applied' => $applied]);
     }
 
     public function checkout(Request $request): JsonResponse

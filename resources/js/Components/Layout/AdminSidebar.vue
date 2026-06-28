@@ -8,6 +8,7 @@ import {
     GitCompareArrows,
     LayoutDashboard,
     Package,
+    Percent,
     ReceiptText,
     ShoppingBag,
     ShoppingCart,
@@ -172,6 +173,16 @@ const navGroups = computed(() => {
                         label: 'Comparativa de Precios',
                         name: 'admin.comparativa-precios.index',
                         icon: GitCompareArrows,
+                    },
+                ],
+            },
+            {
+                label: 'Marketing',
+                items: [
+                    {
+                        label: 'Promociones',
+                        name: 'admin.promociones.index',
+                        icon: Percent,
                     },
                 ],
             },

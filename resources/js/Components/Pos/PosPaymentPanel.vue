@@ -15,6 +15,9 @@ import {
 
 const props = defineProps<{
     total: number;
+    rawTotal: number;
+    promoDiscount: number;
+    previewPromosLoading: boolean;
     remaining: number;
     balanceState: string | null;
     balanceClasses: string;
@@ -179,6 +182,17 @@ function emitAmount(key: string, val: string) {
             >
                 {{ formatCLP(total) }}
             </p>
+            <div v-if="previewPromosLoading" class="mt-1 text-xs text-content-muted italic">
+                Calculando descuentos...
+            </div>
+            <div v-else-if="promoDiscount > 0" class="mt-1 space-y-0.5">
+                <p class="text-sm text-content-muted line-through">
+                    {{ formatCLP(rawTotal) }}
+                </p>
+                <p class="text-sm font-semibold text-emerald-600">
+                    −{{ formatCLP(promoDiscount / 100) }} descuento promocional
+                </p>
+            </div>
         </div>
 
         <div class="mb-4 flex items-center gap-2 text-sm text-content-muted">

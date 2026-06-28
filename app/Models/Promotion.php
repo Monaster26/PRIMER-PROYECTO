@@ -95,9 +95,13 @@ class Promotion extends Model
 
     private function evaluateMinQtyDiscount(array $cartItems): array
     {
-        $cond = $this->conditions; // {product_id, min_qty, discount_pct}
+        $cond = $this->conditions; // {product_id, min_qty, discount_pct} or {product_id, min_qty, special_price}
 
-        if (empty($cond['product_id']) || empty($cond['min_qty']) || empty($cond['discount_pct'])) {
+        if (empty($cond['product_id']) || empty($cond['min_qty'])) {
+            return ['applies' => false, 'rewards' => [], 'discount' => 0];
+        }
+
+        if (empty($cond['discount_pct']) && empty($cond['special_price'])) {
             return ['applies' => false, 'rewards' => [], 'discount' => 0];
         }
 
@@ -109,11 +113,22 @@ class Promotion extends Model
             return ['applies' => false, 'rewards' => [], 'discount' => 0];
         }
 
-        $totalPrice = collect($cartItems)
+        $unitPrice = collect($cartItems)
             ->where('product_id', $cond['product_id'])
-            ->sum(fn($item) => $item['qty'] * $item['price']);
+            ->first()['price']
+            ?? 0;
 
-        $discount = (int) round($totalPrice * ($cond['discount_pct'] / 100));
+        $groups = intdiv($qty, $cond['min_qty']);
+        $groupNormalPrice = $cond['min_qty'] * (int) $unitPrice;
+
+        if (!empty($cond['discount_pct'])) {
+            $groupDiscount = (int) round($groupNormalPrice * ($cond['discount_pct'] / 100));
+        } else {
+            $groupSpecialCents = (int) $cond['special_price'] * 100;
+            $groupDiscount = max(0, $groupNormalPrice - $groupSpecialCents);
+        }
+
+        $discount = $groups * $groupDiscount;
 
         return ['applies' => true, 'rewards' => [], 'discount' => $discount];
     }

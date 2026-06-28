@@ -1,5 +1,5 @@
 import type { TabState } from '@/Stores/posTabsStore';
-import { computed, ref, type ComputedRef } from 'vue';
+import { computed, ref, watch, type ComputedRef } from 'vue';
 
 type BalanceState = 'exacto' | 'faltante' | 'exceso';
 
@@ -12,11 +12,56 @@ export function usePayments(activeTab: ComputedRef<TabState>) {
     const lastAppliedPromotions = ref<string[]>([]);
     const showSuccess = ref(false);
 
-    const total = computed(() =>
+    const promoDiscount = ref(0);           // centavos, desde backend
+    const previewPromosLoading = ref(false);
+    let promoDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    watch(
+        () => activeTab.value.cart,
+        (cart) => {
+            if (promoDebounceTimer) clearTimeout(promoDebounceTimer);
+            if (cart.length === 0) { promoDiscount.value = 0; return; }
+            previewPromosLoading.value = true;
+            promoDebounceTimer = setTimeout(async () => {
+                try {
+                    const route = (window as any).route;
+                    const token = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
+                    const res = await fetch(route('admin.pos.preview-promos'), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': token,
+                        },
+                        body: JSON.stringify({
+                            items: cart.map(i => ({
+                                product_id: i.product.id,
+                                quantity: i.quantity,
+                            })),
+                        }),
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        promoDiscount.value = data.discount || 0;
+                    }
+                } catch {
+                    promoDiscount.value = 0;
+                } finally {
+                    previewPromosLoading.value = false;
+                }
+            }, 400);
+        },
+        { deep: true, immediate: true },
+    );
+
+    const rawTotal = computed(() =>
         activeTab.value.cart.reduce(
             (sum, item) => sum + (item.product.price / 100) * item.quantity,
             0,
         ),
+    );
+
+    const total = computed(() =>
+        Math.max(0, rawTotal.value - promoDiscount.value / 100),
     );
 
     const totalPayments = computed(() =>
@@ -175,6 +220,9 @@ export function usePayments(activeTab: ComputedRef<TabState>) {
         lastDiscount,
         lastAppliedPromotions,
         showSuccess,
+        rawTotal,
+        promoDiscount,
+        previewPromosLoading,
         total,
         totalPayments,
         remaining,

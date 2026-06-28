@@ -187,7 +187,8 @@ class ProductController extends Controller
         $product = Product::where('is_active', true)
             ->where(function ($q) use ($search) {
                 $q->where('sku', $search)
-                  ->orWhere('barcode', $search);
+                  ->orWhere('barcode', $search)
+                  ->orWhere('id', $search);
             })
             ->first(['id', 'name', 'sku', 'barcode', 'stock', 'cost_price', 'price', 'image_path']);
 
