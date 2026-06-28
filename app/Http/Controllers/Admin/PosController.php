@@ -358,6 +358,9 @@ class PosController extends Controller
                 $totalDiscount = min($promoDiscount + $couponDiscount, $totalCents);
                 $finalTotal = $totalCents - $totalDiscount;
 
+                $netTotal = (int) $netTotal;
+                $taxTotal = (int) $taxTotal;
+
                 $sale->update([
                     'total'           => $finalTotal,
                     'net_total'       => $netTotal,

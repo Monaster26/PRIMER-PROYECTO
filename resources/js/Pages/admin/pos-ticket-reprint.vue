@@ -24,11 +24,11 @@ const props = defineProps<{
     };
 }>();
 
-const subtotalNeto = props.sale.net_total;
-const iva = props.sale.tax_total;
+const subtotalNeto = Math.round(props.sale.net_total);
+const iva = Math.round(props.sale.tax_total);
 
 function fmtPesos(cents: number): string {
-    return '$' + (cents / 100).toLocaleString('es-CL');
+    return '$' + Math.round(cents / 100).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 function paymentLabel(sale: typeof props.sale): string {
