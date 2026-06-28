@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\SalePayment;
+use App\Models\StockMovement;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -96,7 +97,14 @@ class SaleController extends Controller
                 'total_line' => $lineTotal,
             ]);
 
-            $product->decrement('stock', $item['quantity']);
+            StockMovement::record(
+                product: $product,
+                quantityChange: -$item['quantity'],
+                type: 'sale',
+                reference: $sale,
+                unitCost: $product->cost_price,
+                notes: "Venta POS #{$sale->id}",
+            );
             $totalCents += $lineTotal;
         }
 

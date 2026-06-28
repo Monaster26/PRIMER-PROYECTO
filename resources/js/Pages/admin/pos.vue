@@ -63,6 +63,7 @@ interface TodaySale {
     folio: number;
     time: string;
     total: number;
+    discount_total: number;
     items: { name: string; quantity: number; price: number; total: number }[];
     payments: { method: string; amount: number }[];
     cash_amount: number;
@@ -85,6 +86,10 @@ function focusBarcodeInput() {
 const searchFocused = ref(false);
 const checkoutLoading = ref(false);
 const lastSaleId = ref<number | null>(null);
+const couponCode = ref('');
+const couponError = ref('');
+const lastDiscount = ref(0);
+const lastAppliedPromotions = ref<string[]>([]);
 
 // Apertura de caja obligatoria — persiste en localStorage (no en sessionStorage) para
 // sobrevivir cierres accidentales de pestaña/navegador. Se limpia solo al cerrar caja o logout.
@@ -576,6 +581,7 @@ function finalizeSale() {
             method: p.method,
             amount: Number(p.amount),
         })),
+        coupon_code: couponCode.value || undefined,
     };
 
     fetch(route('admin.pos.checkout'), {
@@ -599,6 +605,8 @@ function finalizeSale() {
         })
         .then((data) => {
             lastSaleId.value = data.sale_id;
+            lastDiscount.value = data.discount_total || 0;
+            lastAppliedPromotions.value = data.applied_promotions || [];
             showSuccess.value = true;
             activeTab.value.cart = [];
             activeTab.value.payments = [
@@ -606,14 +614,22 @@ function finalizeSale() {
                 { method: 'card', amount: null },
                 { method: 'transfer', amount: null },
             ];
+            couponCode.value = '';
+            couponError.value = '';
             setTimeout(() => {
                 showSuccess.value = false;
                 lastSaleId.value = null;
+                lastDiscount.value = 0;
+                lastAppliedPromotions.value = [];
             }, 6000);
             focusScanner();
         })
         .catch((err) => {
-            alert(err.message);
+            if (couponCode.value && err.message.includes('Cupón')) {
+                couponError.value = err.message;
+            } else {
+                alert(err.message);
+            }
         })
         .finally(() => {
             checkoutLoading.value = false;
@@ -1311,6 +1327,15 @@ function validateCoin(key: string) {
                     <p class="text-sm text-success/80">
                         Puedes seguir agregando productos para una nueva venta.
                     </p>
+                    <p
+                        v-if="lastDiscount > 0"
+                        class="text-sm text-success/80"
+                    >
+                        Descuento: -${{ (lastDiscount / 100).toLocaleString('es-CL') }}
+                        <span v-if="lastAppliedPromotions.length">
+                            ({{ lastAppliedPromotions.join(', ') }})
+                        </span>
+                    </p>
                 </div>
                 <button
                     @click="
@@ -1729,6 +1754,25 @@ function validateCoin(key: string) {
                                 fmtDec(Math.abs(remaining))
                             }}</span>
                         </template>
+                    </div>
+
+                    <!-- Coupon -->
+                    <div class="mt-3 space-y-1">
+                        <div class="flex items-center gap-2">
+                            <input
+                                v-model="couponCode"
+                                type="text"
+                                placeholder="Código de cupón"
+                                class="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800"
+                                :disabled="checkoutLoading"
+                            />
+                        </div>
+                        <div
+                            v-if="couponError"
+                            class="text-xs font-medium text-red-500"
+                        >
+                            {{ couponError }}
+                        </div>
                     </div>
 
                     <!-- Checkout Button -->

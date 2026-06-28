@@ -19,6 +19,7 @@ interface TodaySale {
     folio: number;
     time: string;
     total: number;
+    discount_total: number;
     items: TodaySaleItem[];
     payments: TodaySalePayment[];
     cash_amount: number;
@@ -415,6 +416,15 @@ function handleClose() {
                                         <span>Subtotal Neto</span>
                                         <span class="font-mono">{{
                                             fmtPesos(subtotalNeto)
+                                        }}</span>
+                                    </div>
+                                    <div
+                                        v-if="selectedSale.discount_total > 0"
+                                        class="flex justify-between text-red-600"
+                                    >
+                                        <span>Descuento</span>
+                                        <span class="font-mono">-{{
+                                            fmtPesos(selectedSale.discount_total)
                                         }}</span>
                                     </div>
                                     <div

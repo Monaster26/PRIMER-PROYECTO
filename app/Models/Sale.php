@@ -18,6 +18,10 @@ class Sale extends Model
         'card_amount',
         'transfer_amount',
         'total',
+        'coupon_id',
+        'discount_total',
+        'promo_discount',
+        'coupon_discount',
     ];
 
     public function cashier(): BelongsTo

@@ -6,6 +6,7 @@ const props = defineProps<{
         id: number;
         folio: number;
         total: number;
+        discount_total: number;
         items: {
             name: string;
             quantity: number;
@@ -125,6 +126,13 @@ onMounted(() => {
             <div class="flex justify-between">
                 <span>Subtotal Neto</span>
                 <span class="font-mono">{{ fmtPesos(subtotalNeto) }}</span>
+            </div>
+            <div
+                v-if="sale.discount_total > 0"
+                class="flex justify-between text-red-600"
+            >
+                <span>Descuento</span>
+                <span class="font-mono">-{{ fmtPesos(sale.discount_total) }}</span>
             </div>
             <div class="flex justify-between">
                 <span>IVA (19%)</span>

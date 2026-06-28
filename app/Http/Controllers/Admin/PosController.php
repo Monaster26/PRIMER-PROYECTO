@@ -10,8 +10,12 @@ use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\SalePayment;
+use App\Models\Coupon;
+use App\Models\Promotion;
+use App\Models\StockMovement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class PosController extends Controller
@@ -76,6 +80,7 @@ class PosController extends Controller
                 'cash_amount'     => $s->cash_amount,
                 'card_amount'     => $s->card_amount,
                 'transfer_amount' => $s->transfer_amount,
+                'discount_total'  => $s->discount_total,
                 'cashier_name'    => $s->cashier?->name,
                 'created_at'      => $s->created_at->toDateTimeString(),
             ]);
@@ -106,6 +111,7 @@ class PosController extends Controller
                 'cash_amount'     => $sale->cash_amount,
                 'card_amount'     => $sale->card_amount,
                 'transfer_amount' => $sale->transfer_amount,
+                'discount_total'  => $sale->discount_total,
                 'cashier_name'    => $sale->cashier?->name,
                 'created_at'      => $sale->created_at->toDateTimeString(),
             ],
@@ -243,6 +249,7 @@ class PosController extends Controller
             'payments' => 'required|array|min:1',
             'payments.*.method' => 'required|in:cash,card,transfer',
             'payments.*.amount' => 'required|numeric|min:0',
+            'coupon_code' => 'nullable|string',
         ]);
 
         $cashAmount = 0;
@@ -258,53 +265,114 @@ class PosController extends Controller
             };
         }
 
-        $totalCents = 0;
+        try {
+            return DB::transaction(function () use ($validated, $cashAmount, $cardAmount, $transferAmount) {
+                $totalCents = 0;
 
-        $sale = Sale::create([
-            'user_id' => auth()->id(),
-            'type' => 'pos',
-            'cash_amount' => $cashAmount,
-            'card_amount' => $cardAmount,
-            'transfer_amount' => $transferAmount,
-            'total' => 0,
-        ]);
+                $sale = Sale::create([
+                    'user_id' => auth()->id(),
+                    'type' => 'pos',
+                    'cash_amount' => $cashAmount,
+                    'card_amount' => $cardAmount,
+                    'transfer_amount' => $transferAmount,
+                    'total' => 0,
+                ]);
 
-        foreach ($validated['items'] as $item) {
-            $product = Product::findOrFail($item['product_id']);
+                foreach ($validated['items'] as $item) {
+                    $product = Product::lockForUpdate()->findOrFail($item['product_id']);
 
-            if ($product->stock < $item['quantity']) {
+                    if ($product->stock < $item['quantity']) {
+                        throw new \Exception("Stock insuficiente para {$product->name} (disponible: {$product->stock})");
+                    }
+
+                    $lineTotal = $product->price * $item['quantity'];
+
+                    SaleItem::create([
+                        'sale_id' => $sale->id,
+                        'product_id' => $product->id,
+                        'quantity' => $item['quantity'],
+                        'price' => $product->price,
+                        'total_line' => $lineTotal,
+                    ]);
+
+                    StockMovement::record(
+                        product: $product,
+                        quantityChange: -$item['quantity'],
+                        type: 'sale',
+                        reference: $sale,
+                        unitCost: $product->cost_price,
+                        notes: "Venta POS #{$sale->id}",
+                    );
+                    $totalCents += $lineTotal;
+                }
+
+                $cartForPromo = collect($validated['items'])->map(fn($item) => [
+                    'product_id' => $item['product_id'],
+                    'variant_id' => null,
+                    'qty'        => $item['quantity'],
+                    'price'      => Product::find($item['product_id'])->price,
+                ])->toArray();
+
+                $promoDiscount = 0;
+                $appliedPromotions = [];
+
+                foreach (Promotion::active()->get() as $promo) {
+                    $result = $promo->evaluateCart($cartForPromo);
+                    if ($result['applies']) {
+                        $promoDiscount += $result['discount'];
+                        $appliedPromotions[] = $promo->name;
+                        if ($promo->is_exclusive) break;
+                    }
+                }
+
+                $couponDiscount = 0;
+                $coupon = null;
+
+                if (!empty($validated['coupon_code'])) {
+                    $coupon = Coupon::active()->where('code', $validated['coupon_code'])->first();
+                    if (!$coupon) {
+                        throw new \Exception('Cupón inválido o expirado.');
+                    }
+                    $result = $coupon->validate($totalCents);
+                    if (!$result['valid']) {
+                        throw new \Exception($result['message']);
+                    }
+                    $couponDiscount = $result['discount'];
+                }
+
+                $totalDiscount = min($promoDiscount + $couponDiscount, $totalCents);
+                $finalTotal = $totalCents - $totalDiscount;
+
+                $sale->update([
+                    'total'           => $finalTotal,
+                    'discount_total'  => $totalDiscount,
+                    'coupon_id'       => $coupon?->id,
+                    'promo_discount'  => $promoDiscount,
+                    'coupon_discount' => $couponDiscount,
+                ]);
+
+                if ($coupon) {
+                    $coupon->increment('used_count');
+                }
+
+                foreach ($validated['payments'] as $payment) {
+                    SalePayment::create([
+                        'sale_id' => $sale->id,
+                        'method' => $payment['method'],
+                        'amount' => $payment['amount'],
+                    ]);
+                }
+
                 return response()->json([
-                    'error' => "Stock insuficiente para {$product->name} (disponible: {$product->stock})",
-                ], 422);
-            }
-
-            $lineTotal = $product->price * $item['quantity'];
-
-            SaleItem::create([
-                'sale_id' => $sale->id,
-                'product_id' => $product->id,
-                'quantity' => $item['quantity'],
-                'price' => $product->price,
-                'total_line' => $lineTotal,
-            ]);
-
-            $product->decrement('stock', $item['quantity']);
-            $totalCents += $lineTotal;
+                    'success'             => "Venta #{$sale->id} registrada correctamente.",
+                    'sale_id'             => $sale->id,
+                    'discount_total'      => $totalDiscount,
+                    'applied_promotions'  => $appliedPromotions,
+                    'coupon_discount'     => $couponDiscount,
+                ]);
+            });
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
         }
-
-        $sale->update(['total' => $totalCents]);
-
-        foreach ($validated['payments'] as $payment) {
-            SalePayment::create([
-                'sale_id' => $sale->id,
-                'method' => $payment['method'],
-                'amount' => $payment['amount'],
-            ]);
-        }
-
-        return response()->json([
-            'success' => "Venta #{$sale->id} registrada correctamente.",
-            'sale_id' => $sale->id,
-        ]);
     }
 }
