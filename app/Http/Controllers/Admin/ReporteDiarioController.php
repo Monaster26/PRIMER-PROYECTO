@@ -66,34 +66,57 @@ class ReporteDiarioController extends Controller
             ->where('type', 'retiro')
             ->sum('amount');
 
-        // Sales by category
+        // Sales by category (with profit & cost)
         $byCategory = (clone $itemsQuery)
             ->selectRaw('
-                categories.name as category_name,
+                categories.name as category,
                 SUM(sale_items.quantity) as qty,
-                SUM(sale_items.total_line) as total_raw
+                SUM(sale_items.total_line) / 100 as total,
+                SUM((CAST(sale_items.price AS SIGNED) - CAST(products.cost_price AS SIGNED)) * sale_items.quantity) / 100 as profit,
+                SUM(products.cost_price * sale_items.quantity) / 100 as cost
             ')
             ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
             ->join('products', 'sale_items.product_id', '=', 'products.id')
             ->join('categories', 'products.category_id', '=', 'categories.id')
             ->groupBy('categories.name')
-            ->orderByDesc('total_raw')
+            ->orderByDesc('total')
             ->get()
             ->map(fn ($item) => [
-                'category' => $item->category_name,
+                'category' => $item->category,
                 'qty'      => (int) $item->qty,
-                'total'    => (int) ($item->total_raw / 100),
+                'total'    => (int) $item->total,
+                'profit'   => (int) $item->profit,
+                'cost'     => (int) $item->cost,
             ]);
 
-        // Net profit (cents → pesos)
-        $netProfitRaw = (clone $itemsQuery)
+        // Gross profit (cents → pesos)
+        $grossProfitRaw = (clone $itemsQuery)
             ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
             ->join('products', 'sale_items.product_id', '=', 'products.id')
             ->selectRaw('COALESCE(SUM((CAST(sale_items.price AS SIGNED) - CAST(products.cost_price AS SIGNED)) * sale_items.quantity),0) as profit')
             ->first()
             ->profit;
 
-        $netProfit = (int) ($netProfitRaw / 100);
+        $grossProfit = (int) ($grossProfitRaw / 100);
+
+        // Promo & coupon discounts (cents → pesos)
+        $totalPromoDiscount = (int) ((clone $salesQuery)->sum('promo_discount') / 100);
+        $totalCouponDiscount = (int) ((clone $salesQuery)->sum('coupon_discount') / 100);
+
+        // Net profit after discounts
+        $netProfit = $grossProfit - $totalPromoDiscount - $totalCouponDiscount;
+
+        // Count sales with discounts
+        $promoCount = (int) (clone $salesQuery)->where('promo_discount', '>', 0)->count();
+        $couponCount = (int) (clone $salesQuery)->where('coupon_discount', '>', 0)->count();
+
+        // CMV — Costo de Mercancía Vendida (cents → pesos)
+        $cmv = (int) ((clone $itemsQuery)
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->join('products', 'sale_items.product_id', '=', 'products.id')
+            ->selectRaw('COALESCE(SUM(products.cost_price * sale_items.quantity),0) as cmv')
+            ->first()
+            ->cmv / 100);
 
         // Users for the filter dropdown
         $users = User::role(['admin', 'cashier'])
@@ -110,6 +133,7 @@ class ReporteDiarioController extends Controller
                 'ingresos'        => $totalIngresos,
                 'withdrawals'     => $totalRetiros,
                 'expected'        => $efectivoCierre + $totalRetiros - $openingBalance,
+                'totalGeneral'    => $openingBalance + $grandTotal + $totalIngresos - $totalRetiros,
             ],
             'digitalSales' => [
                 'card'     => $cardSales,
@@ -117,9 +141,17 @@ class ReporteDiarioController extends Controller
                 'total'    => $cardSales + $transferSales,
             ],
             'byCategory' => $byCategory,
+            'discounts' => [
+                'promo'        => $totalPromoDiscount,
+                'coupon'       => $totalCouponDiscount,
+                'total'        => $totalPromoDiscount + $totalCouponDiscount,
+                'promo_count'  => $promoCount,
+                'coupon_count' => $couponCount,
+            ],
+            'cmv'         => $cmv,
+            'grossProfit' => $grossProfit,
             'summary' => [
                 'grossSales'   => $grandTotal,
-                'totalGeneral' => $openingBalance + $grandTotal + $totalIngresos - $totalRetiros,
                 'netProfit'    => $netProfit,
             ],
         ]);

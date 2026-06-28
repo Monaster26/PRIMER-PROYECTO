@@ -6,6 +6,7 @@ import {
     Banknote,
     CreditCard,
     Percent,
+    Tags,
     TrendingUp,
     Wallet,
 } from 'lucide-vue-next';
@@ -21,16 +22,25 @@ const props = defineProps<{
         ingresos: number;
         withdrawals: number;
         expected: number;
+        totalGeneral: number;
     };
     digitalSales: {
         card: number;
         transfer: number;
         total: number;
     };
-    byCategory: { category: string; qty: number; total: number }[];
+    byCategory: { category: string; qty: number; total: number; profit: number; cost: number }[];
+    discounts: {
+        promo: number;
+        coupon: number;
+        total: number;
+        promo_count: number;
+        coupon_count: number;
+    };
+    cmv: number;
+    grossProfit: number;
     summary: {
         grossSales: number;
-        totalGeneral: number;
         netProfit: number;
     };
 }>();
@@ -184,6 +194,21 @@ const profitMargin = computed(() => {
                             {{ fmt(cashBalance.expected) }}
                         </p>
                     </div>
+                    <div
+                        class="rounded-xl bg-gray-50 p-3 dark:bg-gray-800/50"
+                    >
+                        <p class="text-xs text-gray-400">
+                            = Total General Caja
+                        </p>
+                        <p
+                            class="text-lg font-bold text-gray-800 dark:text-white"
+                        >
+                            {{ fmt(cashBalance.totalGeneral) }}
+                        </p>
+                        <p class="text-xs text-gray-400">
+                            Apertura + Ventas + Ingresos - Retiros
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -259,8 +284,17 @@ const profitMargin = computed(() => {
                                 <th class="pb-2 pr-4 text-right font-medium">
                                     Unidades
                                 </th>
-                                <th class="pb-2 text-right font-medium">
+                                <th class="pb-2 pr-4 text-right font-medium">
                                     Total
+                                </th>
+                                <th class="pb-2 pr-4 text-right font-medium">
+                                    Costo
+                                </th>
+                                <th class="pb-2 pr-4 text-right font-medium">
+                                    Ganancia
+                                </th>
+                                <th class="pb-2 text-right font-medium">
+                                    Margen
                                 </th>
                             </tr>
                         </thead>
@@ -294,9 +328,29 @@ const profitMargin = computed(() => {
                                     {{ item.qty }}
                                 </td>
                                 <td
-                                    class="py-2 text-right font-semibold text-gray-800 dark:text-white"
+                                    class="py-2 pr-4 text-right font-semibold text-gray-800 dark:text-white"
                                 >
                                     {{ fmt(item.total) }}
+                                </td>
+                                <td
+                                    class="py-2 pr-4 text-right text-gray-500"
+                                >
+                                    {{ fmt(item.cost) }}
+                                </td>
+                                <td
+                                    class="py-2 pr-4 text-right font-semibold"
+                                    :class="
+                                        item.profit >= 0
+                                            ? 'text-emerald-600 dark:text-emerald-400'
+                                            : 'text-red-600 dark:text-red-400'
+                                    "
+                                >
+                                    {{ fmt(item.profit) }}
+                                </td>
+                                <td
+                                    class="py-2 text-right text-gray-500"
+                                >
+                                    {{ item.total > 0 ? ((item.profit / item.total) * 100).toFixed(1) : '0.0' }}%
                                 </td>
                             </tr>
                             <tr
@@ -318,7 +372,7 @@ const profitMargin = computed(() => {
                                     }}
                                 </td>
                                 <td
-                                    class="py-2 text-right text-gray-800 dark:text-white"
+                                    class="py-2 pr-4 text-right text-gray-800 dark:text-white"
                                 >
                                     {{
                                         fmt(
@@ -329,13 +383,129 @@ const profitMargin = computed(() => {
                                         )
                                     }}
                                 </td>
+                                <td
+                                    class="py-2 pr-4 text-right text-gray-800 dark:text-white"
+                                >
+                                    {{
+                                        fmt(
+                                            byCategory.reduce(
+                                                (a, c) => a + c.cost,
+                                                0,
+                                            ),
+                                        )
+                                    }}
+                                </td>
+                                <td
+                                    class="py-2 pr-4 text-right"
+                                    :class="
+                                        byCategory.reduce(
+                                            (a, c) => a + c.profit,
+                                            0,
+                                        ) >= 0
+                                            ? 'text-emerald-600 dark:text-emerald-400'
+                                            : 'text-red-600 dark:text-red-400'
+                                    "
+                                >
+                                    {{
+                                        fmt(
+                                            byCategory.reduce(
+                                                (a, c) => a + c.profit,
+                                                0,
+                                            ),
+                                        )
+                                    }}
+                                </td>
+                                <td
+                                    class="py-2 text-right text-gray-800 dark:text-white"
+                                >
+                                    {{
+                                        (() => {
+                                            const t = byCategory.reduce(
+                                                (a, c) => a + c.total,
+                                                0,
+                                            )
+                                            const p = byCategory.reduce(
+                                                (a, c) => a + c.profit,
+                                                0,
+                                            )
+                                            return t > 0
+                                                ? ((p / t) * 100).toFixed(1)
+                                                : '0.0'
+                                        })()
+                                    }}%
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Section 4: Performance Summary -->
+            <!-- Section 4: Discounts Applied -->
+            <div
+                v-if="discounts.total > 0"
+                class="rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-surface-dark"
+            >
+                <h2
+                    class="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-800 dark:text-white"
+                >
+                    <Tags class="h-5 w-5 text-rose-500" />
+                    Descuentos del Día
+                </h2>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div
+                        v-if="discounts.promo > 0"
+                        class="rounded-xl bg-rose-50 p-4 dark:bg-rose-900/20"
+                    >
+                        <p
+                            class="text-xs text-rose-600 dark:text-rose-400"
+                        >
+                            Promociones
+                        </p>
+                        <p
+                            class="text-2xl font-bold text-rose-700 dark:text-rose-300"
+                        >
+                            {{ fmt(discounts.promo) }}
+                        </p>
+                        <p class="text-xs text-rose-500">
+                            {{ discounts.promo_count }}
+                            {{ discounts.promo_count === 1 ? 'venta con descuento' : 'ventas con descuento' }}
+                        </p>
+                    </div>
+                    <div
+                        v-if="discounts.coupon > 0"
+                        class="rounded-xl bg-purple-50 p-4 dark:bg-purple-900/20"
+                    >
+                        <p
+                            class="text-xs text-purple-600 dark:text-purple-400"
+                        >
+                            Cupones
+                        </p>
+                        <p
+                            class="text-2xl font-bold text-purple-700 dark:text-purple-300"
+                        >
+                            {{ fmt(discounts.coupon) }}
+                        </p>
+                        <p class="text-xs text-purple-500">
+                            {{ discounts.coupon_count }}
+                            {{ discounts.coupon_count === 1 ? 'venta con cupón' : 'ventas con cupón' }}
+                        </p>
+                    </div>
+                    <div
+                        class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/50"
+                    >
+                        <p class="text-xs text-gray-400">
+                            Total Descontado
+                        </p>
+                        <p
+                            class="text-2xl font-bold text-gray-800 dark:text-white"
+                        >
+                            {{ fmt(discounts.total) }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 5: Performance Summary -->
             <div
                 class="rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-surface-dark"
             >
@@ -348,7 +518,7 @@ const profitMargin = computed(() => {
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
                     <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/50">
                         <p class="text-xs text-gray-400">
-                            Ventas Totales (Bruto)
+                            Ventas Brutas
                         </p>
                         <p
                             class="text-2xl font-bold text-gray-800 dark:text-white"
@@ -357,18 +527,37 @@ const profitMargin = computed(() => {
                         </p>
                     </div>
                     <div
-                        class="rounded-xl bg-primary-50 p-4 dark:bg-primary-900/20"
+                        class="rounded-xl bg-orange-50 p-4 dark:bg-orange-900/20"
                     >
                         <p
-                            class="text-xs text-primary-600 dark:text-primary-400"
+                            class="text-xs text-orange-600 dark:text-orange-400"
                         >
-                            Total General (Apertura + Ventas + Ingresos -
-                            Retiros)
+                            CMV (Costo Mercancía Vendida)
                         </p>
                         <p
-                            class="text-2xl font-bold text-primary-700 dark:text-primary-300"
+                            class="text-2xl font-bold text-orange-700 dark:text-orange-300"
                         >
-                            {{ fmt(summary.totalGeneral) }}
+                            {{ fmt(cmv) }}
+                        </p>
+                    </div>
+                    <div
+                        class="rounded-xl bg-rose-50 p-4 dark:bg-rose-900/20"
+                    >
+                        <p
+                            class="text-xs text-rose-600 dark:text-rose-400"
+                        >
+                            Descuentos
+                        </p>
+                        <p
+                            class="text-2xl font-bold text-rose-700 dark:text-rose-300"
+                        >
+                            {{ fmt(discounts.total) }}
+                        </p>
+                        <p class="text-xs text-rose-500">
+                            Promos: {{ fmt(discounts.promo) }}
+                        </p>
+                        <p class="text-xs text-rose-500">
+                            Cupones: {{ fmt(discounts.coupon) }}
                         </p>
                     </div>
                     <div
@@ -377,29 +566,27 @@ const profitMargin = computed(() => {
                         <p
                             class="text-xs text-emerald-600 dark:text-emerald-400"
                         >
-                            Ganancia del Día (Neta)
+                            Ganancia Neta
                         </p>
                         <p class="text-2xl font-bold" :class="profitColor">
                             {{ fmt(summary.netProfit) }}
                         </p>
                     </div>
-                    <div
-                        class="rounded-xl bg-amber-50 p-4 dark:bg-amber-900/20"
+                </div>
+                <div
+                    class="mt-4 flex items-center justify-end gap-2 rounded-xl bg-amber-50 px-4 py-3 dark:bg-amber-900/20"
+                >
+                    <Percent class="h-5 w-5 text-amber-500" />
+                    <span
+                        class="text-sm font-semibold text-amber-700 dark:text-amber-300"
                     >
-                        <div class="mb-1 flex items-center gap-1.5">
-                            <Percent class="h-4 w-4 text-amber-500" />
-                            <p
-                                class="text-xs text-amber-600 dark:text-amber-400"
-                            >
-                                Margen de Utilidad
-                            </p>
-                        </div>
-                        <p
-                            class="text-2xl font-bold text-amber-700 dark:text-amber-300"
-                        >
-                            {{ profitMargin.toFixed(1) }}%
-                        </p>
-                    </div>
+                        Margen de Utilidad:
+                    </span>
+                    <span
+                        class="text-xl font-bold text-amber-700 dark:text-amber-300"
+                    >
+                        {{ profitMargin.toFixed(1) }}%
+                    </span>
                 </div>
             </div>
         </div>

@@ -38,21 +38,29 @@ const props = defineProps<{
 const filters = ref({ ...props.filters });
 const showForm = ref(false);
 const editingId = ref<number | null>(null);
-const productSearchResults = ref<any[]>([]);
+
+// — Product search refs per field (min_qty, buy_x_get_y buy, buy_x_get_y reward) —
+const minQtySearchResults = ref<any[]>([]);
+const minQtySkuResults = ref<any[]>([]);
+const minQtyProductName = ref('');
+
+const buyProductSearchResults = ref<any[]>([]);
+const buyProductSkuResults = ref<any[]>([]);
+const buyProductName = ref('');
+
+const getProductSearchResults = ref<any[]>([]);
+const getProductSkuResults = ref<any[]>([]);
+
 const bundleProductSearchResults = ref<any[]>([]);
 const searchProductId = ref<number | null>(null);
-const searchProductName = ref('');
 const bundleSearchQuery = ref('');
 const bundleSearchLoading = ref(false);
 const discountMode = ref<'pct' | 'fixed'>('pct');
 
-function clearProductSearch() {
-    setTimeout(() => { productSearchResults.value = []; }, 200);
-}
-
-function clearBundleSearch() {
-    setTimeout(() => { bundleProductSearchResults.value = []; }, 300);
-}
+function clearMinQtySearch() { minQtySearchResults.value = []; minQtySkuResults.value = []; }
+function clearBuyProductSearch() { buyProductSearchResults.value = []; buyProductSkuResults.value = []; }
+function clearGetProductSearch() { getProductSearchResults.value = []; getProductSkuResults.value = []; }
+function clearBundleSearch() { bundleProductSearchResults.value = []; }
 
 function handleSearchInput() {
     clearTimeout(searchTimer);
@@ -107,8 +115,12 @@ function resetForm() {
     form.type = 'min_qty_discount';
     discountMode.value = 'pct';
     searchProductId.value = null;
-    searchProductName.value = '';
-    productSearchResults.value = [];
+    minQtyProductName.value = '';
+    minQtySearchResults.value = [];
+    minQtySkuResults.value = [];
+    buyProductName.value = '';
+    buyProductSearchResults.value = [];
+    buyProductSkuResults.value = [];
     bundleSearchQuery.value = '';
     bundleProductSearchResults.value = [];
 }
@@ -141,9 +153,9 @@ function openEdit(promotion: PromotionItem) {
         window.axios.get(route('admin.codigos.search-sku'), {
             params: { query: promotion.conditions.product_id },
         }).then(r => {
-            if (r.data) searchProductName.value = r.data.name;
+            if (r.data) minQtyProductName.value = r.data.name;
         }).catch(() => {
-            searchProductName.value = `#${promotion.conditions.product_id}`;
+            minQtyProductName.value = `#${promotion.conditions.product_id}`;
         });
     }
     if (promotion.type === 'buy_x_get_y' && promotion.conditions.buy_product_id) {
@@ -151,9 +163,18 @@ function openEdit(promotion: PromotionItem) {
         window.axios.get(route('admin.codigos.search-sku'), {
             params: { query: promotion.conditions.buy_product_id },
         }).then(r => {
-            if (r.data) searchProductName.value = r.data.name;
+            if (r.data) buyProductName.value = r.data.name;
         }).catch(() => {
-            searchProductName.value = `#${promotion.conditions.buy_product_id}`;
+            buyProductName.value = `#${promotion.conditions.buy_product_id}`;
+        });
+    }
+    if (promotion.type === 'buy_x_get_y' && promotion.rewards?.get_product_id) {
+        window.axios.get(route('admin.codigos.search-sku'), {
+            params: { query: promotion.rewards.get_product_id },
+        }).then(r => {
+            if (r.data) form.rewards.get_product_name = r.data.name;
+        }).catch(() => {
+            form.rewards.get_product_name = `#${promotion.rewards.get_product_id}`;
         });
     }
     showForm.value = true;
@@ -192,7 +213,6 @@ function submitForm() {
         } else {
             payload.conditions.special_price = form.conditions.special_price;
         }
-        console.warn('[PromoDebug] min_qty_discount payload.conditions:', JSON.stringify(payload.conditions));
     } else if (form.type === 'buy_x_get_y') {
         payload.conditions = {
             buy_product_id: form.conditions.buy_product_id,
@@ -278,21 +298,102 @@ const discountText = (p: PromotionItem) => {
 };
 
 let searchTimer: ReturnType<typeof setTimeout>;
-function onSearchProduct(query: string) {
-    clearTimeout(searchTimer);
-    if (!query.trim()) { productSearchResults.value = []; return; }
-    searchTimer = setTimeout(async () => {
+
+// ── min_qty product search ──
+let minQtySearchTimer: ReturnType<typeof setTimeout>;
+function onSearchMinQtyName(query: string) {
+    clearTimeout(minQtySearchTimer);
+    if (!query.trim()) { minQtySearchResults.value = []; return; }
+    minQtySearchTimer = setTimeout(async () => {
         try {
             const res = await window.axios.get(route('admin.codigos.search-name'), { params: { query } });
-            productSearchResults.value = res.data;
-        } catch { productSearchResults.value = []; }
+            minQtySearchResults.value = res.data;
+        } catch { minQtySearchResults.value = []; }
     }, 300);
 }
 
-function selectProduct(product: any) {
-    searchProductId.value = product.id;
-    searchProductName.value = product.name;
-    productSearchResults.value = [];
+let minQtySkuTimer: ReturnType<typeof setTimeout>;
+function onSearchMinQtySku(query: string) {
+    clearTimeout(minQtySkuTimer);
+    if (!query.trim()) { minQtySkuResults.value = []; return; }
+    minQtySkuTimer = setTimeout(async () => {
+        try {
+            const res = await window.axios.get(route('admin.codigos.search-sku'), { params: { query } });
+            minQtySkuResults.value = res.data ? [res.data] : [];
+        } catch { minQtySkuResults.value = []; }
+    }, 300);
+}
+
+function selectMinQtyProduct(product: any) {
+    minQtyProductName.value = product.name;
+    form.conditions.product_id = product.id;
+    minQtySearchResults.value = [];
+    minQtySkuResults.value = [];
+}
+
+// ── buy_x_get_y "buy product" search ──
+let buyProductSearchTimer: ReturnType<typeof setTimeout>;
+function onSearchBuyName(query: string) {
+    clearTimeout(buyProductSearchTimer);
+    if (!query.trim()) { buyProductSearchResults.value = []; return; }
+    buyProductSearchTimer = setTimeout(async () => {
+        try {
+            const res = await window.axios.get(route('admin.codigos.search-name'), { params: { query } });
+            buyProductSearchResults.value = res.data;
+        } catch { buyProductSearchResults.value = []; }
+    }, 300);
+}
+
+let buyProductSkuTimer: ReturnType<typeof setTimeout>;
+function onSearchBuySku(query: string) {
+    clearTimeout(buyProductSkuTimer);
+    if (!query.trim()) { buyProductSkuResults.value = []; return; }
+    buyProductSkuTimer = setTimeout(async () => {
+        try {
+            const res = await window.axios.get(route('admin.codigos.search-sku'), { params: { query } });
+            buyProductSkuResults.value = res.data ? [res.data] : [];
+        } catch { buyProductSkuResults.value = []; }
+    }, 300);
+}
+
+function selectBuyProduct(product: any) {
+    buyProductName.value = product.name;
+    form.conditions.buy_product_id = product.id;
+    form.conditions.buy_qty = form.conditions.buy_qty || 2;
+    buyProductSearchResults.value = [];
+    buyProductSkuResults.value = [];
+}
+
+// ── buy_x_get_y "get product" search ──
+let getProductSearchTimer: ReturnType<typeof setTimeout>;
+function onSearchGetName(query: string) {
+    clearTimeout(getProductSearchTimer);
+    if (!query.trim()) { getProductSearchResults.value = []; return; }
+    getProductSearchTimer = setTimeout(async () => {
+        try {
+            const res = await window.axios.get(route('admin.codigos.search-name'), { params: { query } });
+            getProductSearchResults.value = res.data;
+        } catch { getProductSearchResults.value = []; }
+    }, 300);
+}
+
+let getProductSkuTimer: ReturnType<typeof setTimeout>;
+function onSearchGetSku(query: string) {
+    clearTimeout(getProductSkuTimer);
+    if (!query.trim()) { getProductSkuResults.value = []; return; }
+    getProductSkuTimer = setTimeout(async () => {
+        try {
+            const res = await window.axios.get(route('admin.codigos.search-sku'), { params: { query } });
+            getProductSkuResults.value = res.data ? [res.data] : [];
+        } catch { getProductSkuResults.value = []; }
+    }, 300);
+}
+
+function selectGetProduct(product: any) {
+    form.rewards.get_product_id = product.id;
+    form.rewards.get_product_name = product.name;
+    getProductSearchResults.value = [];
+    getProductSkuResults.value = [];
 }
 
 function selectBundleProduct(product: any) {
@@ -485,19 +586,42 @@ const bundleProductNames = computed(() => {
                         <div class="rounded-2xl bg-gray-50 p-4 dark:bg-gray-800/50">
                             <h3 class="mb-3 text-xs font-bold uppercase tracking-wider text-content-muted">Condiciones — Dto. por Cantidad</h3>
                             <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                <div class="relative">
+                                <div class="relative md:col-span-2">
                                     <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted">Producto</label>
-                                    <input :value="searchProductName" @input="onSearchProduct(($event.target as HTMLInputElement).value)" @blur="clearProductSearch"
-                                        type="text" placeholder="Buscar producto..."
-                                        class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
-                                    <input v-model="form.conditions.product_id" type="hidden" />
-                                    <div v-if="productSearchResults.length" class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
-                                        <button v-for="pr in productSearchResults" :key="pr.id" type="button"
-                                            @click="selectProduct(pr); form.conditions.product_id = pr.id"
-                                            class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
-                                            <span class="flex-1 font-medium text-content-primary dark:text-white">{{ pr.name }}</span>
-                                            <span class="text-xs text-content-muted">Stock: {{ pr.stock }}</span>
-                                        </button>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="relative">
+                                            <input :value="minQtyProductName"
+                                                @input="onSearchMinQtyName(($event.target as HTMLInputElement).value)"
+                                                @blur="clearMinQtySearch"
+                                                type="text" placeholder="Buscar por nombre..."
+                                                class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                                            <input v-model="form.conditions.product_id" type="hidden" />
+                                            <div v-if="minQtySearchResults.length"
+                                                class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                                                <button v-for="pr in minQtySearchResults" :key="pr.id" type="button"
+                                                    @mousedown.prevent="selectMinQtyProduct(pr)"
+                                                    class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
+                                                    <span class="flex-1 font-medium text-content-primary dark:text-white">{{ pr.name }}</span>
+                                                    <span class="text-xs text-content-muted">Stock: {{ pr.stock }}</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="relative">
+                                            <input
+                                                @input="onSearchMinQtySku(($event.target as HTMLInputElement).value)"
+                                                @blur="clearMinQtySearch"
+                                                type="text" placeholder="SKU / Código de barras..."
+                                                class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                                            <div v-if="minQtySkuResults.length"
+                                                class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                                                <button v-for="pr in minQtySkuResults" :key="pr.id" type="button"
+                                                    @mousedown.prevent="selectMinQtyProduct(pr)"
+                                                    class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
+                                                    <span class="flex-1 font-medium text-content-primary dark:text-white">{{ pr.name }}</span>
+                                                    <span class="text-xs text-content-muted">Stock: {{ pr.stock }}</span>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div>
@@ -541,17 +665,40 @@ const bundleProductNames = computed(() => {
                             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div class="relative">
                                     <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted">Producto a comprar</label>
-                                    <input :value="searchProductName" @input="onSearchProduct(($event.target as HTMLInputElement).value)" @blur="clearProductSearch"
-                                        type="text" placeholder="Buscar producto..."
-                                        class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
-                                    <input v-model="form.conditions.buy_product_id" type="hidden" />
-                                    <div v-if="productSearchResults.length" class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
-                                        <button v-for="pr in productSearchResults" :key="pr.id" type="button"
-                                            @click="selectProduct(pr); form.conditions.buy_product_id = pr.id; form.conditions.buy_qty = form.conditions.buy_qty || 2;"
-                                            class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
-                                            <span class="flex-1 font-medium text-content-primary dark:text-white">{{ pr.name }}</span>
-                                            <span class="text-xs text-content-muted">Stock: {{ pr.stock }}</span>
-                                        </button>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="relative">
+                                            <input :value="buyProductName"
+                                                @input="onSearchBuyName(($event.target as HTMLInputElement).value)"
+                                                @blur="clearBuyProductSearch"
+                                                type="text" placeholder="Buscar por nombre..."
+                                                class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                                            <input v-model="form.conditions.buy_product_id" type="hidden" />
+                                            <div v-if="buyProductSearchResults.length"
+                                                class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                                                <button v-for="pr in buyProductSearchResults" :key="pr.id" type="button"
+                                                    @mousedown.prevent="selectBuyProduct(pr)"
+                                                    class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
+                                                    <span class="flex-1 font-medium text-content-primary dark:text-white">{{ pr.name }}</span>
+                                                    <span class="text-xs text-content-muted">Stock: {{ pr.stock }}</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="relative">
+                                            <input
+                                                @input="onSearchBuySku(($event.target as HTMLInputElement).value)"
+                                                @blur="clearBuyProductSearch"
+                                                type="text" placeholder="SKU / Código de barras..."
+                                                class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                                            <div v-if="buyProductSkuResults.length"
+                                                class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                                                <button v-for="pr in buyProductSkuResults" :key="pr.id" type="button"
+                                                    @mousedown.prevent="selectBuyProduct(pr)"
+                                                    class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
+                                                    <span class="flex-1 font-medium text-content-primary dark:text-white">{{ pr.name }}</span>
+                                                    <span class="text-xs text-content-muted">Stock: {{ pr.stock }}</span>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div>
@@ -564,19 +711,40 @@ const bundleProductNames = computed(() => {
                             <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                                 <div class="relative">
                                     <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-content-muted">Producto a regalar</label>
-                                    <input :value="form.rewards?.get_product_name || ''"
-                                        @input="onSearchProduct(($event.target as HTMLInputElement).value); form.rewards.get_product_name = ($event.target as HTMLInputElement).value"
-                                        @blur="clearProductSearch"
-                                        type="text" placeholder="Buscar producto..."
-                                        class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
-                                    <input v-model="form.rewards.get_product_id" type="hidden" />
-                                    <div v-if="productSearchResults.length" class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
-                                        <button v-for="pr in productSearchResults" :key="pr.id" type="button"
-                                            @click="form.rewards.get_product_id = pr.id; form.rewards.get_product_name = pr.name; productSearchResults = []"
-                                            class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
-                                            <span class="flex-1 font-medium text-content-primary dark:text-white">{{ pr.name }}</span>
-                                            <span class="text-xs text-content-muted">Stock: {{ pr.stock }}</span>
-                                        </button>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="relative">
+                                            <input :value="form.rewards?.get_product_name || ''"
+                                                @input="onSearchGetName(($event.target as HTMLInputElement).value); form.rewards.get_product_name = ($event.target as HTMLInputElement).value"
+                                                @blur="clearGetProductSearch"
+                                                type="text" placeholder="Buscar por nombre..."
+                                                class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                                            <input v-model="form.rewards.get_product_id" type="hidden" />
+                                            <div v-if="getProductSearchResults.length"
+                                                class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                                                <button v-for="pr in getProductSearchResults" :key="pr.id" type="button"
+                                                    @mousedown.prevent="selectGetProduct(pr)"
+                                                    class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
+                                                    <span class="flex-1 font-medium text-content-primary dark:text-white">{{ pr.name }}</span>
+                                                    <span class="text-xs text-content-muted">Stock: {{ pr.stock }}</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="relative">
+                                            <input
+                                                @input="onSearchGetSku(($event.target as HTMLInputElement).value)"
+                                                @blur="clearGetProductSearch"
+                                                type="text" placeholder="SKU / Código de barras..."
+                                                class="w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                                            <div v-if="getProductSkuResults.length"
+                                                class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                                                <button v-for="pr in getProductSkuResults" :key="pr.id" type="button"
+                                                    @mousedown.prevent="selectGetProduct(pr)"
+                                                    class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
+                                                    <span class="flex-1 font-medium text-content-primary dark:text-white">{{ pr.name }}</span>
+                                                    <span class="text-xs text-content-muted">Stock: {{ pr.stock }}</span>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div>
@@ -608,7 +776,7 @@ const bundleProductNames = computed(() => {
                                     <div v-if="bundleProductSearchResults.length"
                                         class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
                                         <button v-for="pr in bundleProductSearchResults" :key="pr.id" type="button"
-                                            @click="selectBundleProduct(pr)"
+                                            @mousedown.prevent="selectBundleProduct(pr)"
                                             class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
                                             <span class="flex-1 font-medium text-content-primary dark:text-white">{{ pr.name }}</span>
                                             <span class="text-xs text-content-muted">Stock: {{ pr.stock }}</span>
