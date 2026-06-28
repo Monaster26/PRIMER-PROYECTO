@@ -22,6 +22,8 @@ class Sale extends Model
         'discount_total',
         'promo_discount',
         'coupon_discount',
+        'net_total',
+        'tax_total',
     ];
 
     public function cashier(): BelongsTo

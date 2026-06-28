@@ -62,6 +62,10 @@ class Promotion extends Model
         $cond = $this->conditions; // {buy_product_id, buy_qty}
         $rwd  = $this->rewards;   // {get_product_id, get_qty, discount_pct}
 
+        if (empty($cond['buy_product_id']) || empty($cond['buy_qty']) || empty($rwd['get_product_id'])) {
+            return ['applies' => false, 'rewards' => [], 'discount' => 0];
+        }
+
         $buyQty = collect($cartItems)
             ->where('product_id', $cond['buy_product_id'])
             ->sum('qty');
@@ -93,6 +97,10 @@ class Promotion extends Model
     {
         $cond = $this->conditions; // {product_id, min_qty, discount_pct}
 
+        if (empty($cond['product_id']) || empty($cond['min_qty']) || empty($cond['discount_pct'])) {
+            return ['applies' => false, 'rewards' => [], 'discount' => 0];
+        }
+
         $qty = collect($cartItems)
             ->where('product_id', $cond['product_id'])
             ->sum('qty');
@@ -112,9 +120,14 @@ class Promotion extends Model
 
     private function evaluateBundleDiscount(array $cartItems): array
     {
-        $cond     = $this->conditions; // {product_ids: [1,2,3], discount_pct: 15}
+        $cond    = $this->conditions; // {product_ids: [1,2,3], discount_pct: 15}
+
+        if (empty($cond['product_ids']) || empty($cond['discount_pct'])) {
+            return ['applies' => false, 'rewards' => [], 'discount' => 0];
+        }
+
         $cartIds  = collect($cartItems)->pluck('product_id')->toArray();
-        $required = $cond['product_ids'] ?? [];
+        $required = $cond['product_ids'];
 
         foreach ($required as $pid) {
             if (!in_array($pid, $cartIds)) {

@@ -80,6 +80,8 @@ class PosController extends Controller
                 'cash_amount'     => $s->cash_amount,
                 'card_amount'     => $s->card_amount,
                 'transfer_amount' => $s->transfer_amount,
+                'net_total'       => $s->net_total,
+                'tax_total'       => $s->tax_total,
                 'discount_total'  => $s->discount_total,
                 'cashier_name'    => $s->cashier?->name,
                 'created_at'      => $s->created_at->toDateTimeString(),
@@ -111,6 +113,8 @@ class PosController extends Controller
                 'cash_amount'     => $sale->cash_amount,
                 'card_amount'     => $sale->card_amount,
                 'transfer_amount' => $sale->transfer_amount,
+                'net_total'       => $sale->net_total,
+                'tax_total'       => $sale->tax_total,
                 'discount_total'  => $sale->discount_total,
                 'cashier_name'    => $sale->cashier?->name,
                 'created_at'      => $sale->created_at->toDateTimeString(),
@@ -268,6 +272,8 @@ class PosController extends Controller
         try {
             return DB::transaction(function () use ($validated, $cashAmount, $cardAmount, $transferAmount) {
                 $totalCents = 0;
+                $netTotal = 0;
+                $taxTotal = 0;
 
                 $sale = Sale::create([
                     'user_id' => auth()->id(),
@@ -285,13 +291,20 @@ class PosController extends Controller
                         throw new \Exception("Stock insuficiente para {$product->name} (disponible: {$product->stock})");
                     }
 
-                    $lineTotal = $product->price * $item['quantity'];
+                    $taxRate = $product->tax_rate > 0 ? $product->tax_rate : 19;
+                    $unitPrice = $product->price;
+                    $netPrice = $taxRate > 0 ? (int) round($unitPrice / (1 + $taxRate / 100)) : $unitPrice;
+                    $taxAmount = $unitPrice - $netPrice;
+                    $lineTotal = $unitPrice * $item['quantity'];
 
                     SaleItem::create([
-                        'sale_id' => $sale->id,
+                        'sale_id'    => $sale->id,
                         'product_id' => $product->id,
-                        'quantity' => $item['quantity'],
-                        'price' => $product->price,
+                        'quantity'   => $item['quantity'],
+                        'price'      => $unitPrice,
+                        'net_price'  => $netPrice,
+                        'tax_amount' => $taxAmount,
+                        'tax_rate'   => $taxRate,
                         'total_line' => $lineTotal,
                     ]);
 
@@ -304,6 +317,8 @@ class PosController extends Controller
                         notes: "Venta POS #{$sale->id}",
                     );
                     $totalCents += $lineTotal;
+                    $netTotal += $netPrice * $item['quantity'];
+                    $taxTotal += $taxAmount * $item['quantity'];
                 }
 
                 $cartForPromo = collect($validated['items'])->map(fn($item) => [
@@ -345,6 +360,8 @@ class PosController extends Controller
 
                 $sale->update([
                     'total'           => $finalTotal,
+                    'net_total'       => $netTotal,
+                    'tax_total'       => $taxTotal,
                     'discount_total'  => $totalDiscount,
                     'coupon_id'       => $coupon?->id,
                     'promo_discount'  => $promoDiscount,

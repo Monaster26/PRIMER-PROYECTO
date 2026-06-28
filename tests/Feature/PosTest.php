@@ -60,6 +60,16 @@ class PosTest extends TestCase
 
         $this->assertSame(7, $product->fresh()->stock);
 
+        $sale = Sale::find($response['sale_id']);
+        $this->assertNotNull($sale);
+        $this->assertSame(252102, $sale->net_total);
+        $this->assertSame(47898, $sale->tax_total);
+        $this->assertSame(300000, $sale->total);
+        $saleItem = $sale->items()->first();
+        $this->assertSame(84034, $saleItem->net_price);
+        $this->assertSame(15966, $saleItem->tax_amount);
+        $this->assertSame(19, $saleItem->tax_rate);
+
         $this->assertDatabaseHas('stock_movements', [
             'product_id' => $product->id,
             'type' => 'sale',

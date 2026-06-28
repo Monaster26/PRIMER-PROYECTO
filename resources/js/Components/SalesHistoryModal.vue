@@ -19,6 +19,8 @@ interface TodaySale {
     folio: number;
     time: string;
     total: number;
+    net_total: number;
+    tax_total: number;
     discount_total: number;
     items: TodaySaleItem[];
     payments: TodaySalePayment[];
@@ -102,15 +104,9 @@ function paymentBadgeClass(sale: TodaySale): string {
     return 'bg-amber-100 text-amber-800';
 }
 
-const subtotalNeto = computed(() => {
-    if (!selectedSale.value) return 0;
-    return Math.round(selectedSale.value.total / 1.19);
-});
+const subtotalNeto = computed(() => selectedSale.value?.net_total ?? 0);
 
-const iva = computed(() => {
-    if (!selectedSale.value) return 0;
-    return selectedSale.value.total - subtotalNeto.value;
-});
+const iva = computed(() => selectedSale.value?.tax_total ?? 0);
 
 function fmtPesos(cents: number): string {
     return '$' + (cents / 100).toLocaleString('es-CL');

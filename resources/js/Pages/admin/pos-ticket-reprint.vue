@@ -6,6 +6,8 @@ const props = defineProps<{
         id: number;
         folio: number;
         total: number;
+        net_total: number;
+        tax_total: number;
         discount_total: number;
         items: {
             name: string;
@@ -22,15 +24,11 @@ const props = defineProps<{
     };
 }>();
 
-const subtotalNeto = Math.round(props.sale.total / 1.19);
-const iva = props.sale.total - subtotalNeto;
+const subtotalNeto = props.sale.net_total;
+const iva = props.sale.tax_total;
 
 function fmtPesos(cents: number): string {
     return '$' + (cents / 100).toLocaleString('es-CL');
-}
-
-function fmtPesosNeto(cents: number): string {
-    return '$' + Math.round(cents / 1.19).toLocaleString('es-CL');
 }
 
 function paymentLabel(sale: typeof props.sale): string {

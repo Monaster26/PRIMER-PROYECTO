@@ -15,12 +15,18 @@ class SaleItem extends Model
         'product_id',
         'quantity',
         'price',
+        'net_price',
+        'tax_amount',
+        'tax_rate',
         'total_line',
     ];
 
     protected $casts = [
-        'quantity' => 'integer',
-        'price' => 'integer',
+        'quantity'   => 'integer',
+        'price'      => 'integer',
+        'net_price'  => 'integer',
+        'tax_amount' => 'integer',
+        'tax_rate'   => 'integer',
         'total_line' => 'integer',
     ];
 
