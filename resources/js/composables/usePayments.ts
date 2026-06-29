@@ -12,7 +12,7 @@ export function usePayments(activeTab: ComputedRef<TabState>) {
     const lastAppliedPromotions = ref<string[]>([]);
     const showSuccess = ref(false);
 
-    const promoDiscount = ref(0);           // centavos, desde backend
+    const promoDiscount = ref(0); // centavos, desde backend
     const previewPromosLoading = ref(false);
     let promoDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -20,12 +20,18 @@ export function usePayments(activeTab: ComputedRef<TabState>) {
         () => activeTab.value.cart,
         (cart) => {
             if (promoDebounceTimer) clearTimeout(promoDebounceTimer);
-            if (cart.length === 0) { promoDiscount.value = 0; return; }
+            if (cart.length === 0) {
+                promoDiscount.value = 0;
+                return;
+            }
             previewPromosLoading.value = true;
             promoDebounceTimer = setTimeout(async () => {
                 try {
                     const route = (window as any).route;
-                    const token = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
+                    const token =
+                        document.querySelector<HTMLMetaElement>(
+                            'meta[name="csrf-token"]',
+                        )?.content || '';
                     const res = await fetch(route('admin.pos.preview-promos'), {
                         method: 'POST',
                         headers: {
@@ -33,7 +39,7 @@ export function usePayments(activeTab: ComputedRef<TabState>) {
                             'X-CSRF-TOKEN': token,
                         },
                         body: JSON.stringify({
-                            items: cart.map(i => ({
+                            items: cart.map((i) => ({
                                 product_id: i.product.id,
                                 quantity: i.quantity,
                             })),

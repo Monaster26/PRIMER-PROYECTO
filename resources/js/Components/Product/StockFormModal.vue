@@ -89,7 +89,13 @@ function cascadeNota() {
                                 <input
                                     ref="skuSearchRef"
                                     :value="props.skuQuery"
-                                    @input="emit('update:skuQuery', ($event.target as HTMLInputElement).value)"
+                                    @input="
+                                        emit(
+                                            'update:skuQuery',
+                                            ($event.target as HTMLInputElement)
+                                                .value,
+                                        )
+                                    "
                                     type="text"
                                     placeholder="Código / SKU..."
                                     @keydown.enter.prevent="emit('skuEnter')"
@@ -107,7 +113,13 @@ function cascadeNota() {
                                 <input
                                     ref="nameSearchRef"
                                     :value="props.nameQuery"
-                                    @input="emit('update:nameQuery', ($event.target as HTMLInputElement).value)"
+                                    @input="
+                                        emit(
+                                            'update:nameQuery',
+                                            ($event.target as HTMLInputElement)
+                                                .value,
+                                        )
+                                    "
                                     type="text"
                                     placeholder="Buscar por nombre..."
                                     class="w-full rounded-2xl border-0 bg-transparent py-3 pl-11 pr-4 text-sm text-content-primary placeholder:text-content-muted focus:ring-2 focus:ring-primary-500 dark:text-white"
@@ -131,7 +143,9 @@ function cascadeNota() {
                                     v-for="p in props.nameResults"
                                     :key="p.id"
                                     type="button"
-                                    @mousedown.prevent="emit('selectSearchProduct', p)"
+                                    @mousedown.prevent="
+                                        emit('selectSearchProduct', p)
+                                    "
                                     class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
                                 >
                                     <span
@@ -150,8 +164,7 @@ function cascadeNota() {
                         <div
                             class="rounded-xl bg-gray-50 p-3 dark:bg-gray-800/50"
                         >
-                            <span
-                                class="text-xs font-bold text-content-muted"
+                            <span class="text-xs font-bold text-content-muted"
                                 >Producto:</span
                             >
                             <span
@@ -159,8 +172,7 @@ function cascadeNota() {
                                 >{{ props.stockProduct.name }}</span
                             >
                             <span class="mx-3 text-content-muted">|</span>
-                            <span
-                                class="text-xs font-bold text-content-muted"
+                            <span class="text-xs font-bold text-content-muted"
                                 >Stock Actual:</span
                             >
                             <span
@@ -168,8 +180,7 @@ function cascadeNota() {
                                 >{{ props.stockProduct.stock ?? '—' }} un.</span
                             >
                             <span class="mx-3 text-content-muted">|</span>
-                            <span
-                                class="text-xs font-bold text-content-muted"
+                            <span class="text-xs font-bold text-content-muted"
                                 >Último Costo:</span
                             >
                             <span
@@ -178,7 +189,8 @@ function cascadeNota() {
                                     props.stockProduct.cost_price != null
                                         ? '$ ' +
                                           (
-                                              props.stockProduct.cost_price / 100
+                                              props.stockProduct.cost_price /
+                                              100
                                           ).toLocaleString('es-CO')
                                         : '—'
                                 }}</span
@@ -213,7 +225,9 @@ function cascadeNota() {
                                     >
                                     <input
                                         ref="costoInputRef"
-                                        v-model.number="props.stockForm.unit_cost"
+                                        v-model.number="
+                                            props.stockForm.unit_cost
+                                        "
                                         type="number"
                                         min="0"
                                         step="0.01"
@@ -273,7 +287,9 @@ function cascadeNota() {
                         >
                             <button
                                 type="button"
-                                @click="emit('update:keepOpen', !props.keepOpen)"
+                                @click="
+                                    emit('update:keepOpen', !props.keepOpen)
+                                "
                                 class="relative h-5 w-10 flex-shrink-0 rounded-full transition-colors"
                                 :class="
                                     props.keepOpen

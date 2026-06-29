@@ -104,12 +104,20 @@ function paymentBadgeClass(sale: TodaySale): string {
     return 'bg-amber-100 text-amber-800';
 }
 
-const subtotalNeto = computed(() => Math.round(selectedSale.value?.net_total ?? 0));
+const subtotalNeto = computed(() =>
+    Math.round(selectedSale.value?.net_total ?? 0),
+);
 
 const iva = computed(() => Math.round(selectedSale.value?.tax_total ?? 0));
 
 function fmtPesos(cents: number): string {
-    return '$' + Math.round(cents / 100).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return (
+        '$' +
+        Math.round(cents / 100).toLocaleString('es-CL', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        })
+    );
 }
 
 function formatDate(iso: string): string {
@@ -419,9 +427,13 @@ function handleClose() {
                                         class="flex justify-between text-red-600"
                                     >
                                         <span>Descuento</span>
-                                        <span class="font-mono">-{{
-                                            fmtPesos(selectedSale.discount_total)
-                                        }}</span>
+                                        <span class="font-mono"
+                                            >-{{
+                                                fmtPesos(
+                                                    selectedSale.discount_total,
+                                                )
+                                            }}</span
+                                        >
                                     </div>
                                     <div
                                         class="flex justify-between text-content-secondary"

@@ -223,7 +223,10 @@ function onProductArrowUpEdit() {
 
 function onProductEnterEdit(index: number) {
     const list = filteredByNameEdit(index);
-    if (focusedProductIndexEdit.value >= 0 && list[focusedProductIndexEdit.value]) {
+    if (
+        focusedProductIndexEdit.value >= 0 &&
+        list[focusedProductIndexEdit.value]
+    ) {
         selectByNameEdit(index, list[focusedProductIndexEdit.value]);
     } else {
         handleProductoEnterEdit(index);
@@ -232,7 +235,8 @@ function onProductEnterEdit(index: number) {
 
 function handleNameBlurEdit(index: number) {
     setTimeout(() => {
-        if (showNameDropdownEdit.value === index) showNameDropdownEdit.value = null;
+        if (showNameDropdownEdit.value === index)
+            showNameDropdownEdit.value = null;
     }, 200);
 }
 
@@ -450,7 +454,8 @@ const detailTotal = computed(() => {
     if (!detailOrder.value) return 0;
     if (detailOrder.value.status === 'received') {
         return detailOrder.value.items.reduce(
-            (sum: number, item: any) => sum + (item.received_quantity ?? 0) * item.unit_cost,
+            (sum: number, item: any) =>
+                sum + (item.received_quantity ?? 0) * item.unit_cost,
             0,
         );
     }
@@ -870,7 +875,10 @@ const computedTotal = () => {
                                     </button>
                                     <button
                                         type="button"
-                                        @click="isQuickAddEdit = false; showQuickAdd = true"
+                                        @click="
+                                            isQuickAddEdit = false;
+                                            showQuickAdd = true;
+                                        "
                                         class="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-amber-400 px-4 py-2 text-xs font-semibold text-amber-600 transition-all hover:bg-amber-50 active:scale-95 md:text-sm"
                                     >
                                         <Plus class="h-4 w-4" /> Producto rápido
@@ -979,21 +987,21 @@ const computedTotal = () => {
                                                         "
                                                         class="text-xs font-bold text-amber-600 hover:text-amber-700"
                                                     >
-                                                         + Crear "{{
-                                                             item.name
-                                                         }}" (elige categoría)
-                                                     </button>
-                                                 </div>
-                                             </div>
-                                             <span
-                                                 v-if="item.is_new"
-                                                 class="mt-1 inline-block rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700"
-                                             >
-                                                 Nuevo
-                                             </span>
-                                         </div>
+                                                        + Crear "{{
+                                                            item.name
+                                                        }}" (elige categoría)
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <span
+                                                v-if="item.is_new"
+                                                class="mt-1 inline-block rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700"
+                                            >
+                                                Nuevo
+                                            </span>
+                                        </div>
 
-                                         <!-- Costo -->
+                                        <!-- Costo -->
                                         <div
                                             class="flex w-full flex-col md:w-32 md:flex-shrink-0 md:items-center"
                                         >
@@ -1203,9 +1211,7 @@ const computedTotal = () => {
                                 :disabled="!quickForm.category_id"
                                 class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                             >
-                                <option value="">
-                                    Sin subcategoría
-                                </option>
+                                <option value="">Sin subcategoría</option>
                                 <option
                                     v-for="sub in filteredSubcategories"
                                     :key="sub.id"
@@ -1381,8 +1387,14 @@ const computedTotal = () => {
                                         item.product?.name ||
                                         'Producto #' + item.product_id
                                     }}
-                                    <template v-if="detailOrder.status === 'received' && item.received_quantity != null">
-                                        Pedido: {{ item.quantity }} · Recibido: {{ item.received_quantity }}
+                                    <template
+                                        v-if="
+                                            detailOrder.status === 'received' &&
+                                            item.received_quantity != null
+                                        "
+                                    >
+                                        Pedido: {{ item.quantity }} · Recibido:
+                                        {{ item.received_quantity }}
                                     </template>
                                     <template v-else>
                                         × {{ item.quantity }}
@@ -1390,11 +1402,16 @@ const computedTotal = () => {
                                 </span>
                                 <span
                                     class="font-medium text-content-primary dark:text-white"
-                                >{{
-                                    detailOrder.status === 'received' && item.received_quantity != null
-                                        ? fmt(item.received_quantity * item.unit_cost)
-                                        : fmt(item.subtotal)
-                                }}</span>
+                                    >{{
+                                        detailOrder.status === 'received' &&
+                                        item.received_quantity != null
+                                            ? fmt(
+                                                  item.received_quantity *
+                                                      item.unit_cost,
+                                              )
+                                            : fmt(item.subtotal)
+                                    }}</span
+                                >
                             </div>
                         </div>
                         <hr class="border-gray-100 dark:border-gray-800" />
@@ -1667,7 +1684,10 @@ const computedTotal = () => {
                                     </button>
                                     <button
                                         type="button"
-                                        @click="isQuickAddEdit = true; showQuickAdd = true"
+                                        @click="
+                                            isQuickAddEdit = true;
+                                            showQuickAdd = true;
+                                        "
                                         class="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-amber-400 px-4 py-2 text-xs font-semibold text-amber-600 transition-all hover:bg-amber-50 active:scale-95 md:text-sm"
                                     >
                                         <Plus class="h-4 w-4" /> Producto rápido
@@ -1702,7 +1722,9 @@ const computedTotal = () => {
                                             <input
                                                 v-model="item.name"
                                                 @keydown.down.prevent="
-                                                    onProductArrowDownEdit(index)
+                                                    onProductArrowDownEdit(
+                                                        index,
+                                                    )
                                                 "
                                                 @keydown.up.prevent="
                                                     onProductArrowUpEdit()
@@ -1712,10 +1734,14 @@ const computedTotal = () => {
                                                 "
                                                 @input="onNameInputEdit(index)"
                                                 @focus="
-                                                    showNameDropdownEdit = index;
-                                                    focusedProductIndexEdit = -1;
+                                                    showNameDropdownEdit =
+                                                        index;
+                                                    focusedProductIndexEdit =
+                                                        -1;
                                                 "
-                                                @blur="handleNameBlurEdit(index)"
+                                                @blur="
+                                                    handleNameBlurEdit(index)
+                                                "
                                                 type="text"
                                                 placeholder="Buscar producto..."
                                                 class="w-full rounded-xl border-gray-200 text-sm dark:border-gray-700 dark:bg-surface-dark dark:text-white"
@@ -1732,7 +1758,9 @@ const computedTotal = () => {
                                                 <button
                                                     v-for="(
                                                         p, pIndex
-                                                    ) in filteredByNameEdit(index)"
+                                                    ) in filteredByNameEdit(
+                                                        index,
+                                                    )"
                                                     :key="p.id"
                                                     @mousedown.prevent="
                                                         selectByNameEdit(

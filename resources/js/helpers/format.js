@@ -32,6 +32,14 @@ export function formatTime(dateStr) {
     });
 }
 
+export function formatCLP(value) {
+    if (value == null || isNaN(value)) return '$0';
+    return (
+        '$' +
+        Number(value).toLocaleString('es-CL', { minimumFractionDigits: 0 })
+    );
+}
+
 export function formatDateTime(dateStr) {
     if (!dateStr) return '—';
     return `${formatDate(dateStr)} ${formatTime(dateStr)}`;

@@ -28,7 +28,13 @@ const subtotalNeto = Math.round(props.sale.net_total);
 const iva = Math.round(props.sale.tax_total);
 
 function fmtPesos(cents: number): string {
-    return '$' + Math.round(cents / 100).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return (
+        '$' +
+        Math.round(cents / 100).toLocaleString('es-CL', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        })
+    );
 }
 
 function paymentLabel(sale: typeof props.sale): string {
@@ -130,7 +136,9 @@ onMounted(() => {
                 class="flex justify-between text-red-600"
             >
                 <span>Descuento</span>
-                <span class="font-mono">-{{ fmtPesos(sale.discount_total) }}</span>
+                <span class="font-mono"
+                    >-{{ fmtPesos(sale.discount_total) }}</span
+                >
             </div>
             <div class="flex justify-between">
                 <span>IVA (19%)</span>

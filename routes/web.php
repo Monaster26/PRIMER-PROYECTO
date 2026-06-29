@@ -48,22 +48,14 @@ Route::get('/categoria/{categorySlug}', [StorefrontController::class, 'byCategor
 
 /*
 |--------------------------------------------------------------------------
-| Dashboard
+| Dashboard (redirige al panel admin según rol)
 |--------------------------------------------------------------------------
 */
-use App\Models\Category;
-use App\Models\Product;
-
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard', [
-        'totalCategories' => Category::whereNull('parent_id')->count(),
-        'totalProducts'   => Product::count(),
-        'featuredCategories' => Category::with('children')
-            ->roots()
-            ->ordered()
-            ->limit(6)
-            ->get(['id', 'name', 'slug']),
-    ]);
+    if (auth()->user()?->hasRole('admin')) {
+        return redirect()->route('admin.dashboard');
+    }
+    return redirect()->route('admin.pos');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 /*

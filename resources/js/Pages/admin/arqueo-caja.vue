@@ -510,41 +510,66 @@ const auditTotalCierre = computed(() => {
                             <td
                                 class="px-4 py-2 text-right text-xs font-medium"
                             >
-                                {{ s.total_red_compra != null ? fmtCLP(s.total_red_compra) : '—' }}
+                                {{
+                                    s.total_red_compra != null
+                                        ? fmtCLP(s.total_red_compra)
+                                        : '—'
+                                }}
                             </td>
                             <td
                                 class="px-4 py-2 text-right text-xs font-medium"
                             >
-                                {{ s.total_transferencia != null ? fmtCLP(s.total_transferencia) : '—' }}
+                                {{
+                                    s.total_transferencia != null
+                                        ? fmtCLP(s.total_transferencia)
+                                        : '—'
+                                }}
                             </td>
                             <td
                                 class="px-4 py-2 text-right text-xs font-bold text-primary-500"
                             >
-                                {{ s.total_caja_esperado != null ? fmtCLP(s.total_caja_esperado) : '—' }}
+                                {{
+                                    s.total_caja_esperado != null
+                                        ? fmtCLP(s.total_caja_esperado)
+                                        : '—'
+                                }}
                             </td>
                             <td class="px-4 py-2 text-center">
                                 <span
-                                    v-if="s.diferencia_efectivo != null && s.closed_at"
+                                    v-if="
+                                        s.diferencia_efectivo != null &&
+                                        s.closed_at
+                                    "
                                     :class="
                                         s.diferencia_efectivo < 0
                                             ? 'bg-danger/10 text-danger'
                                             : s.diferencia_efectivo > 0
-                                                ? 'bg-success/10 text-success'
-                                                : 'bg-gray-100 text-gray-500'
+                                              ? 'bg-success/10 text-success'
+                                              : 'bg-gray-100 text-gray-500'
                                     "
                                     class="inline-block rounded-lg px-2 py-0.5 text-[9px] font-bold uppercase"
                                 >
                                     <template v-if="s.diferencia_efectivo < 0">
-                                        Faltó {{ fmtCLP(Math.abs(s.diferencia_efectivo)) }}
+                                        Faltó
+                                        {{
+                                            fmtCLP(
+                                                Math.abs(s.diferencia_efectivo),
+                                            )
+                                        }}
                                     </template>
-                                    <template v-else-if="s.diferencia_efectivo > 0">
-                                        Sobró {{ fmtCLP(s.diferencia_efectivo) }}
+                                    <template
+                                        v-else-if="s.diferencia_efectivo > 0"
+                                    >
+                                        Sobró
+                                        {{ fmtCLP(s.diferencia_efectivo) }}
                                     </template>
-                                    <template v-else>
-                                        Cuadrado
-                                    </template>
+                                    <template v-else> Cuadrado </template>
                                 </span>
-                                <span v-else class="text-[9px] text-content-muted">—</span>
+                                <span
+                                    v-else
+                                    class="text-[9px] text-content-muted"
+                                    >—</span
+                                >
                             </td>
                             <td class="px-4 py-2 text-center">
                                 <span
@@ -1729,7 +1754,12 @@ const auditTotalCierre = computed(() => {
                                         <div
                                             class="font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400"
                                         >
-                                            +{{ fmtCLP(auditSession?.total_ingresos || 0) }}
+                                            +{{
+                                                fmtCLP(
+                                                    auditSession?.total_ingresos ||
+                                                        0,
+                                                )
+                                            }}
                                         </div>
                                     </div>
                                     <div
@@ -1743,7 +1773,12 @@ const auditTotalCierre = computed(() => {
                                         <div
                                             class="font-mono text-sm font-bold text-orange-600 dark:text-orange-400"
                                         >
-                                            -{{ fmtCLP(auditSession?.total_retiros || 0) }}
+                                            -{{
+                                                fmtCLP(
+                                                    auditSession?.total_retiros ||
+                                                        0,
+                                                )
+                                            }}
                                         </div>
                                     </div>
                                 </div>

@@ -14,8 +14,11 @@ return new class extends Migration
             $table->string('invoice_number')->nullable();
             $table->date('issue_date');
             $table->date('due_date');
-            $table->decimal('total_amount', 12, 2);
-            $table->enum('status', ['pending', 'partially_paid', 'paid'])->default('pending');
+            $table->date('delivery_date')->nullable();
+            $table->unsignedBigInteger('total_amount'); // centavos
+            $table->text('notes')->nullable();
+            $table->string('status')->default('pending'); // pending, received, paid
+            $table->timestamp('received_at')->nullable();
             $table->timestamps();
         });
     }

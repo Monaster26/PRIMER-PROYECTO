@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronRight, Package, Plus, Search, Tag, Upload } from 'lucide-vue-next';
+import {
+    ChevronDown,
+    ChevronRight,
+    Package,
+    Plus,
+    Search,
+    Tag,
+    Upload,
+} from 'lucide-vue-next';
 import { onMounted, onUnmounted, ref } from 'vue';
 
 interface CategoryTreeItem {
@@ -35,7 +43,10 @@ const dropdownRef = ref<HTMLElement | null>(null);
 function handleClickOutside(e: MouseEvent) {
     if (!props.dropdownOpen) return;
     const target = e.target as Node;
-    if (dropdownRef.value && !dropdownRef.value.parentElement?.contains(target)) {
+    if (
+        dropdownRef.value &&
+        !dropdownRef.value.parentElement?.contains(target)
+    ) {
         emit('update:dropdownOpen', false);
     }
 }
@@ -49,9 +60,7 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
         class="flex flex-wrap items-center gap-3 border-b border-gray-100 px-6 py-4 dark:border-gray-800"
     >
         <Package class="h-5 w-5 text-primary-500" />
-        <h2
-            class="flex-1 font-bold text-content-primary dark:text-white"
-        >
+        <h2 class="flex-1 font-bold text-content-primary dark:text-white">
             Productos Registrados
         </h2>
         <div class="relative w-64">
@@ -60,7 +69,13 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
             />
             <input
                 :value="props.search"
-                @input="emit('update:search', ($event.target as HTMLInputElement).value); emit('search')"
+                @input="
+                    emit(
+                        'update:search',
+                        ($event.target as HTMLInputElement).value,
+                    );
+                    emit('search');
+                "
                 type="text"
                 placeholder="Buscar producto..."
                 class="w-full rounded-xl border border-gray-200 bg-gray-50 py-2 pl-10 pr-4 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
@@ -71,7 +86,9 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
                 @click="emit('update:dropdownOpen', !props.dropdownOpen)"
                 class="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
             >
-                <span class="min-w-[100px] text-left">{{ props.selectedLabel }}</span>
+                <span class="min-w-[100px] text-left">{{
+                    props.selectedLabel
+                }}</span>
                 <ChevronDown
                     class="h-4 w-4 transition-transform duration-200"
                     :class="{ 'rotate-180': props.dropdownOpen }"
@@ -80,12 +97,14 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
             <div
                 v-if="props.dropdownOpen"
                 ref="dropdownRef"
-                class="absolute right-0 z-50 mt-1 w-72 rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900 max-h-96 overflow-y-auto"
+                class="absolute right-0 z-50 mt-1 max-h-96 w-72 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
             >
                 <button
                     @click="emit('selectCategory', null)"
                     class="flex w-full items-center px-4 py-2.5 text-left text-sm transition hover:bg-gray-50 dark:hover:bg-gray-800"
-                    :class="{ 'font-bold text-primary-500': !props.filterCategory }"
+                    :class="{
+                        'font-bold text-primary-500': !props.filterCategory,
+                    }"
                 >
                     Todas las categorías
                 </button>
@@ -94,7 +113,10 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
                         <button
                             @click.stop="emit('toggleRoot', cat.id)"
                             class="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium transition hover:bg-gray-50 dark:hover:bg-gray-800"
-                            :class="{ 'text-primary-500': props.filterCategory === String(cat.id) }"
+                            :class="{
+                                'text-primary-500':
+                                    props.filterCategory === String(cat.id),
+                            }"
                         >
                             <ChevronRight
                                 v-if="props.expandedRoot !== cat.id"
@@ -108,20 +130,24 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
                         </button>
                         <div
                             v-if="props.expandedRoot === cat.id"
-                            class="border-l border-gray-100 dark:border-gray-700 ml-4"
+                            class="ml-4 border-l border-gray-100 dark:border-gray-700"
                         >
                             <button
                                 v-for="child in cat.children"
                                 :key="child.id"
                                 @click="emit('selectCategory', child.id)"
-                                class="flex w-full items-center gap-2 pl-4 pr-4 py-2 text-left text-sm transition hover:bg-gray-50 dark:hover:bg-gray-800"
-                                :class="{ 'font-bold text-primary-500': props.filterCategory === String(child.id) }"
+                                class="flex w-full items-center gap-2 py-2 pl-4 pr-4 text-left text-sm transition hover:bg-gray-50 dark:hover:bg-gray-800"
+                                :class="{
+                                    'font-bold text-primary-500':
+                                        props.filterCategory ===
+                                        String(child.id),
+                                }"
                             >
                                 {{ child.name }}
                             </button>
                             <button
                                 @click="emit('selectCategory', cat.id)"
-                                class="flex w-full items-center gap-2 pl-4 pr-4 py-2 text-left text-sm font-semibold text-primary-500 transition hover:bg-primary-50 dark:hover:bg-gray-800"
+                                class="flex w-full items-center gap-2 py-2 pl-4 pr-4 text-left text-sm font-semibold text-primary-500 transition hover:bg-primary-50 dark:hover:bg-gray-800"
                             >
                                 Ver todo en {{ cat.name }}
                             </button>

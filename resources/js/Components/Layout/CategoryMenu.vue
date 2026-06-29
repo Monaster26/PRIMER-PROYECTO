@@ -153,7 +153,9 @@ function getIcon(name: string) {
                         Departamentos
                     </p>
                     <button
-                        v-for="parent in categoryStore.categories.filter(c => !c.parent_id)"
+                        v-for="parent in categoryStore.categories.filter(
+                            (c) => !c.parent_id,
+                        )"
                         :key="parent.id"
                         @mouseenter="activeCategory = parent"
                         class="group flex w-full items-center gap-3 px-4 py-2.5 text-sm font-semibold transition-all duration-150"
@@ -163,7 +165,9 @@ function getIcon(name: string) {
                                 : 'text-content-primary hover:bg-primary-50 hover:text-primary-500 dark:text-content-inverted dark:hover:bg-gray-800'
                         "
                     >
-                        <span class="text-base leading-none">{{ parent.icon }}</span>
+                        <span class="text-base leading-none">{{
+                            parent.icon
+                        }}</span>
                         <span class="truncate">{{ parent.name }}</span>
                         <ChevronRight class="ml-auto h-4 w-4 opacity-60" />
                     </button>
@@ -173,7 +177,9 @@ function getIcon(name: string) {
                 <div class="max-h-[480px] flex-1 overflow-y-auto p-6">
                     <template v-if="activeCategory">
                         <div class="mb-5 flex items-center gap-3">
-                            <span class="text-3xl">{{ activeCategory.icon }}</span>
+                            <span class="text-3xl">{{
+                                activeCategory.icon
+                            }}</span>
                             <h3
                                 class="font-display text-lg font-extrabold text-primary-500"
                             >
@@ -280,7 +286,9 @@ function getIcon(name: string) {
                 <!-- Accordion List -->
                 <div class="flex-1 overflow-y-auto">
                     <div
-                        v-for="cat in categoryStore.categories.filter(c => !c.parent_id)"
+                        v-for="cat in categoryStore.categories.filter(
+                            (c) => !c.parent_id,
+                        )"
                         :key="cat.id"
                         class="border-b border-gray-100 dark:border-gray-800"
                     >

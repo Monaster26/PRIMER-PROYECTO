@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
 import {
-    ShoppingCart,
-    Banknote,
-    CreditCard,
-    Landmark,
-    Check,
-    Clock,
-    Menu,
     ArrowDownLeft,
     ArrowUpRight,
+    Banknote,
+    Check,
+    Clock,
+    CreditCard,
     FileText,
+    Landmark,
+    Menu,
+    ShoppingCart,
 } from 'lucide-vue-next';
+import { onMounted, onUnmounted, ref } from 'vue';
 
 const props = defineProps<{
     total: number;
@@ -62,9 +62,24 @@ const methodLabels: Record<string, string> = {
 };
 
 const paymentMethods = [
-    { key: 'cash' as const, label: 'Efectivo', icon: Banknote, color: 'text-emerald-500' },
-    { key: 'card' as const, label: 'Tarjeta', icon: CreditCard, color: 'text-amber-500' },
-    { key: 'transfer' as const, label: 'Transferencia', icon: Landmark, color: 'text-content-muted' },
+    {
+        key: 'cash' as const,
+        label: 'Efectivo',
+        icon: Banknote,
+        color: 'text-emerald-500',
+    },
+    {
+        key: 'card' as const,
+        label: 'Tarjeta',
+        icon: CreditCard,
+        color: 'text-amber-500',
+    },
+    {
+        key: 'transfer' as const,
+        label: 'Transferencia',
+        icon: Landmark,
+        color: 'text-content-muted',
+    },
 ];
 
 const menuOptions = [
@@ -86,10 +101,13 @@ onMounted(() => document.addEventListener('click', handleClickOutside));
 onUnmounted(() => document.removeEventListener('click', handleClickOutside));
 
 function formatCLP(value: number): string {
-    return '$' + Math.round(value).toLocaleString('es-CL', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    });
+    return (
+        '$' +
+        Math.round(value).toLocaleString('es-CL', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        })
+    );
 }
 
 function amountValue(key: string): number | null {
@@ -151,7 +169,10 @@ function emitAmount(key: string, val: string) {
                     <button
                         v-for="opt in menuOptions"
                         :key="opt.label"
-                        @click="emit('menu-action', opt.label); showMenu = false"
+                        @click="
+                            emit('menu-action', opt.label);
+                            showMenu = false;
+                        "
                         class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-content-primary transition-colors hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800"
                     >
                         <component
@@ -182,7 +203,10 @@ function emitAmount(key: string, val: string) {
             >
                 {{ formatCLP(total) }}
             </p>
-            <div v-if="previewPromosLoading" class="mt-1 text-xs text-content-muted italic">
+            <div
+                v-if="previewPromosLoading"
+                class="mt-1 text-xs italic text-content-muted"
+            >
                 Calculando descuentos...
             </div>
             <div v-else-if="promoDiscount > 0" class="mt-1 space-y-0.5">
@@ -223,10 +247,16 @@ function emitAmount(key: string, val: string) {
                 <div class="relative flex-[2]">
                     <span
                         class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-content-muted"
-                    >$</span>
+                        >$</span
+                    >
                     <input
                         :value="amountValue(pm.key) ?? ''"
-                        @input="emitAmount(pm.key, ($event.target as HTMLInputElement).value)"
+                        @input="
+                            emitAmount(
+                                pm.key,
+                                ($event.target as HTMLInputElement).value,
+                            )
+                        "
                         @focus="emit('payment-focus', pm.key)"
                         type="number"
                         min="0"
@@ -239,18 +269,25 @@ function emitAmount(key: string, val: string) {
 
         <div
             v-if="balanceState"
-            :class="['mt-4 rounded-lg p-3 text-center transition-all', balanceClasses]"
+            :class="[
+                'mt-4 rounded-lg p-3 text-center transition-all',
+                balanceClasses,
+            ]"
         >
             <template v-if="balanceState === 'exacto'">
                 <span>✓ Pago Exacto</span>
             </template>
             <template v-else-if="balanceState === 'faltante'">
                 <span class="font-medium">Faltan</span>
-                <span class="ml-1 text-xl font-bold">{{ formatCLP(remaining) }}</span>
+                <span class="ml-1 text-xl font-bold">{{
+                    formatCLP(remaining)
+                }}</span>
             </template>
             <template v-else>
                 <span>Vuelto:</span>
-                <span class="ml-1 text-xl font-bold">{{ formatCLP(Math.abs(remaining)) }}</span>
+                <span class="ml-1 text-xl font-bold">{{
+                    formatCLP(Math.abs(remaining))
+                }}</span>
             </template>
         </div>
 
@@ -258,7 +295,12 @@ function emitAmount(key: string, val: string) {
             <div class="flex items-center gap-2">
                 <input
                     :value="couponCode"
-                    @input="emit('update:couponCode', ($event.target as HTMLInputElement).value)"
+                    @input="
+                        emit(
+                            'update:couponCode',
+                            ($event.target as HTMLInputElement).value,
+                        )
+                    "
                     type="text"
                     placeholder="Código de cupón"
                     class="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800"

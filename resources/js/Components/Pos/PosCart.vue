@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ShoppingCart, Minus, Plus, Trash2, X } from 'lucide-vue-next';
 import type { CartItem } from '@/Stores/posTabsStore';
-import { ref, nextTick, watch } from 'vue';
+import { Minus, Plus, ShoppingCart, Trash2, X } from 'lucide-vue-next';
+import { nextTick, ref, watch } from 'vue';
 
 const props = defineProps<{
     cart: CartItem[];
@@ -34,7 +34,13 @@ function cancelClear() {
 }
 
 function formatCLP(cents: number): string {
-    return '$' + Math.round(cents / 100).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return (
+        '$' +
+        Math.round(cents / 100).toLocaleString('es-CL', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        })
+    );
 }
 </script>
 
@@ -43,9 +49,7 @@ function formatCLP(cents: number): string {
         class="flex items-center gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-800"
     >
         <ShoppingCart class="h-5 w-5 text-primary-500" />
-        <h2
-            class="flex-1 font-bold text-content-primary dark:text-white"
-        >
+        <h2 class="flex-1 font-bold text-content-primary dark:text-white">
             Venta Actual
         </h2>
         <span
@@ -71,21 +75,25 @@ function formatCLP(cents: number): string {
                 <tr>
                     <th class="w-24 px-4 py-2.5 font-bold">Código</th>
                     <th class="px-4 py-2.5 font-bold">Descripción</th>
-                    <th class="w-36 px-4 py-2.5 text-center font-bold">Cantidad</th>
-                    <th class="w-28 px-4 py-2.5 text-right font-bold">P.Unitario</th>
+                    <th class="w-36 px-4 py-2.5 text-center font-bold">
+                        Cantidad
+                    </th>
+                    <th class="w-28 px-4 py-2.5 text-right font-bold">
+                        P.Unitario
+                    </th>
                     <th class="w-28 px-4 py-2.5 text-right font-bold">Total</th>
                     <th class="w-12 px-4 py-2.5"></th>
                 </tr>
             </thead>
-            <tbody
-                class="divide-y divide-gray-100 dark:divide-gray-800"
-            >
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                 <tr v-if="!cart.length">
                     <td
                         colspan="6"
                         class="px-4 py-16 text-center text-sm text-content-muted dark:text-gray-500"
                     >
-                        <ShoppingCart class="mx-auto mb-3 h-10 w-10 opacity-30" />
+                        <ShoppingCart
+                            class="mx-auto mb-3 h-10 w-10 opacity-30"
+                        />
                         Escanea o busca productos para comenzar la venta
                     </td>
                 </tr>
@@ -98,16 +106,16 @@ function formatCLP(cents: number): string {
                             scannedProductIndex === i,
                     }"
                 >
-                    <td
-                        class="px-4 py-3 font-mono text-xs text-content-muted"
-                    >
+                    <td class="px-4 py-3 font-mono text-xs text-content-muted">
                         {{ item.product.sku }}
                     </td>
                     <td
                         class="max-w-[240px] truncate px-4 py-3 text-sm font-medium text-content-primary dark:text-white"
                     >
                         {{ item.product.name }}
-                        <span class="ml-1 text-[10px] text-content-muted">/{{ item.product.unit }}</span>
+                        <span class="ml-1 text-[10px] text-content-muted"
+                            >/{{ item.product.unit }}</span
+                        >
                     </td>
                     <td class="px-4 py-3">
                         <div class="flex items-center justify-center gap-1">
@@ -115,7 +123,9 @@ function formatCLP(cents: number): string {
                                 @click="emit('decrement-qty', i)"
                                 class="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
                             >
-                                <Minus class="h-3.5 w-3.5 text-content-secondary" />
+                                <Minus
+                                    class="h-3.5 w-3.5 text-content-secondary"
+                                />
                             </button>
                             <input
                                 :value="item.quantity"

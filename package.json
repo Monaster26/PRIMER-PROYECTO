@@ -33,9 +33,11 @@
         "vue-tsc": "^2.2.12"
     },
     "dependencies": {
+        "chart.js": "^4.5.1",
         "laravel-echo": "^2.3.7",
         "lucide-vue-next": "^1.0.0",
         "pinia": "^3.0.4",
-        "pusher-js": "^8.5.0"
+        "pusher-js": "^8.5.0",
+        "vue-chartjs": "^5.3.3"
     }
 }

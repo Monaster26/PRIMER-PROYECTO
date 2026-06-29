@@ -28,19 +28,22 @@ const emit = defineEmits<{
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const barcodeInputRef = ref<HTMLInputElement | null>(null);
 
-const selectedCategory = computed(() =>
-    props.categoryTree.find((c) => c.slug === props.form.category_slug) ?? null,
+const selectedCategory = computed(
+    () =>
+        props.categoryTree.find((c) => c.slug === props.form.category_slug) ??
+        null,
 );
 
-const subcategories = computed(() =>
-    selectedCategory.value?.children ?? [],
-);
+const subcategories = computed(() => selectedCategory.value?.children ?? []);
 
-watch(() => props.showForm, (val) => {
-    if (val) {
-        nextTick(() => barcodeInputRef.value?.focus());
-    }
-});
+watch(
+    () => props.showForm,
+    (val) => {
+        if (val) {
+            nextTick(() => barcodeInputRef.value?.focus());
+        }
+    },
+);
 
 function handleImageSelect(e: Event) {
     const target = e.target as HTMLInputElement;
@@ -74,7 +77,9 @@ function handleRemoveImage() {
                         class="font-display text-lg font-bold text-content-primary dark:text-white"
                     >
                         {{
-                            props.editingId ? 'Editar Producto' : 'Nuevo Producto'
+                            props.editingId
+                                ? 'Editar Producto'
+                                : 'Nuevo Producto'
                         }}
                     </h3>
                     <button
@@ -87,9 +92,7 @@ function handleRemoveImage() {
 
                 <form @submit.prevent="emit('submit')">
                     <div class="flex flex-col gap-6 lg:flex-row">
-                        <div
-                            class="w-full space-y-5 lg:w-64 lg:flex-shrink-0"
-                        >
+                        <div class="w-full space-y-5 lg:w-64 lg:flex-shrink-0">
                             <div>
                                 <label
                                     class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
@@ -143,7 +146,8 @@ function handleRemoveImage() {
                                 <button
                                     type="button"
                                     @click="
-                                        props.form.is_active = !props.form.is_active
+                                        props.form.is_active =
+                                            !props.form.is_active
                                     "
                                     class="flex w-full items-center gap-3 rounded-2xl border border-gray-200 px-4 py-2.5 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                                 >
@@ -185,7 +189,8 @@ function handleRemoveImage() {
                                 <button
                                     type="button"
                                     @click="
-                                        props.form.is_featured = !props.form.is_featured
+                                        props.form.is_featured =
+                                            !props.form.is_featured
                                     "
                                     class="flex w-full items-center gap-3 rounded-2xl border border-gray-200 px-4 py-2.5 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                                 >

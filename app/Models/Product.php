@@ -182,7 +182,7 @@ class Product extends Model
         if ($this->has_variants) {
             return $this->variants()->sum('stock');
         }
-        return $this->stock;
+        return (int) $this->stock;
     }
 
     public function getIsLowStockAttribute(): bool
@@ -193,7 +193,7 @@ class Product extends Model
     /** Accessors/mutators mapping current_stock to stock */
     public function getCurrentStockAttribute(): int
     {
-        return $this->stock;
+        return (int) $this->stock;
     }
 
     public function setCurrentStockAttribute($value): void

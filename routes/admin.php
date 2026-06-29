@@ -109,10 +109,14 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::resource('gastos', ExpenseController::class)
             ->except(['show', 'create', 'edit']);
 
-        // Facturas pendientes
+        // Facturas pendientes (cuentas por pagar)
         Route::resource('facturas-pendientes', PendingInvoiceController::class)
             ->parameters(['facturas-pendientes' => 'pendingInvoice'])
             ->except(['show', 'create', 'edit']);
+        Route::post('facturas-pendientes/{pendingInvoice}/receive', [PendingInvoiceController::class, 'receive'])
+            ->name('facturas-pendientes.receive');
+        Route::patch('facturas-pendientes/{pendingInvoice}/mark-paid', [PendingInvoiceController::class, 'markPaid'])
+            ->name('facturas-pendientes.mark-paid');
 
         // Pérdidas
         Route::resource('perdida', LossController::class)

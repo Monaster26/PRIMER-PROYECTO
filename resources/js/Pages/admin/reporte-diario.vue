@@ -29,7 +29,13 @@ const props = defineProps<{
         transfer: number;
         total: number;
     };
-    byCategory: { category: string; qty: number; total: number; profit: number; cost: number }[];
+    byCategory: {
+        category: string;
+        qty: number;
+        total: number;
+        profit: number;
+        cost: number;
+    }[];
     discounts: {
         promo: number;
         coupon: number;
@@ -194,9 +200,7 @@ const profitMargin = computed(() => {
                             {{ fmt(cashBalance.expected) }}
                         </p>
                     </div>
-                    <div
-                        class="rounded-xl bg-gray-50 p-3 dark:bg-gray-800/50"
-                    >
+                    <div class="rounded-xl bg-gray-50 p-3 dark:bg-gray-800/50">
                         <p class="text-xs text-gray-400">
                             = Total General Caja
                         </p>
@@ -332,9 +336,7 @@ const profitMargin = computed(() => {
                                 >
                                     {{ fmt(item.total) }}
                                 </td>
-                                <td
-                                    class="py-2 pr-4 text-right text-gray-500"
-                                >
+                                <td class="py-2 pr-4 text-right text-gray-500">
                                     {{ fmt(item.cost) }}
                                 </td>
                                 <td
@@ -347,10 +349,15 @@ const profitMargin = computed(() => {
                                 >
                                     {{ fmt(item.profit) }}
                                 </td>
-                                <td
-                                    class="py-2 text-right text-gray-500"
-                                >
-                                    {{ item.total > 0 ? ((item.profit / item.total) * 100).toFixed(1) : '0.0' }}%
+                                <td class="py-2 text-right text-gray-500">
+                                    {{
+                                        item.total > 0
+                                            ? (
+                                                  (item.profit / item.total) *
+                                                  100
+                                              ).toFixed(1)
+                                            : '0.0'
+                                    }}%
                                 </td>
                             </tr>
                             <tr
@@ -423,14 +430,14 @@ const profitMargin = computed(() => {
                                             const t = byCategory.reduce(
                                                 (a, c) => a + c.total,
                                                 0,
-                                            )
+                                            );
                                             const p = byCategory.reduce(
                                                 (a, c) => a + c.profit,
                                                 0,
-                                            )
+                                            );
                                             return t > 0
                                                 ? ((p / t) * 100).toFixed(1)
-                                                : '0.0'
+                                                : '0.0';
                                         })()
                                     }}%
                                 </td>
@@ -456,9 +463,7 @@ const profitMargin = computed(() => {
                         v-if="discounts.promo > 0"
                         class="rounded-xl bg-rose-50 p-4 dark:bg-rose-900/20"
                     >
-                        <p
-                            class="text-xs text-rose-600 dark:text-rose-400"
-                        >
+                        <p class="text-xs text-rose-600 dark:text-rose-400">
                             Promociones
                         </p>
                         <p
@@ -468,16 +473,18 @@ const profitMargin = computed(() => {
                         </p>
                         <p class="text-xs text-rose-500">
                             {{ discounts.promo_count }}
-                            {{ discounts.promo_count === 1 ? 'venta con descuento' : 'ventas con descuento' }}
+                            {{
+                                discounts.promo_count === 1
+                                    ? 'venta con descuento'
+                                    : 'ventas con descuento'
+                            }}
                         </p>
                     </div>
                     <div
                         v-if="discounts.coupon > 0"
                         class="rounded-xl bg-purple-50 p-4 dark:bg-purple-900/20"
                     >
-                        <p
-                            class="text-xs text-purple-600 dark:text-purple-400"
-                        >
+                        <p class="text-xs text-purple-600 dark:text-purple-400">
                             Cupones
                         </p>
                         <p
@@ -487,15 +494,15 @@ const profitMargin = computed(() => {
                         </p>
                         <p class="text-xs text-purple-500">
                             {{ discounts.coupon_count }}
-                            {{ discounts.coupon_count === 1 ? 'venta con cupón' : 'ventas con cupón' }}
+                            {{
+                                discounts.coupon_count === 1
+                                    ? 'venta con cupón'
+                                    : 'ventas con cupón'
+                            }}
                         </p>
                     </div>
-                    <div
-                        class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/50"
-                    >
-                        <p class="text-xs text-gray-400">
-                            Total Descontado
-                        </p>
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/50">
+                        <p class="text-xs text-gray-400">Total Descontado</p>
                         <p
                             class="text-2xl font-bold text-gray-800 dark:text-white"
                         >
@@ -517,9 +524,7 @@ const profitMargin = computed(() => {
                 </h2>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
                     <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/50">
-                        <p class="text-xs text-gray-400">
-                            Ventas Brutas
-                        </p>
+                        <p class="text-xs text-gray-400">Ventas Brutas</p>
                         <p
                             class="text-2xl font-bold text-gray-800 dark:text-white"
                         >
@@ -529,9 +534,7 @@ const profitMargin = computed(() => {
                     <div
                         class="rounded-xl bg-orange-50 p-4 dark:bg-orange-900/20"
                     >
-                        <p
-                            class="text-xs text-orange-600 dark:text-orange-400"
-                        >
+                        <p class="text-xs text-orange-600 dark:text-orange-400">
                             CMV (Costo Mercancía Vendida)
                         </p>
                         <p
@@ -540,12 +543,8 @@ const profitMargin = computed(() => {
                             {{ fmt(cmv) }}
                         </p>
                     </div>
-                    <div
-                        class="rounded-xl bg-rose-50 p-4 dark:bg-rose-900/20"
-                    >
-                        <p
-                            class="text-xs text-rose-600 dark:text-rose-400"
-                        >
+                    <div class="rounded-xl bg-rose-50 p-4 dark:bg-rose-900/20">
+                        <p class="text-xs text-rose-600 dark:text-rose-400">
                             Descuentos
                         </p>
                         <p

@@ -2,13 +2,13 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { FileSpreadsheet, Upload, X } from 'lucide-vue-next';
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
-import ProductToolbar from '@/Components/Product/ProductToolbar.vue';
-import AdminProductTable from '@/Components/Product/AdminProductTable.vue';
 import AdminProductForm from '@/Components/Product/AdminProductForm.vue';
-import StockFormModal from '@/Components/Product/StockFormModal.vue';
+import AdminProductTable from '@/Components/Product/AdminProductTable.vue';
 import CategoryManager from '@/Components/Product/CategoryManager.vue';
+import ProductToolbar from '@/Components/Product/ProductToolbar.vue';
+import StockFormModal from '@/Components/Product/StockFormModal.vue';
 
 interface CategoryItem {
     id: number;
@@ -56,7 +56,9 @@ const selectedLabel = computed(() => {
     if (!filterCategory.value) return 'Todas las categorías';
     for (const root of props.categoryTree) {
         if (String(root.id) === filterCategory.value) return root.name;
-        const child = root.children.find(c => String(c.id) === filterCategory.value);
+        const child = root.children.find(
+            (c) => String(c.id) === filterCategory.value,
+        );
         if (child) return child.name;
     }
     return 'Todas las categorías';
@@ -474,7 +476,9 @@ const editQuantity = ref<number>(0);
 const batchSaving = ref(false);
 
 async function fetchBatches(productId: number) {
-    const res = await window.axios.get(route('admin.codigos.batches', productId));
+    const res = await window.axios.get(
+        route('admin.codigos.batches', productId),
+    );
     batchesData.value = res.data;
 }
 
@@ -510,12 +514,18 @@ function cancelEditBatch() {
 }
 
 async function saveBatchAdjustment(batch: any) {
-    if (editQuantity.value === batch.quantity) { editingBatchId.value = null; return; }
+    if (editQuantity.value === batch.quantity) {
+        editingBatchId.value = null;
+        return;
+    }
     batchSaving.value = true;
     try {
         const res = await window.axios.patch(
-            route('admin.codigos.batches.update', [batchesProduct.value!.id, batch.id]),
-            { quantity: editQuantity.value }
+            route('admin.codigos.batches.update', [
+                batchesProduct.value!.id,
+                batch.id,
+            ]),
+            { quantity: editQuantity.value },
         );
         batchesData.value = res.data;
         editingBatchId.value = null;
@@ -528,11 +538,19 @@ async function saveBatchAdjustment(batch: any) {
 }
 
 async function writeOffBatch(batch: any) {
-    if (!confirm(`¿Confirmas dar de baja ${batch.quantity} unidades vencidas de ${batchesProduct.value?.name}?`)) return;
+    if (
+        !confirm(
+            `¿Confirmas dar de baja ${batch.quantity} unidades vencidas de ${batchesProduct.value?.name}?`,
+        )
+    )
+        return;
     batchSaving.value = true;
     try {
         const res = await window.axios.delete(
-            route('admin.codigos.batches.destroy', [batchesProduct.value!.id, batch.id])
+            route('admin.codigos.batches.destroy', [
+                batchesProduct.value!.id,
+                batch.id,
+            ]),
         );
         batchesData.value = res.data;
         router.reload({ only: ['products'] });
@@ -696,7 +714,10 @@ function submitImport() {
                         ></div>
                     </div>
 
-                    <div v-else-if="!batchesData.length" class="py-8 text-center text-sm text-content-muted">
+                    <div
+                        v-else-if="!batchesData.length"
+                        class="py-8 text-center text-sm text-content-muted"
+                    >
                         No hay lotes activos para este producto.
                     </div>
 
@@ -716,9 +737,11 @@ function submitImport() {
                                             class="w-24 rounded-xl border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-800"
                                             :disabled="batchSaving"
                                         />
-                                        <span class="text-xs text-content-muted">uds</span>
+                                        <span class="text-xs text-content-muted"
+                                            >uds</span
+                                        >
                                     </div>
-                                    <div class="flex gap-1.5 mt-1">
+                                    <div class="mt-1 flex gap-1.5">
                                         <button
                                             @click="saveBatchAdjustment(b)"
                                             :disabled="batchSaving"
@@ -736,13 +759,19 @@ function submitImport() {
                                     </div>
                                 </template>
                                 <template v-else>
-                                    <span class="text-sm font-bold text-content-primary dark:text-white">
+                                    <span
+                                        class="text-sm font-bold text-content-primary dark:text-white"
+                                    >
                                         {{ b.quantity }} uds
                                     </span>
                                     <span class="text-xs text-content-muted">
-                                        Vence: {{ b.expiration_date ?? 'Sin fecha' }}
+                                        Vence:
+                                        {{ b.expiration_date ?? 'Sin fecha' }}
                                     </span>
-                                    <span v-if="b.notes" class="text-xs text-content-muted">
+                                    <span
+                                        v-if="b.notes"
+                                        class="text-xs text-content-muted"
+                                    >
                                         {{ b.notes }}
                                     </span>
                                 </template>
@@ -751,14 +780,26 @@ function submitImport() {
                                 <span
                                     class="rounded-full px-2.5 py-1 text-[11px] font-bold uppercase"
                                     :class="{
-                                        'bg-red-100 text-red-700': b.status === 'expired',
-                                        'bg-amber-100 text-amber-700': b.status === 'warning',
-                                        'bg-green-100 text-green-700': b.status === 'ok',
+                                        'bg-red-100 text-red-700':
+                                            b.status === 'expired',
+                                        'bg-amber-100 text-amber-700':
+                                            b.status === 'warning',
+                                        'bg-green-100 text-green-700':
+                                            b.status === 'ok',
                                     }"
                                 >
-                                    {{ b.status === 'expired' ? 'Vencido' : b.status === 'warning' ? 'Por vencer' : 'Ok' }}
+                                    {{
+                                        b.status === 'expired'
+                                            ? 'Vencido'
+                                            : b.status === 'warning'
+                                              ? 'Por vencer'
+                                              : 'Ok'
+                                    }}
                                 </span>
-                                <div v-if="editingBatchId !== b.id" class="flex gap-1.5">
+                                <div
+                                    v-if="editingBatchId !== b.id"
+                                    class="flex gap-1.5"
+                                >
                                     <button
                                         @click="startEditBatch(b)"
                                         class="rounded-lg border border-gray-300 px-2.5 py-1 text-[11px] font-bold text-content-secondary hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
@@ -766,7 +807,10 @@ function submitImport() {
                                         Ajustar
                                     </button>
                                     <button
-                                        v-if="b.status === 'expired' || b.status === 'warning'"
+                                        v-if="
+                                            b.status === 'expired' ||
+                                            b.status === 'warning'
+                                        "
                                         @click="writeOffBatch(b)"
                                         :disabled="batchSaving"
                                         class="rounded-lg bg-red-500 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-red-600 disabled:opacity-50"

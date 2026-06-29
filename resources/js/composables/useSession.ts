@@ -45,10 +45,17 @@ export function useSession(
     const coins = computed(() => denominations.filter((d) => d.directInput));
 
     const billQtys = reactive<Record<string, number | null>>({
-        '20k': null, '10k': null, '5k': null, '2k': null, '1k': null,
+        '20k': null,
+        '10k': null,
+        '5k': null,
+        '2k': null,
+        '1k': null,
     });
     const coinAmounts = reactive<Record<string, number | null>>({
-        '500': null, '100': null, '50': null, '10': null,
+        '500': null,
+        '100': null,
+        '50': null,
+        '10': null,
     });
     const coinErrors = reactive<Record<string, string | null>>({});
 
@@ -160,9 +167,7 @@ export function useSession(
                             showDiscrepancyModal.value = true;
                             throw new Error();
                         }
-                        throw new Error(
-                            err.message || 'Error al abrir caja',
-                        );
+                        throw new Error(err.message || 'Error al abrir caja');
                     });
                 return res.json();
             })
@@ -206,9 +211,7 @@ export function useSession(
             .then((res) => {
                 if (!res.ok)
                     return res.json().then((err) => {
-                        throw new Error(
-                            err.message || 'Error al abrir caja',
-                        );
+                        throw new Error(err.message || 'Error al abrir caja');
                     });
                 return res.json();
             })

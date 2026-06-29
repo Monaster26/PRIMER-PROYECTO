@@ -105,7 +105,18 @@ const emit = defineEmits<{
                         </label>
                         <select
                             :value="props.parentId"
-                            @change="emit('update:parentId', ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null)"
+                            @change="
+                                emit(
+                                    'update:parentId',
+                                    ($event.target as HTMLSelectElement).value
+                                        ? Number(
+                                              (
+                                                  $event.target as HTMLSelectElement
+                                              ).value,
+                                          )
+                                        : null,
+                                )
+                            "
                             class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-content-primary dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                         >
                             <option :value="null">
@@ -124,7 +135,12 @@ const emit = defineEmits<{
                     </div>
                     <input
                         :value="props.newCategoryName"
-                        @input="emit('update:newCategoryName', ($event.target as HTMLInputElement).value)"
+                        @input="
+                            emit(
+                                'update:newCategoryName',
+                                ($event.target as HTMLInputElement).value,
+                            )
+                        "
                         @keydown.enter="emit('save')"
                         type="text"
                         placeholder="Nombre de la categoría o subcategoría"
@@ -140,12 +156,15 @@ const emit = defineEmits<{
                         <button
                             @click="emit('save')"
                             :disabled="
-                                props.savingCategory || !props.newCategoryName.trim()
+                                props.savingCategory ||
+                                !props.newCategoryName.trim()
                             "
                             class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary-500 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-600 disabled:opacity-50"
                         >
                             {{
-                                props.savingCategory ? 'Guardando...' : 'Guardar'
+                                props.savingCategory
+                                    ? 'Guardando...'
+                                    : 'Guardar'
                             }}
                         </button>
                     </div>
@@ -191,7 +210,13 @@ const emit = defineEmits<{
                             <template v-if="props.editingCategoryId === cat.id">
                                 <input
                                     :value="props.editingCategoryName"
-                                    @input="emit('update:editingCategoryName', ($event.target as HTMLInputElement).value)"
+                                    @input="
+                                        emit(
+                                            'update:editingCategoryName',
+                                            ($event.target as HTMLInputElement)
+                                                .value,
+                                        )
+                                    "
                                     @keydown.enter="emit('confirmEdit', cat.id)"
                                     @keydown.escape="emit('cancelEdit')"
                                     type="text"
@@ -286,7 +311,14 @@ const emit = defineEmits<{
                                 >
                                     <input
                                         :value="props.editingCategoryName"
-                                        @input="emit('update:editingCategoryName', ($event.target as HTMLInputElement).value)"
+                                        @input="
+                                            emit(
+                                                'update:editingCategoryName',
+                                                (
+                                                    $event.target as HTMLInputElement
+                                                ).value,
+                                            )
+                                        "
                                         @keydown.enter="
                                             emit('confirmEdit', child.id)
                                         "
@@ -347,7 +379,9 @@ const emit = defineEmits<{
                                         ✏️
                                     </button>
                                     <button
-                                        @click="emit('deleteCategory', child.id)"
+                                        @click="
+                                            emit('deleteCategory', child.id)
+                                        "
                                         :disabled="props.deletingCategory"
                                         class="rounded-lg p-1 text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-900/30"
                                         title="Eliminar"

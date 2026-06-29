@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Plus, X, Check } from 'lucide-vue-next';
 import type { TabState } from '@/Stores/posTabsStore';
+import { Check, Plus, X } from 'lucide-vue-next';
 
 defineProps<{
     tabs: TabState[];
@@ -61,10 +61,7 @@ const emit = defineEmits<{
             <p class="text-sm text-success/80">
                 Puedes seguir agregando productos para una nueva venta.
             </p>
-            <p
-                v-if="lastDiscount > 0"
-                class="text-sm text-success/80"
-            >
+            <p v-if="lastDiscount > 0" class="text-sm text-success/80">
                 Descuento: -${{ (lastDiscount / 100).toLocaleString('es-CL') }}
                 <span v-if="lastAppliedPromotions.length">
                     ({{ lastAppliedPromotions.join(', ') }})

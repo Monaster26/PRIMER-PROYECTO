@@ -33,7 +33,7 @@ interface ProductItem {
     name: string;
     slug: string;
     sku: string;
-    price: number;          // en centavos
+    price: number; // en centavos
     stock: number;
     is_low_stock: boolean;
     image_url: string | null;
@@ -63,31 +63,42 @@ const props = defineProps<{
 }>();
 
 // ─── Stores ───────────────────────────────────────────────────────────────────
-const cartStore  = useCartStore();
-const catStore   = useCategoryStore();
+const cartStore = useCartStore();
+const catStore = useCategoryStore();
 
 // Asegurar que el store tenga categorías cargadas
 catStore.fetchCategories();
 
 // ─── Estado local ─────────────────────────────────────────────────────────────
-const searchQuery     = ref(props.filters.q ?? '');
-const isSidebarOpen   = ref(false);   // para móvil
-const expandedCatId   = ref<number | null>(props.rootCategory.id); // acordeón abierto por defecto
-const addedProductId  = ref<number | null>(null);  // feedback visual de "añadido"
-const sortValue       = ref(props.filters.sort ?? 'name');
-const sortDir         = ref(props.filters.dir  ?? 'asc');
+const searchQuery = ref(props.filters.q ?? '');
+const isSidebarOpen = ref(false); // para móvil
+const expandedCatId = ref<number | null>(props.rootCategory.id); // acordeón abierto por defecto
+const addedProductId = ref<number | null>(null); // feedback visual de "añadido"
+const sortValue = ref(props.filters.sort ?? 'name');
+const sortDir = ref(props.filters.dir ?? 'asc');
 
 // ─── Breadcrumb ───────────────────────────────────────────────────────────────
 const breadcrumb = computed(() => {
-    const base = [{ label: 'Inicio', href: '/' }, { label: props.rootCategory.name, href: `/categoria/${props.rootCategory.slug}` }];
+    const base = [
+        { label: 'Inicio', href: '/' },
+        {
+            label: props.rootCategory.name,
+            href: `/categoria/${props.rootCategory.slug}`,
+        },
+    ];
     if (props.activeSubcategory) {
-        base.push({ label: props.activeSubcategory.name, href: `/categoria/${props.rootCategory.slug}/${props.activeSubcategory.slug}` });
+        base.push({
+            label: props.activeSubcategory.name,
+            href: `/categoria/${props.rootCategory.slug}/${props.activeSubcategory.slug}`,
+        });
     }
     return base;
 });
 
 const pageTitle = computed(() =>
-    props.activeSubcategory ? props.activeSubcategory.name : props.rootCategory.name
+    props.activeSubcategory
+        ? props.activeSubcategory.name
+        : props.rootCategory.name,
 );
 
 // ─── Precio formateado ────────────────────────────────────────────────────────
@@ -115,16 +126,18 @@ function isSubActive(sub: SubCategory) {
 // ─── Añadir al carrito ────────────────────────────────────────────────────────
 function addToCart(product: ProductItem) {
     cartStore.addToCart({
-        id:          product.id,
-        name:        product.name,
-        price:       product.price / 100,
-        image:       product.image_url ?? undefined,
-        sku:         product.sku,
-        stock:       product.stock,
+        id: product.id,
+        name: product.name,
+        price: product.price / 100,
+        image: product.image_url ?? undefined,
+        sku: product.sku,
+        stock: product.stock,
         description: product.description ?? undefined,
     });
     addedProductId.value = product.id;
-    setTimeout(() => { addedProductId.value = null; }, 1500);
+    setTimeout(() => {
+        addedProductId.value = null;
+    }, 1500);
 }
 
 // ─── Filtros / búsqueda ───────────────────────────────────────────────────────
@@ -139,12 +152,16 @@ function applyFilters(extra: Record<string, string | undefined> = {}) {
     const base = props.activeSubcategory
         ? `/categoria/${props.rootCategory.slug}/${props.activeSubcategory.slug}`
         : `/categoria/${props.rootCategory.slug}`;
-    router.get(base, {
-        q:    searchQuery.value || undefined,
-        sort: sortValue.value !== 'name' ? sortValue.value : undefined,
-        dir:  sortDir.value !== 'asc'   ? sortDir.value  : undefined,
-        ...extra,
-    }, { preserveState: true, replace: true });
+    router.get(
+        base,
+        {
+            q: searchQuery.value || undefined,
+            sort: sortValue.value !== 'name' ? sortValue.value : undefined,
+            dir: sortDir.value !== 'asc' ? sortDir.value : undefined,
+            ...extra,
+        },
+        { preserveState: true, replace: true },
+    );
 }
 
 function onSortChange() {
@@ -162,22 +179,39 @@ function onSortChange() {
         <div class="px-4 py-5 text-white" style="background-color: #ffb2d2">
             <div class="mx-auto max-w-7xl">
                 <!-- Breadcrumb -->
-                <nav class="mb-2 flex items-center gap-1.5 text-xs text-white/70">
+                <nav
+                    class="mb-2 flex items-center gap-1.5 text-xs text-white/70"
+                >
                     <template v-for="(crumb, i) in breadcrumb" :key="i">
-                        <Link :href="crumb.href" class="transition-colors hover:text-white">
+                        <Link
+                            :href="crumb.href"
+                            class="transition-colors hover:text-white"
+                        >
                             {{ crumb.label }}
                         </Link>
-                        <ChevronRight v-if="i < breadcrumb.length - 1" class="h-3 w-3 opacity-60" />
+                        <ChevronRight
+                            v-if="i < breadcrumb.length - 1"
+                            class="h-3 w-3 opacity-60"
+                        />
                     </template>
                 </nav>
 
                 <div class="flex items-center justify-between gap-4">
                     <div class="flex items-center gap-3">
-                        <span v-if="rootCategory.icon" class="text-3xl">{{ rootCategory.icon }}</span>
+                        <span v-if="rootCategory.icon" class="text-3xl">{{
+                            rootCategory.icon
+                        }}</span>
                         <div>
-                            <h1 class="font-display text-2xl font-extrabold tracking-tight">{{ pageTitle }}</h1>
+                            <h1
+                                class="font-display text-2xl font-extrabold tracking-tight"
+                            >
+                                {{ pageTitle }}
+                            </h1>
                             <p class="text-sm text-white/70">
-                                {{ products.total }} producto{{ products.total !== 1 ? 's' : '' }} encontrado{{ products.total !== 1 ? 's' : '' }}
+                                {{ products.total }} producto{{
+                                    products.total !== 1 ? 's' : ''
+                                }}
+                                encontrado{{ products.total !== 1 ? 's' : '' }}
                             </p>
                         </div>
                     </div>
@@ -197,31 +231,46 @@ function onSortChange() {
         <!-- ══════════════════════════════════════════════════════════
              LAYOUT PRINCIPAL (split-screen)
         ══════════════════════════════════════════════════════════════ -->
-        <div class="mx-auto flex max-w-7xl gap-0 lg:gap-8 px-0 lg:px-4 py-6">
-
+        <div class="mx-auto flex max-w-7xl gap-0 px-0 py-6 lg:gap-8 lg:px-4">
             <!-- ─────────────────────────────────────────────────────
                  SIDEBAR IZQUIERDO — ESCRITORIO (25%)
             ───────────────────────────────────────────────────────── -->
             <aside class="hidden w-64 flex-shrink-0 lg:block">
-                <div class="sticky top-24 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-surface-dark">
-                    <p class="mb-3 text-xs font-bold uppercase tracking-widest text-content-muted dark:text-gray-500">
+                <div
+                    class="sticky top-24 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-surface-dark"
+                >
+                    <p
+                        class="mb-3 text-xs font-bold uppercase tracking-widest text-content-muted dark:text-gray-500"
+                    >
                         Departamentos
                     </p>
 
-                    <div v-for="cat in allCategories" :key="cat.id" class="mb-1">
+                    <div
+                        v-for="cat in allCategories"
+                        :key="cat.id"
+                        class="mb-1"
+                    >
                         <!-- Categoría raíz -->
                         <button
                             @click="toggleAccordion(cat.id)"
                             class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-all duration-150"
-                            :class="isRootActive(cat)
-                                ? 'bg-primary-500 text-white shadow-sm'
-                                : 'text-content-primary hover:bg-primary-50 hover:text-primary-600 dark:text-content-inverted dark:hover:bg-gray-800'"
+                            :class="
+                                isRootActive(cat)
+                                    ? 'bg-primary-500 text-white shadow-sm'
+                                    : 'text-content-primary hover:bg-primary-50 hover:text-primary-600 dark:text-content-inverted dark:hover:bg-gray-800'
+                            "
                         >
-                            <span v-if="cat.icon" class="text-base leading-none">{{ cat.icon }}</span>
+                            <span
+                                v-if="cat.icon"
+                                class="text-base leading-none"
+                                >{{ cat.icon }}</span
+                            >
                             <span class="flex-1 truncate">{{ cat.name }}</span>
                             <ChevronDown
                                 class="h-4 w-4 flex-shrink-0 transition-transform duration-200"
-                                :class="expandedCatId === cat.id ? 'rotate-180' : ''"
+                                :class="
+                                    expandedCatId === cat.id ? 'rotate-180' : ''
+                                "
                             />
                         </button>
 
@@ -234,16 +283,26 @@ function onSortChange() {
                             leave-from-class="max-h-96 opacity-100"
                             leave-to-class="max-h-0 opacity-0"
                         >
-                            <div v-if="expandedCatId === cat.id && cat.children?.length" class="ml-3 mt-1 border-l-2 border-gray-100 pl-3 dark:border-gray-700">
+                            <div
+                                v-if="
+                                    expandedCatId === cat.id &&
+                                    cat.children?.length
+                                "
+                                class="ml-3 mt-1 border-l-2 border-gray-100 pl-3 dark:border-gray-700"
+                            >
                                 <!-- "Ver todo" de la raíz -->
                                 <Link
                                     :href="`/categoria/${cat.slug}`"
                                     class="flex items-center gap-2 rounded-lg px-2 py-2 text-xs font-bold transition-colors"
-                                    :class="isRootActive(cat) && !activeSubcategory
-                                        ? 'text-primary-500'
-                                        : 'text-content-muted hover:text-primary-500 dark:text-gray-500'"
+                                    :class="
+                                        isRootActive(cat) && !activeSubcategory
+                                            ? 'text-primary-500'
+                                            : 'text-content-muted hover:text-primary-500 dark:text-gray-500'
+                                    "
                                 >
-                                    <span class="h-1 w-1 rounded-full bg-current opacity-60"></span>
+                                    <span
+                                        class="h-1 w-1 rounded-full bg-current opacity-60"
+                                    ></span>
                                     Ver todo
                                 </Link>
 
@@ -253,13 +312,19 @@ function onSortChange() {
                                     :key="sub.id"
                                     :href="`/categoria/${cat.slug}/${sub.slug}`"
                                     class="flex items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors"
-                                    :class="isSubActive(sub)
-                                        ? 'font-bold text-primary-500'
-                                        : 'text-content-secondary hover:text-primary-500 dark:text-gray-400'"
+                                    :class="
+                                        isSubActive(sub)
+                                            ? 'font-bold text-primary-500'
+                                            : 'text-content-secondary hover:text-primary-500 dark:text-gray-400'
+                                    "
                                 >
                                     <span
                                         class="h-1.5 w-1.5 flex-shrink-0 rounded-full transition-colors"
-                                        :class="isSubActive(sub) ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'"
+                                        :class="
+                                            isSubActive(sub)
+                                                ? 'bg-primary-500'
+                                                : 'bg-gray-300 dark:bg-gray-600'
+                                        "
                                     ></span>
                                     {{ sub.name }}
                                 </Link>
@@ -273,11 +338,14 @@ function onSortChange() {
                  VITRINA DE PRODUCTOS — DERECHA (75%)
             ───────────────────────────────────────────────────────── -->
             <section class="min-w-0 flex-1 px-4 lg:px-0">
-
                 <!-- Barra de búsqueda + ordenamiento -->
-                <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="relative flex-1 max-w-sm">
-                        <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <div
+                    class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                    <div class="relative max-w-sm flex-1">
+                        <Search
+                            class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                        />
                         <input
                             v-model="searchQuery"
                             type="text"
@@ -297,24 +365,43 @@ function onSortChange() {
                 </div>
 
                 <!-- Estado vacío -->
-                <div v-if="products.data.length === 0" class="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-gray-200 py-20 text-center dark:border-gray-700">
-                    <Package class="mb-4 h-12 w-12 text-gray-300 dark:text-gray-600" />
-                    <p class="font-display text-lg font-bold text-content-primary dark:text-white">Sin productos en esta sección</p>
-                    <p class="mt-1 text-sm text-content-muted">Intenta con otra categoría o amplía tu búsqueda.</p>
-                    <Link href="/" class="mt-5 rounded-2xl bg-primary-500 px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-primary-600">
+                <div
+                    v-if="products.data.length === 0"
+                    class="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-gray-200 py-20 text-center dark:border-gray-700"
+                >
+                    <Package
+                        class="mb-4 h-12 w-12 text-gray-300 dark:text-gray-600"
+                    />
+                    <p
+                        class="font-display text-lg font-bold text-content-primary dark:text-white"
+                    >
+                        Sin productos en esta sección
+                    </p>
+                    <p class="mt-1 text-sm text-content-muted">
+                        Intenta con otra categoría o amplía tu búsqueda.
+                    </p>
+                    <Link
+                        href="/"
+                        class="mt-5 rounded-2xl bg-primary-500 px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-primary-600"
+                    >
                         Ir al inicio
                     </Link>
                 </div>
 
                 <!-- Grid de productos -->
-                <div v-else class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+                <div
+                    v-else
+                    class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4"
+                >
                     <article
                         v-for="product in products.data"
                         :key="product.id"
                         class="group relative flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-gray-800 dark:bg-surface-dark"
                     >
                         <!-- Imagen -->
-                        <div class="relative aspect-square overflow-hidden bg-gray-50 dark:bg-gray-900">
+                        <div
+                            class="relative aspect-square overflow-hidden bg-gray-50 dark:bg-gray-900"
+                        >
                             <img
                                 v-if="product.image_url"
                                 :src="product.image_url"
@@ -322,8 +409,13 @@ function onSortChange() {
                                 class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                                 loading="lazy"
                             />
-                            <div v-else class="flex h-full w-full items-center justify-center">
-                                <Package class="h-12 w-12 text-gray-300 dark:text-gray-600" />
+                            <div
+                                v-else
+                                class="flex h-full w-full items-center justify-center"
+                            >
+                                <Package
+                                    class="h-12 w-12 text-gray-300 dark:text-gray-600"
+                                />
                             </div>
 
                             <!-- Badge stock bajo -->
@@ -337,16 +429,29 @@ function onSortChange() {
 
                         <!-- Info -->
                         <div class="flex flex-1 flex-col gap-2 p-3">
-                            <p class="line-clamp-2 text-sm font-semibold leading-tight text-content-primary dark:text-white">
+                            <p
+                                class="line-clamp-2 text-sm font-semibold leading-tight text-content-primary dark:text-white"
+                            >
                                 {{ product.name }}
                             </p>
-                            <p v-if="product.brand" class="text-xs text-content-muted dark:text-gray-500">{{ product.brand }}</p>
+                            <p
+                                v-if="product.brand"
+                                class="text-xs text-content-muted dark:text-gray-500"
+                            >
+                                {{ product.brand }}
+                            </p>
 
-                            <div class="mt-auto flex items-center justify-between gap-2">
-                                <span class="font-display text-base font-extrabold text-primary-500">
+                            <div
+                                class="mt-auto flex items-center justify-between gap-2"
+                            >
+                                <span
+                                    class="font-display text-base font-extrabold text-primary-500"
+                                >
                                     {{ formatPrice(product.price) }}
                                 </span>
-                                <span class="text-xs text-content-muted dark:text-gray-500">
+                                <span
+                                    class="text-xs text-content-muted dark:text-gray-500"
+                                >
                                     /{{ product.unit }}
                                 </span>
                             </div>
@@ -356,15 +461,27 @@ function onSortChange() {
                                 @click="addToCart(product)"
                                 :disabled="product.stock <= 0"
                                 class="flex w-full items-center justify-center gap-2 rounded-xl py-2 text-xs font-bold transition-all duration-200 active:scale-95"
-                                :class="addedProductId === product.id
-                                    ? 'bg-emerald-500 text-white'
-                                    : product.stock <= 0
-                                        ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-800'
-                                        : 'bg-primary-500 text-white hover:bg-primary-600 shadow-primary-sm'"
+                                :class="
+                                    addedProductId === product.id
+                                        ? 'bg-emerald-500 text-white'
+                                        : product.stock <= 0
+                                          ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-800'
+                                          : 'bg-primary-500 text-white shadow-primary-sm hover:bg-primary-600'
+                                "
                             >
                                 <template v-if="addedProductId === product.id">
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                    <svg
+                                        class="h-4 w-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2.5"
+                                            d="M5 13l4 4L19 7"
+                                        />
                                     </svg>
                                     ¡Añadido!
                                 </template>
@@ -381,7 +498,10 @@ function onSortChange() {
                 </div>
 
                 <!-- Paginación -->
-                <div v-if="products.last_page > 1" class="mt-8 flex flex-wrap items-center justify-center gap-2">
+                <div
+                    v-if="products.last_page > 1"
+                    class="mt-8 flex flex-wrap items-center justify-center gap-2"
+                >
                     <Link
                         v-for="link in products.links"
                         :key="link.label"
@@ -391,8 +511,8 @@ function onSortChange() {
                             link.active
                                 ? 'bg-primary-500 text-white shadow-sm'
                                 : link.url
-                                    ? 'bg-white text-content-primary hover:bg-primary-50 hover:text-primary-500 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700'
-                                    : 'cursor-not-allowed bg-gray-100 text-gray-300 dark:bg-gray-800 dark:text-gray-600',
+                                  ? 'bg-white text-content-primary hover:bg-primary-50 hover:text-primary-500 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700'
+                                  : 'cursor-not-allowed bg-gray-100 text-gray-300 dark:bg-gray-800 dark:text-gray-600',
                         ]"
                         :as="link.url ? 'a' : 'span'"
                         v-html="link.label"
@@ -435,44 +555,81 @@ function onSortChange() {
                     class="fixed inset-y-0 left-0 z-[70] flex w-[300px] max-w-full flex-col overflow-hidden bg-white shadow-2xl dark:bg-surface-dark"
                 >
                     <!-- Cabecera del drawer -->
-                    <div class="flex items-center justify-between bg-gradient-to-r from-primary-500 to-secondary-400 px-5 py-4 text-white">
+                    <div
+                        class="flex items-center justify-between bg-gradient-to-r from-primary-500 to-secondary-400 px-5 py-4 text-white"
+                    >
                         <div class="flex items-center gap-2">
                             <LayoutGrid class="h-5 w-5" />
-                            <span class="font-display text-base font-bold">Categorías</span>
+                            <span class="font-display text-base font-bold"
+                                >Categorías</span
+                            >
                         </div>
-                        <button @click="isSidebarOpen = false" class="rounded-full p-1.5 transition-colors hover:bg-white/20">
+                        <button
+                            @click="isSidebarOpen = false"
+                            class="rounded-full p-1.5 transition-colors hover:bg-white/20"
+                        >
                             <X class="h-5 w-5" />
                         </button>
                     </div>
 
                     <!-- Lista de categorías -->
                     <div class="flex-1 overflow-y-auto p-4">
-                        <div v-for="cat in allCategories" :key="cat.id" class="mb-1">
+                        <div
+                            v-for="cat in allCategories"
+                            :key="cat.id"
+                            class="mb-1"
+                        >
                             <button
                                 @click="toggleAccordion(cat.id)"
                                 class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition-colors"
-                                :class="isRootActive(cat) ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20' : 'text-content-primary hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800'"
+                                :class="
+                                    isRootActive(cat)
+                                        ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20'
+                                        : 'text-content-primary hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800'
+                                "
                             >
-                                <span v-if="cat.icon" class="text-lg">{{ cat.icon }}</span>
+                                <span v-if="cat.icon" class="text-lg">{{
+                                    cat.icon
+                                }}</span>
                                 <span class="flex-1">{{ cat.name }}</span>
-                                <ChevronDown class="h-4 w-4 transition-transform" :class="expandedCatId === cat.id ? 'rotate-180 text-primary-500' : ''" />
+                                <ChevronDown
+                                    class="h-4 w-4 transition-transform"
+                                    :class="
+                                        expandedCatId === cat.id
+                                            ? 'rotate-180 text-primary-500'
+                                            : ''
+                                    "
+                                />
                             </button>
 
-                            <div v-if="expandedCatId === cat.id && cat.children?.length" class="ml-4 border-l-2 border-gray-100 pl-3 pb-2 dark:border-gray-700">
+                            <div
+                                v-if="
+                                    expandedCatId === cat.id &&
+                                    cat.children?.length
+                                "
+                                class="ml-4 border-l-2 border-gray-100 pb-2 pl-3 dark:border-gray-700"
+                            >
                                 <Link
                                     :href="`/categoria/${cat.slug}`"
                                     @click="isSidebarOpen = false"
                                     class="block py-2 text-xs font-bold text-content-muted hover:text-primary-500"
-                                >Ver todo →</Link>
+                                    >Ver todo →</Link
+                                >
                                 <Link
                                     v-for="sub in cat.children"
                                     :key="sub.id"
                                     :href="`/categoria/${cat.slug}/${sub.slug}`"
                                     @click="isSidebarOpen = false"
                                     class="flex items-center gap-2 py-2 text-sm transition-colors"
-                                    :class="isSubActive(sub) ? 'font-bold text-primary-500' : 'text-content-secondary hover:text-primary-500 dark:text-gray-400'"
+                                    :class="
+                                        isSubActive(sub)
+                                            ? 'font-bold text-primary-500'
+                                            : 'text-content-secondary hover:text-primary-500 dark:text-gray-400'
+                                    "
                                 >
-                                    <span class="h-1.5 w-1.5 rounded-full bg-current opacity-60"></span>
+                                    <span
+                                        class="h-1.5 w-1.5 rounded-full bg-current opacity-60"
+                                    ></span>
                                     {{ sub.name }}
                                 </Link>
                             </div>

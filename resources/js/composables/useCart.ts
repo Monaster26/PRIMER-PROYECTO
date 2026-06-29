@@ -16,7 +16,9 @@ export function useCart(cart: { value: CartItem[] }, products: Product[]) {
     }
 
     function addToCart(product: Product) {
-        const existing = cart.value.find((item) => item.product.id === product.id);
+        const existing = cart.value.find(
+            (item) => item.product.id === product.id,
+        );
         if (existing) {
             existing.quantity++;
         } else {
@@ -74,7 +76,8 @@ export function useCart(cart: { value: CartItem[] }, products: Product[]) {
 
         const cartIdx = cart.value.findIndex(
             (item) =>
-                item.product.barcode === trimmed || item.product.sku === trimmed,
+                item.product.barcode === trimmed ||
+                item.product.sku === trimmed,
         );
         if (cartIdx !== -1) {
             cart.value[cartIdx].quantity++;

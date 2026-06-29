@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Search } from 'lucide-vue-next';
 import type { Product } from '@/Stores/posTabsStore';
+import { Search } from 'lucide-vue-next';
 
 defineProps<{
     scannerInput: string;
@@ -14,22 +14,35 @@ const emit = defineEmits<{
     'update:scannerInput': [value: string];
     'update:searchQuery': [value: string];
     'select-product': [product: Product];
-    'blur': [];
+    blur: [];
     'enter-search': [];
     'focus-barcode': [];
 }>();
 
 function formatCLP(cents: number): string {
-    return '$' + Math.round(cents / 100).toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return (
+        '$' +
+        Math.round(cents / 100).toLocaleString('es-CL', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        })
+    );
 }
 </script>
 
 <template>
-    <div class="flex gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+    <div
+        class="flex gap-3 border-b border-gray-100 px-4 py-3 dark:border-gray-800"
+    >
         <div class="relative flex-1">
             <input
                 :value="scannerInput"
-                @input="emit('update:scannerInput', ($event.target as HTMLInputElement).value)"
+                @input="
+                    emit(
+                        'update:scannerInput',
+                        ($event.target as HTMLInputElement).value,
+                    )
+                "
                 @focus="emit('focus-barcode')"
                 type="text"
                 autofocus
@@ -49,8 +62,18 @@ function formatCLP(cents: number): string {
             />
             <input
                 :value="searchQuery"
-                @input="emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
-                @focus="$emit('update:searchQuery', searchQuery); (($event.target as HTMLInputElement).value.length > 0) ? null : null"
+                @input="
+                    emit(
+                        'update:searchQuery',
+                        ($event.target as HTMLInputElement).value,
+                    )
+                "
+                @focus="
+                    $emit('update:searchQuery', searchQuery);
+                    ($event.target as HTMLInputElement).value.length > 0
+                        ? null
+                        : null;
+                "
                 @blur="emit('blur')"
                 type="text"
                 placeholder="Buscar por nombre"
@@ -68,10 +91,11 @@ function formatCLP(cents: number): string {
                 >
                     <span
                         class="min-w-0 flex-1 whitespace-normal break-words font-medium text-content-primary dark:text-white"
-                    >{{ p.name }}</span>
-                    <span
-                        class="shrink-0 font-bold text-primary-500"
-                    >{{ formatCLP(p.price) }}</span>
+                        >{{ p.name }}</span
+                    >
+                    <span class="shrink-0 font-bold text-primary-500">{{
+                        formatCLP(p.price)
+                    }}</span>
                 </button>
             </div>
         </div>

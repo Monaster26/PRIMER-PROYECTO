@@ -60,23 +60,15 @@ const fmt = (v: number) =>
                         <th class="px-6 py-3 text-right font-bold">
                             Precio Venta
                         </th>
-                        <th class="px-6 py-3 text-center font-bold">
-                            Stock
-                        </th>
+                        <th class="px-6 py-3 text-center font-bold">Stock</th>
                         <th class="px-6 py-3 text-center font-bold">
                             Stock Mín.
                         </th>
-                        <th class="px-6 py-3 text-center font-bold">
-                            Activo
-                        </th>
-                        <th class="px-6 py-3 text-right font-bold">
-                            Acciones
-                        </th>
+                        <th class="px-6 py-3 text-center font-bold">Activo</th>
+                        <th class="px-6 py-3 text-right font-bold">Acciones</th>
                     </tr>
                 </thead>
-                <tbody
-                    class="divide-y divide-gray-100 dark:divide-gray-800"
-                >
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                     <tr v-if="!props.products.data?.length">
                         <td
                             colspan="10"
@@ -143,9 +135,7 @@ const fmt = (v: number) =>
                         >
                             {{ fmt(p.price / 100) }}
                         </td>
-                        <td
-                            class="px-6 py-4 text-center"
-                        >
+                        <td class="px-6 py-4 text-center">
                             <div class="flex flex-col items-center gap-0.5">
                                 <span
                                     class="text-sm font-bold"
@@ -162,7 +152,9 @@ const fmt = (v: number) =>
                                     class="flex items-center gap-1"
                                 >
                                     <button
-                                        v-if="(p.batches_expired_count ?? 0) > 0"
+                                        v-if="
+                                            (p.batches_expired_count ?? 0) > 0
+                                        "
                                         @click="emit('openBatches', p)"
                                         class="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-bold text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
                                         title="Ver lotes vencidos"
@@ -171,7 +163,9 @@ const fmt = (v: number) =>
                                         {{ p.batches_expired_count }}
                                     </button>
                                     <button
-                                        v-if="(p.batches_expiring_count ?? 0) > 0"
+                                        v-if="
+                                            (p.batches_expiring_count ?? 0) > 0
+                                        "
                                         @click="emit('openBatches', p)"
                                         class="flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-bold text-amber-600 transition-colors hover:bg-amber-50 dark:hover:bg-amber-900/20"
                                         title="Ver lotes por vencer"

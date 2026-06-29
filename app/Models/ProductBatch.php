@@ -10,6 +10,7 @@ class ProductBatch extends Model
 {
     protected $fillable = [
         'product_id',
+        'batch_number',
         'quantity',
         'cost_price',
         'expiration_date',

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Wallet, FileText, X } from 'lucide-vue-next';
+import { FileText, Wallet, X } from 'lucide-vue-next';
 
 interface Denomination {
     key: string;
@@ -115,7 +114,9 @@ function onCoinBlur(key: string) {
                                 </span>
                                 <span
                                     class="ml-auto text-[10px] text-content-muted"
-                                >{{ ultimaSesion?.cerrado_por }} · {{ ultimaSesion?.cerrado_at }}</span>
+                                    >{{ ultimaSesion?.cerrado_por }} ·
+                                    {{ ultimaSesion?.cerrado_at }}</span
+                                >
                             </div>
 
                             <div
@@ -123,15 +124,20 @@ function onCoinBlur(key: string) {
                             >
                                 <label
                                     class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-muted"
-                                >Billetes</label>
+                                    >Billetes</label
+                                >
                                 <table class="w-full text-left">
                                     <thead>
                                         <tr
                                             class="text-[10px] font-bold uppercase tracking-wider text-content-muted"
                                         >
                                             <th class="pb-1">Denominación</th>
-                                            <th class="pb-1 text-center">Cant.</th>
-                                            <th class="pb-1 text-right">Subtotal</th>
+                                            <th class="pb-1 text-center">
+                                                Cant.
+                                            </th>
+                                            <th class="pb-1 text-right">
+                                                Subtotal
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody
@@ -140,17 +146,31 @@ function onCoinBlur(key: string) {
                                         <tr v-for="d in bills" :key="d.key">
                                             <td
                                                 class="py-1.5 text-sm font-semibold text-content-muted"
-                                            >{{ d.label }}</td>
+                                            >
+                                                {{ d.label }}
+                                            </td>
                                             <td class="py-1.5 text-center">
                                                 <input
-                                                    :value="desgloseAnterior[d.key] ?? 0"
+                                                    :value="
+                                                        desgloseAnterior[
+                                                            d.key
+                                                        ] ?? 0
+                                                    "
                                                     disabled
                                                     class="w-16 rounded-lg border border-gray-200 bg-gray-100 px-1 py-1 text-center text-sm text-content-muted opacity-60 dark:border-gray-700 dark:bg-gray-800"
                                                 />
                                             </td>
                                             <td
                                                 class="py-1.5 text-right text-sm font-bold text-content-muted"
-                                            >{{ fmt((desgloseAnterior[d.key] ?? 0) * d.value) }}</td>
+                                            >
+                                                {{
+                                                    fmt(
+                                                        (desgloseAnterior[
+                                                            d.key
+                                                        ] ?? 0) * d.value,
+                                                    )
+                                                }}
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -161,15 +181,20 @@ function onCoinBlur(key: string) {
                             >
                                 <label
                                     class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-muted"
-                                >Monedas</label>
+                                    >Monedas</label
+                                >
                                 <table class="w-full text-left">
                                     <thead>
                                         <tr
                                             class="text-[10px] font-bold uppercase tracking-wider text-content-muted"
                                         >
                                             <th class="pb-1">Denominación</th>
-                                            <th class="pb-1 text-center">Cant.</th>
-                                            <th class="pb-1 text-right">Subtotal</th>
+                                            <th class="pb-1 text-center">
+                                                Cant.
+                                            </th>
+                                            <th class="pb-1 text-right">
+                                                Subtotal
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody
@@ -178,17 +203,31 @@ function onCoinBlur(key: string) {
                                         <tr v-for="d in coins" :key="d.key">
                                             <td
                                                 class="py-1.5 text-sm font-semibold text-content-muted"
-                                            >{{ d.label }}</td>
+                                            >
+                                                {{ d.label }}
+                                            </td>
                                             <td class="py-1.5 text-center">
                                                 <input
-                                                    :value="desgloseAnterior[d.key] ?? 0"
+                                                    :value="
+                                                        desgloseAnterior[
+                                                            d.key
+                                                        ] ?? 0
+                                                    "
                                                     disabled
                                                     class="w-16 rounded-lg border border-gray-200 bg-gray-100 px-1 py-1 text-center text-sm text-content-muted opacity-60 dark:border-gray-700 dark:bg-gray-800"
                                                 />
                                             </td>
                                             <td
                                                 class="py-1.5 text-right text-sm font-bold text-content-muted"
-                                            >{{ fmt((desgloseAnterior[d.key] ?? 0) * d.value) }}</td>
+                                            >
+                                                {{
+                                                    fmt(
+                                                        (desgloseAnterior[
+                                                            d.key
+                                                        ] ?? 0) * d.value,
+                                                    )
+                                                }}
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -199,10 +238,18 @@ function onCoinBlur(key: string) {
                             >
                                 <span
                                     class="text-xs font-bold uppercase tracking-wider text-content-muted"
-                                >Total Cierre Anterior</span>
+                                    >Total Cierre Anterior</span
+                                >
                                 <p
                                     class="font-mono text-lg font-black text-content-muted"
-                                >{{ fmt(ultimaSesion?.total_efectivo_cierre ?? 0) }}</p>
+                                >
+                                    {{
+                                        fmt(
+                                            ultimaSesion?.total_efectivo_cierre ??
+                                                0,
+                                        )
+                                    }}
+                                </p>
                             </div>
                         </div>
 
@@ -240,15 +287,20 @@ function onCoinBlur(key: string) {
                             >
                                 <label
                                     class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-primary"
-                                >Billetes</label>
+                                    >Billetes</label
+                                >
                                 <table class="w-full text-left">
                                     <thead>
                                         <tr
                                             class="text-[10px] font-bold uppercase tracking-wider text-content-muted"
                                         >
                                             <th class="pb-1">Denominación</th>
-                                            <th class="pb-1 text-center">Cant.</th>
-                                            <th class="pb-1 text-right">Subtotal</th>
+                                            <th class="pb-1 text-center">
+                                                Cant.
+                                            </th>
+                                            <th class="pb-1 text-right">
+                                                Subtotal
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody
@@ -257,22 +309,50 @@ function onCoinBlur(key: string) {
                                         <tr v-for="d in bills" :key="d.key">
                                             <td
                                                 class="py-1.5 text-sm font-semibold text-content-primary dark:text-white"
-                                            >{{ d.label }}</td>
+                                            >
+                                                {{ d.label }}
+                                            </td>
                                             <td class="py-1.5 text-center">
                                                 <input
                                                     :value="billQtys[d.key]"
-                                                    @input="emit('update:billQtys', d.key, Number(($event.target as HTMLInputElement).value) || null)"
+                                                    @input="
+                                                        emit(
+                                                            'update:billQtys',
+                                                            d.key,
+                                                            Number(
+                                                                (
+                                                                    $event.target as HTMLInputElement
+                                                                ).value,
+                                                            ) || null,
+                                                        )
+                                                    "
                                                     type="number"
                                                     min="0"
                                                     :autofocus="d.key === '20k'"
-                                                    :id="d.key === '20k' ? 'input-20k' : undefined"
-                                                    @keydown.enter.prevent="emit('focus-next', $event)"
+                                                    :id="
+                                                        d.key === '20k'
+                                                            ? 'input-20k'
+                                                            : undefined
+                                                    "
+                                                    @keydown.enter.prevent="
+                                                        emit(
+                                                            'focus-next',
+                                                            $event,
+                                                        )
+                                                    "
                                                     class="w-16 rounded-lg border border-gray-200 bg-gray-50 px-1 py-1 text-center text-sm text-content-primary transition-shadow focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                                                 />
                                             </td>
                                             <td
                                                 class="py-1.5 text-right text-sm font-bold text-content-primary dark:text-white"
-                                            >{{ fmt((billQtys[d.key] || 0) * d.value) }}</td>
+                                            >
+                                                {{
+                                                    fmt(
+                                                        (billQtys[d.key] || 0) *
+                                                            d.value,
+                                                    )
+                                                }}
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -283,14 +363,17 @@ function onCoinBlur(key: string) {
                             >
                                 <label
                                     class="mb-2 block text-xs font-bold uppercase tracking-wider text-content-primary"
-                                >Monedas</label>
+                                    >Monedas</label
+                                >
                                 <table class="w-full text-left">
                                     <thead>
                                         <tr
                                             class="text-[10px] font-bold uppercase tracking-wider text-content-muted"
                                         >
                                             <th class="pb-1">Denominación</th>
-                                            <th class="pb-1 text-center">Subtotal</th>
+                                            <th class="pb-1 text-center">
+                                                Subtotal
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody
@@ -299,16 +382,32 @@ function onCoinBlur(key: string) {
                                         <tr v-for="d in coins" :key="d.key">
                                             <td
                                                 class="py-1.5 text-sm font-semibold text-content-primary dark:text-white"
-                                            >{{ d.label }}</td>
+                                            >
+                                                {{ d.label }}
+                                            </td>
                                             <td class="py-1.5 text-center">
                                                 <input
-                                                    :value="formatCoin(coinAmounts[d.key])"
-                                                    @input="onCoinInput($event, d.key)"
+                                                    :value="
+                                                        formatCoin(
+                                                            coinAmounts[d.key],
+                                                        )
+                                                    "
+                                                    @input="
+                                                        onCoinInput(
+                                                            $event,
+                                                            d.key,
+                                                        )
+                                                    "
                                                     @blur="onCoinBlur(d.key)"
                                                     type="text"
                                                     inputmode="numeric"
                                                     placeholder="0"
-                                                    @keydown.enter.prevent="emit('focus-next', $event)"
+                                                    @keydown.enter.prevent="
+                                                        emit(
+                                                            'focus-next',
+                                                            $event,
+                                                        )
+                                                    "
                                                     :class="[
                                                         'w-28 rounded-lg px-2 py-1.5 text-center text-sm transition-shadow',
                                                         coinErrors[d.key]
@@ -320,7 +419,9 @@ function onCoinBlur(key: string) {
                                                 <p
                                                     v-if="coinErrors[d.key]"
                                                     class="mt-1 text-[10px] font-medium text-red-500"
-                                                >{{ coinErrors[d.key] }}</p>
+                                                >
+                                                    {{ coinErrors[d.key] }}
+                                                </p>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -332,10 +433,13 @@ function onCoinBlur(key: string) {
                             >
                                 <span
                                     class="text-xs font-bold uppercase tracking-wider text-content-muted"
-                                >Total Apertura</span>
+                                    >Total Apertura</span
+                                >
                                 <p
                                     class="font-mono text-xl font-black text-primary-600 dark:text-primary-400"
-                                >{{ fmt(totalOpening) }}</p>
+                                >
+                                    {{ fmt(totalOpening) }}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -343,7 +447,9 @@ function onCoinBlur(key: string) {
                     <p
                         v-if="sessionOpenError"
                         class="rounded-xl bg-danger/10 px-3 py-2 text-xs font-bold text-danger"
-                    >{{ sessionOpenError }}</p>
+                    >
+                        {{ sessionOpenError }}
+                    </p>
 
                     <button
                         type="submit"
@@ -400,15 +506,33 @@ function onCoinBlur(key: string) {
                 </div>
                 <div class="space-y-4 p-5">
                     <p class="text-sm leading-relaxed text-content-secondary">
-                        El monto de apertura (<strong class="text-content-primary">{{ fmt(discrepancyData?.nuevo_apertura_monto) }}</strong>) difiere del último cierre (<strong class="text-content-primary">{{ fmt(discrepancyData?.ultimo_cierre_monto) }}</strong>) por
-                        <strong class="text-amber-600 dark:text-amber-400">{{ fmt(discrepancyData?.diferencia) }}</strong>.
+                        El monto de apertura (<strong
+                            class="text-content-primary"
+                            >{{
+                                fmt(discrepancyData?.nuevo_apertura_monto)
+                            }}</strong
+                        >) difiere del último cierre (<strong
+                            class="text-content-primary"
+                            >{{
+                                fmt(discrepancyData?.ultimo_cierre_monto)
+                            }}</strong
+                        >) por
+                        <strong class="text-amber-600 dark:text-amber-400">{{
+                            fmt(discrepancyData?.diferencia)
+                        }}</strong
+                        >.
                     </p>
                     <p class="text-xs text-content-muted">
                         Escriba una justificación para continuar:
                     </p>
                     <textarea
                         :value="discrepancyReason"
-                        @input="emit('update:discrepancyReason', ($event.target as HTMLTextAreaElement).value)"
+                        @input="
+                            emit(
+                                'update:discrepancyReason',
+                                ($event.target as HTMLTextAreaElement).value,
+                            )
+                        "
                         class="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm outline-none transition-colors focus:border-amber-400 focus:ring-2 focus:ring-amber-200 dark:border-gray-700 dark:bg-gray-800/50 dark:text-white dark:focus:border-amber-500"
                         rows="3"
                         placeholder="Ej: Se realizó un depósito bancario después del cierre..."
