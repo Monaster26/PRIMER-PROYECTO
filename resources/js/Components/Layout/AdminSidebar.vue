@@ -130,9 +130,14 @@ const navGroups = computed(() => {
                 label: 'Ventas',
                 items: [
                     {
-                        label: 'Historial',
+                        label: 'Historial de Ventas',
                         name: 'admin.ventas.index',
                         icon: ShoppingCart,
+                    },
+                    {
+                        label: 'Movimientos de Stock',
+                        name: 'admin.movimientos.index',
+                        icon: ClipboardList,
                     },
                     {
                         label: 'Observaciones',

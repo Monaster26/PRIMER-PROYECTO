@@ -17,35 +17,32 @@ class SaleController extends Controller
 {
     public function index()
     {
-        $from = request('from');
-        $to = request('to');
-
         $query = Sale::with('cashier', 'items.product', 'payments');
 
-        if ($from && $to) {
-            $query->whereBetween('created_at', [$from, $to . ' 23:59:59']);
-        } elseif ($from) {
-            $query->whereDate('created_at', $from);
+        if ($from = request('from')) {
+            $query->whereDate('created_at', '>=', $from);
+        }
+        if ($to = request('to')) {
+            $query->whereDate('created_at', '<=', $to);
+        }
+        if ($cashierId = request('cashier_id')) {
+            $query->where('user_id', $cashierId);
+        }
+        if ($method = request('payment_method')) {
+            $query->whereHas('payments', fn($q) => $q->where('method', $method));
+        }
+        if ($search = request('search')) {
+            $query->where('id', (int) $search);
         }
 
-        $sales = $query->orderBy('created_at', 'desc')->paginate(30);
+        $sales = $query->orderBy('created_at', 'desc')->paginate(30)->withQueryString();
 
-        $products = Product::orderBy('name')
-            ->where('stock', '>', 0)
-            ->get();
+        $cashiers = User::role('cashier')->get(['id', 'name']);
 
-        $cashiers = User::role('cashier')->get();
-
-        return Inertia::render('admin/ventas', [
-            'sales' => $sales,
-            'products' => $products,
+        return Inertia::render('admin/ventas-historial', [
+            'sales'    => $sales,
             'cashiers' => $cashiers,
-            'from' => $from,
-            'to' => $to,
-            'summary' => [
-                'total' => (int) (clone $query)->sum('total'),
-                'count' => $sales->total(),
-            ],
+            'filters'  => request(['from', 'to', 'cashier_id', 'payment_method', 'search']),
         ]);
     }
 

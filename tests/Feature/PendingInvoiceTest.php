@@ -163,6 +163,7 @@ class PendingInvoiceTest extends TestCase
                 [
                     'id'                => $invoice->items->first()->id,
                     'quantity_received' => 10,
+                    'expiration_date'   => '2027-06-01',
                 ],
             ],
         ])->assertRedirect();
@@ -211,6 +212,7 @@ class PendingInvoiceTest extends TestCase
                 [
                     'id'                => $item->id,
                     'quantity_received' => 2,
+                    'expiration_date'   => '2027-06-01',
                 ],
             ],
         ])->assertRedirect();
@@ -219,7 +221,7 @@ class PendingInvoiceTest extends TestCase
         $this->assertNotNull($product);
         $this->assertTrue($product->is_active);
         $this->assertSame(95000, $product->cost_price);
-        $this->assertSame(190000, $product->price);
+        $this->assertSame(135714, $product->price); // 95000 / 0.7 = 30% margin
 
         $this->assertSame(2, $product->stock);
 
@@ -267,6 +269,7 @@ class PendingInvoiceTest extends TestCase
                 [
                     'id'                => $item->id,
                     'quantity_received' => 10,
+                    'expiration_date'   => '2027-06-01',
                 ],
             ],
         ])->assertRedirect();

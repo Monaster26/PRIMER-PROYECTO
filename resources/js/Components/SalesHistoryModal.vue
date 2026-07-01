@@ -34,6 +34,7 @@ interface TodaySale {
 const props = defineProps<{
     show: boolean;
     sales: TodaySale[] | null;
+    hideList?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -175,8 +176,9 @@ function handleClose() {
                 </div>
 
                 <div class="flex flex-1 overflow-hidden">
-                    <!-- LEFT: 45% List -->
+                    <!-- LEFT: 60% List (oculto si hideList) -->
                     <div
+                        v-if="!hideList"
                         class="flex w-[60%] flex-col border-r border-gray-100 dark:border-gray-800"
                     >
                         <!-- Search -->
@@ -268,9 +270,10 @@ function handleClose() {
                         </div>
                     </div>
 
-                    <!-- RIGHT: 55% Ticket Preview -->
+                    <!-- RIGHT: Ticket Preview (full width si hideList) -->
                     <div
-                        class="flex w-[40%] flex-col items-center overflow-y-auto bg-gray-50 px-3 py-8 dark:bg-gray-900/50"
+                        class="flex flex-col items-center overflow-y-auto bg-gray-50 px-3 py-8 dark:bg-gray-900/50"
+                        :class="hideList ? 'w-full' : 'w-[40%]'"
                     >
                         <div
                             v-if="selectedSale"

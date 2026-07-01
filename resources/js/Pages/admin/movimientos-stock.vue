@@ -29,7 +29,12 @@ const props = defineProps<{
     };
 }>();
 
-const filter = { ...props.filters };
+const filter = {
+    search: props.filters.search ?? '',
+    type: props.filters.type ?? '',
+    from: props.filters.from ?? '',
+    to: props.filters.to ?? '',
+};
 
 const typeOptions = [
     { value: '', label: 'Todos' },
@@ -64,17 +69,17 @@ function cleanParams() {
 }
 
 function loadFilters() {
-    router.get(route('admin.ventas.index'), cleanParams(), {
+    router.get(route('admin.movimientos.index'), cleanParams(), {
         preserveState: true,
         preserveScroll: true,
     });
 }
 
 function clearFilters() {
-    filter.search = null;
-    filter.type = null;
-    filter.from = null;
-    filter.to = null;
+    filter.search = '';
+    filter.type = '';
+    filter.from = '';
+    filter.to = '';
     loadFilters();
 }
 
@@ -91,7 +96,7 @@ function onToPicked(payload: { dia: number; mes: number; anio: number }) {
 function referenceUrl(m: any): string | null {
     if (!m.reference_type || !m.reference_id) return null;
     if (m.reference_type.includes('\\Sale'))
-        return route('admin.ventas.index') + '?search=' + m.reference_id;
+        return route('admin.movimientos.index') + '?search=' + m.reference_id;
     if (m.reference_type.includes('\\Purchase'))
         return route('admin.compras.index') + '?search=' + m.reference_id;
     if (m.reference_type.includes('\\Loss'))
@@ -189,7 +194,7 @@ function formatTime(d: string) {
                     Limpiar
                 </button>
                 <a
-                    :href="route('admin.ventas.export', cleanParams())"
+                    :href="route('admin.movimientos.export', cleanParams())"
                     class="ml-auto flex items-center gap-2 rounded-2xl bg-primary-500 px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-600"
                 >
                     <Download class="h-4 w-4" /> Exportar Excel
@@ -347,7 +352,7 @@ function formatTime(d: string) {
                             <td class="px-6 py-4 text-sm">
                                 <a
                                     v-if="referenceUrl(m)"
-                                    :href="referenceUrl(m)"
+                                    :href="referenceUrl(m) ?? undefined"
                                     class="font-medium text-primary-500 hover:text-primary-600 hover:underline"
                                 >
                                     {{ referenceLabel(m) }}

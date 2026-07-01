@@ -22,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
 
-        if (!env('DB_ALLOW_DESTRUCTIVE', false)) {
+        if (!env('DB_ALLOW_DESTRUCTIVE', false) && !app()->environment('testing')) {
             \Illuminate\Support\Facades\DB::prohibitDestructiveCommands(true);
         }
     }

@@ -209,7 +209,7 @@ class ProductController extends Controller
                   ->orWhere('barcode', $search)
                   ->orWhere('id', $search);
             })
-            ->first(['id', 'name', 'sku', 'barcode', 'stock', 'cost_price', 'price', 'image_path']);
+            ->first(['id', 'name', 'description', 'sku', 'barcode', 'stock', 'cost_price', 'price', 'image_path']);
 
         return response()->json($product);
     }
@@ -221,7 +221,7 @@ class ProductController extends Controller
         $products = Product::where('is_active', true)
             ->where('name', 'LIKE', "%{$search}%")
             ->limit(5)
-            ->get(['id', 'name', 'sku', 'barcode', 'stock', 'cost_price', 'price', 'image_path']);
+            ->get(['id', 'name', 'description', 'sku', 'barcode', 'stock', 'cost_price', 'price', 'image_path']);
 
         return response()->json($products);
     }

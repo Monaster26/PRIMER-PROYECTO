@@ -245,7 +245,14 @@ function onNameInput(index: number) {
 
 function selectByName(
     index: number,
-    p: { id: number; name: string; sku: string; cost_price: number; category_id: number | null; sub_category: string | null },
+    p: {
+        id: number;
+        name: string;
+        sku: string;
+        cost_price: number;
+        category_id: number | null;
+        sub_category: string | null;
+    },
 ) {
     const item = form.items[index];
     item.product_id = p.id;
@@ -496,7 +503,10 @@ function onSupplierArrowUpEdit() {
 }
 function onSupplierEnterEdit() {
     const list = filteredSuppliersEdit();
-    if (focusedSupplierIndexEdit.value >= 0 && list[focusedSupplierIndexEdit.value]) {
+    if (
+        focusedSupplierIndexEdit.value >= 0 &&
+        list[focusedSupplierIndexEdit.value]
+    ) {
         selectSupplierEdit(list[focusedSupplierIndexEdit.value]);
     }
 }
@@ -526,7 +536,14 @@ function onNameInputEdit(index: number) {
 }
 function selectByNameEdit(
     index: number,
-    p: { id: number; name: string; sku: string; cost_price: number; category_id: number | null; sub_category: string | null },
+    p: {
+        id: number;
+        name: string;
+        sku: string;
+        cost_price: number;
+        category_id: number | null;
+        sub_category: string | null;
+    },
 ) {
     const item = editForm.items[index];
     item.product_id = p.id;
@@ -649,7 +666,7 @@ function openReceive(inv: any) {
         expiration_date: '',
         barcode: item.product?.barcode || '',
         old_sale_price: item.product?.price ? item.product.price / 100 : 0,
-        sale_price: Math.round((item.unit_cost / 100) / 0.7) || 0,
+        sale_price: Math.round(item.unit_cost / 100 / 0.7) || 0,
         margin: 30,
     }));
     showReceive.value = true;
@@ -1054,13 +1071,13 @@ function priceVariation(item: any) {
             leave-from-class="opacity-100"
             leave-to-class="opacity-0"
         >
-                            <div
-                                v-if="showForm"
-                                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm md:p-6"
-                            >
-                                <div
-                                    class="relative my-auto max-h-[90vh] w-[95%] max-w-7xl overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl dark:bg-surface-dark md:p-6 lg:p-8"
-                                >
+            <div
+                v-if="showForm"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm md:p-6"
+            >
+                <div
+                    class="relative my-auto max-h-[90vh] w-[95%] max-w-7xl overflow-y-auto rounded-3xl bg-white p-4 shadow-2xl dark:bg-surface-dark md:p-6 lg:p-8"
+                >
                     <div class="mb-6 flex items-center justify-between">
                         <h3
                             class="font-display text-lg font-bold text-content-primary dark:text-white"
@@ -1130,10 +1147,14 @@ function priceVariation(item: any) {
                             </div>
                         </div>
 
-                        <hr class="border-t border-gray-200 dark:border-gray-700" />
+                        <hr
+                            class="border-t border-gray-200 dark:border-gray-700"
+                        />
 
                         <!-- Fechas (2-column) -->
-                        <div class="grid grid-cols-1 items-end gap-4 md:grid-cols-2">
+                        <div
+                            class="grid grid-cols-1 items-end gap-4 md:grid-cols-2"
+                        >
                             <DateFilter
                                 v-model="form.issue_date"
                                 label="Fecha de Emisión"
@@ -1144,7 +1165,9 @@ function priceVariation(item: any) {
                             />
                         </div>
 
-                        <hr class="border-t border-gray-200 dark:border-gray-700" />
+                        <hr
+                            class="border-t border-gray-200 dark:border-gray-700"
+                        />
 
                         <!-- Products section -->
                         <div>
@@ -1461,7 +1484,9 @@ function priceVariation(item: any) {
                             >
                         </div>
 
-                        <hr class="border-t border-gray-200 dark:border-gray-700" />
+                        <hr
+                            class="border-t border-gray-200 dark:border-gray-700"
+                        />
 
                         <!-- Delivery date & Notes -->
                         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1550,7 +1575,9 @@ function priceVariation(item: any) {
                                     v-model="supplierSearchEdit"
                                     @focus="showSupplierDropdownEdit = true"
                                     @blur="handleSupplierBlurEdit"
-                                    @keydown.down.prevent="onSupplierArrowDownEdit"
+                                    @keydown.down.prevent="
+                                        onSupplierArrowDownEdit
+                                    "
                                     @keydown.up.prevent="onSupplierArrowUpEdit"
                                     @keydown.enter.prevent="onSupplierEnterEdit"
                                     type="text"
@@ -1562,14 +1589,18 @@ function priceVariation(item: any) {
                                     class="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-surface-dark"
                                 >
                                     <button
-                                        v-for="(s, idx) in filteredSuppliersEdit()"
+                                        v-for="(
+                                            s, idx
+                                        ) in filteredSuppliersEdit()"
                                         :key="s.id"
                                         @mousedown.prevent="
                                             selectSupplierEdit(s)
                                         "
                                         :class="[
                                             'flex w-full items-center gap-2 border-b border-gray-100 px-3 py-2 text-left text-sm text-content-primary last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:text-white dark:hover:bg-gray-800',
-                                            idx === focusedSupplierIndexEdit ? 'bg-gray-100 dark:bg-gray-800' : '',
+                                            idx === focusedSupplierIndexEdit
+                                                ? 'bg-gray-100 dark:bg-gray-800'
+                                                : '',
                                         ]"
                                     >
                                         <span class="font-medium">{{
@@ -1611,8 +1642,7 @@ function priceVariation(item: any) {
                                     "
                                     class="flex items-center justify-center gap-2 rounded-xl bg-pink-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-pink-600 active:scale-95"
                                 >
-                                    <Plus class="h-4 w-4" /> Agregar
-                                    Producto
+                                    <Plus class="h-4 w-4" /> Agregar Producto
                                 </button>
                             </div>
                             <div>
@@ -1676,7 +1706,12 @@ function priceVariation(item: any) {
                                             <td class="relative px-2 py-1.5">
                                                 <input
                                                     v-model="item.product_name"
-                                                    :ref="(el: any) => editProductoInputRefs[index] = el"
+                                                    :ref="
+                                                        (el: any) =>
+                                                            (editProductoInputRefs[
+                                                                index
+                                                            ] = el)
+                                                    "
                                                     @keydown.down.prevent="
                                                         onProductArrowDownEdit(
                                                             index,
@@ -2377,9 +2412,7 @@ function priceVariation(item: any) {
                             <p
                                 class="mt-0.5 font-semibold text-content-primary dark:text-white"
                             >
-                                {{
-                                    formatDate(receiveInvoiceRef.issue_date)
-                                }}
+                                {{ formatDate(receiveInvoiceRef.issue_date) }}
                             </p>
                         </div>
                     </div>

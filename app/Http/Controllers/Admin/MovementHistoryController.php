@@ -34,7 +34,7 @@ class MovementHistoryController extends Controller
                 ->sum('quantity_change'),
         ];
 
-        return Inertia::render('admin/ventas', [
+        return Inertia::render('admin/movimientos-stock', [
             'movements' => $movements,
             'summary'   => $summary,
             'filters'   => request(['search', 'type', 'from', 'to']),

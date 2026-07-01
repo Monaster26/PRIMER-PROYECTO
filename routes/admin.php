@@ -83,9 +83,12 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::delete('categorias/{category}', [AdminCategoryController::class, 'destroy'])
             ->name('categorias.destroy');
 
-        // Ventas / Historial de Movimientos
-        Route::get('ventas', [MovementHistoryController::class, 'index'])->name('ventas.index');
-        Route::get('ventas/export', [MovementHistoryController::class, 'exportExcel'])->name('ventas.export');
+        // Movimientos de Inventario
+        Route::get('movimientos', [MovementHistoryController::class, 'index'])->name('movimientos.index');
+        Route::get('movimientos/export', [MovementHistoryController::class, 'exportExcel'])->name('movimientos.export');
+
+        // Ventas / Historial de Ventas
+        Route::get('ventas', [SaleController::class, 'index'])->name('ventas.index');
         Route::post('ventas', [SaleController::class, 'store'])->name('ventas.store');
         Route::put('ventas/{sale}', [SaleController::class, 'update'])->name('ventas.update');
         Route::delete('ventas/{sale}', [SaleController::class, 'destroy'])->name('ventas.destroy');

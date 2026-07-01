@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\Promotion;
 use Illuminate\Http\JsonResponse;
@@ -37,9 +39,31 @@ class PromotionController extends Controller
             };
         }
 
+        $promotions = $query->paginate(15)->withQueryString();
+
+        $promoDiscounts = Order::whereNotNull('promotion_ids')
+            ->selectRaw('promotion_ids, discount_total')
+            ->get()
+            ->reduce(function ($carry, $order) {
+                $ids   = $order->promotion_ids ?? [];
+                $count = count($ids);
+                if ($count === 0) return $carry;
+                $share = (int) round($order->discount_total / $count);
+                foreach ($ids as $id) {
+                    $carry[$id] = ($carry[$id] ?? 0) + $share;
+                }
+                return $carry;
+            }, collect());
+
+        $promotions->through(function ($p) use ($promoDiscounts) {
+            $p->total_discount_given = $promoDiscounts[$p->id] ?? 0;
+            return $p;
+        });
+
         return Inertia::render('admin/promociones', [
-            'promotions' => $query->paginate(15)->withQueryString(),
+            'promotions' => $promotions,
             'filters'    => $request->only(['search', 'type', 'status']),
+            'categories' => Category::orderBy('name')->get(['id', 'name', 'parent_id']),
         ]);
     }
 
@@ -55,6 +79,7 @@ class PromotionController extends Controller
             'rewards'      => $this->buildRewards($validated),
             'is_active'    => $validated['is_active'] ?? true,
             'is_exclusive' => $validated['is_exclusive'] ?? false,
+            'max_uses'     => $validated['max_uses'] ?? null,
             'priority'     => $validated['priority'] ?? 0,
             'starts_at'    => $validated['starts_at'] ?? null,
             'expires_at'   => $validated['expires_at'] ?? null,
@@ -78,6 +103,7 @@ class PromotionController extends Controller
             'rewards'      => $this->buildRewards($validated),
             'is_active'    => $validated['is_active'] ?? true,
             'is_exclusive' => $validated['is_exclusive'] ?? false,
+            'max_uses'     => $validated['max_uses'] ?? null,
             'priority'     => $validated['priority'] ?? 0,
             'starts_at'    => $validated['starts_at'] ?? null,
             'expires_at'   => $validated['expires_at'] ?? null,
@@ -97,22 +123,20 @@ class PromotionController extends Controller
             ->with('success', 'Promoción eliminada.');
     }
 
-    public function toggleActive(Promotion $promotion): JsonResponse
+    public function toggleActive(Promotion $promotion): RedirectResponse
     {
         $promotion->update(['is_active' => !$promotion->is_active]);
 
-        return response()->json([
-            'is_active' => $promotion->fresh()->is_active,
-        ]);
+        return back();
     }
 
     public function evaluate(Request $request, Promotion $promotion): JsonResponse
     {
         $request->validate([
-            'items'            => 'required|array|min:1',
+            'items'              => 'required|array|min:1',
             'items.*.product_id' => 'required|integer|exists:products,id',
-            'items.*.qty'      => 'required|integer|min:1',
-            'items.*.price'    => 'required|integer|min:0',
+            'items.*.qty'        => 'required|integer|min:1',
+            'items.*.price'      => 'required|integer|min:0',
         ]);
 
         $cartForPromo = collect($request->items)->map(fn($item) => [
@@ -125,11 +149,11 @@ class PromotionController extends Controller
         $result = $promotion->evaluateCart($cartForPromo);
 
         return response()->json([
-            'promotion'     => $promotion->only(['id', 'name', 'type', 'is_active']),
-            'conditions'    => $promotion->conditions,
+            'promotion'      => $promotion->only(['id', 'name', 'type', 'is_active']),
+            'conditions'     => $promotion->conditions,
             'cart_for_promo' => $cartForPromo,
-            'applies'       => $result['applies'],
-            'discount'      => $result['discount'],
+            'applies'        => $result['applies'],
+            'discount'       => $result['discount'],
             'discount_pesos' => $result['discount'] / 100,
         ]);
     }
@@ -139,9 +163,10 @@ class PromotionController extends Controller
         $rules = [
             'name'          => 'required|string|max:255',
             'description'   => 'nullable|string|max:1000',
-            'type'          => 'required|in:buy_x_get_y,min_qty_discount,bundle_discount',
+            'type'          => 'required|in:buy_x_get_y,min_qty_discount,bundle_discount,special_price,category_discount',
             'is_active'     => 'boolean',
             'is_exclusive'  => 'boolean',
+            'max_uses'      => 'nullable|integer|min:1',
             'priority'      => 'nullable|integer|min:0',
             'starts_at'     => 'nullable|date',
             'expires_at'    => 'nullable|date|after_or_equal:starts_at',
@@ -151,22 +176,30 @@ class PromotionController extends Controller
             'buy_x_get_y' => [
                 'conditions.buy_product_id'       => 'required|integer|exists:products,id',
                 'conditions.buy_qty'              => 'required|integer|min:1',
-                'conditions.special_price_total'  => 'required_without:rewards.discount_pct|nullable|numeric|min:1',
+                'conditions.special_price_total'  => 'nullable|numeric|min:1|prohibits:rewards.discount_pct',
                 'rewards.get_product_id'          => 'required|integer|exists:products,id',
                 'rewards.get_qty'                 => 'required|integer|min:1',
-                'rewards.discount_pct'            => 'required_without:conditions.special_price_total|nullable|integer|min:0|max:100',
+                'rewards.discount_pct'            => 'nullable|integer|min:0|max:100|prohibits:conditions.special_price_total',
             ],
             'min_qty_discount' => [
                 'conditions.product_id'    => 'required|integer|exists:products,id',
                 'conditions.min_qty'       => 'required|integer|min:1',
-                'conditions.discount_pct'  => 'required_without:conditions.special_price|nullable|integer|min:1|max:100',
-                'conditions.special_price' => 'required_without:conditions.discount_pct|nullable|numeric|min:1',
+                'conditions.discount_pct'  => 'required_without:conditions.special_price|nullable|integer|min:1|max:100|prohibits:conditions.special_price',
+                'conditions.special_price' => 'required_without:conditions.discount_pct|nullable|numeric|min:1|prohibits:conditions.discount_pct',
             ],
             'bundle_discount' => [
                 'conditions.product_ids'        => 'required|array|min:2',
                 'conditions.product_ids.*'      => 'integer|exists:products,id',
-                'conditions.discount_pct'        => 'required_without:conditions.special_price_total|nullable|integer|min:1|max:100',
-                'conditions.special_price_total' => 'required_without:conditions.discount_pct|nullable|numeric|min:1',
+                'conditions.discount_pct'        => 'required_without:conditions.special_price_total|nullable|integer|min:1|max:100|prohibits:conditions.special_price_total',
+                'conditions.special_price_total' => 'required_without:conditions.discount_pct|nullable|numeric|min:1|prohibits:conditions.discount_pct',
+            ],
+            'special_price' => [
+                'conditions.product_id'    => 'required|integer|exists:products,id',
+                'conditions.special_price' => 'required|numeric|min:1',
+            ],
+            'category_discount' => [
+                'conditions.category_id'   => 'required|integer|exists:categories,id',
+                'conditions.discount_pct'  => 'required|integer|min:1|max:100',
             ],
             default => [],
         };
@@ -180,18 +213,26 @@ class PromotionController extends Controller
             'buy_x_get_y' => [
                 'buy_product_id'      => $validated['conditions']['buy_product_id'],
                 'buy_qty'             => (int) $validated['conditions']['buy_qty'],
-                'special_price_total' => isset($validated['conditions']['special_price_total']) ? (int) $validated['conditions']['special_price_total'] : null,
+                'special_price_total' => isset($validated['conditions']['special_price_total']) ? (int) round($validated['conditions']['special_price_total'] * 100) : null,
             ],
             'min_qty_discount' => [
                 'product_id'    => $validated['conditions']['product_id'],
                 'min_qty'       => (int) $validated['conditions']['min_qty'],
                 'discount_pct'  => isset($validated['conditions']['discount_pct']) ? (int) $validated['conditions']['discount_pct'] : null,
-                'special_price' => isset($validated['conditions']['special_price']) ? (int) $validated['conditions']['special_price'] : null,
+                'special_price' => isset($validated['conditions']['special_price']) ? (int) round($validated['conditions']['special_price'] * 100) : null,
             ],
             'bundle_discount' => [
                 'product_ids'         => $validated['conditions']['product_ids'],
                 'discount_pct'        => isset($validated['conditions']['discount_pct']) ? (int) $validated['conditions']['discount_pct'] : null,
-                'special_price_total' => isset($validated['conditions']['special_price_total']) ? (int) $validated['conditions']['special_price_total'] : null,
+                'special_price_total' => isset($validated['conditions']['special_price_total']) ? (int) round($validated['conditions']['special_price_total'] * 100) : null,
+            ],
+            'special_price' => [
+                'product_id'    => $validated['conditions']['product_id'],
+                'special_price' => (int) round($validated['conditions']['special_price'] * 100),
+            ],
+            'category_discount' => [
+                'category_id'  => (int) $validated['conditions']['category_id'],
+                'discount_pct' => (int) $validated['conditions']['discount_pct'],
             ],
             default => [],
         };

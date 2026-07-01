@@ -15,6 +15,7 @@ class Promotion extends Model
         'is_active',
         'priority',
         'is_exclusive',
+        'max_uses',
         'starts_at',
         'expires_at',
     ];
@@ -25,6 +26,8 @@ class Promotion extends Model
         'is_active'    => 'boolean',
         'is_exclusive' => 'boolean',
         'priority'     => 'integer',
+        'max_uses'     => 'integer',
+        'used_count'   => 'integer',
         'starts_at'    => 'datetime',
         'expires_at'   => 'datetime',
     ];
@@ -36,6 +39,7 @@ class Promotion extends Model
         return $query->where('is_active', true)
                      ->where(fn($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
                      ->where(fn($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', now()))
+                     ->where(fn($q) => $q->whereNull('max_uses')->orWhereRaw('used_count < max_uses'))
                      ->orderByDesc('priority');
     }
 
@@ -53,6 +57,8 @@ class Promotion extends Model
             'buy_x_get_y'        => $this->evaluateBuyXGetY($cartItems),
             'min_qty_discount'   => $this->evaluateMinQtyDiscount($cartItems),
             'bundle_discount'    => $this->evaluateBundleDiscount($cartItems),
+            'special_price'      => $this->evaluateSpecialPrice($cartItems),
+            'category_discount'  => $this->evaluateCategoryDiscount($cartItems),
             default              => ['applies' => false, 'rewards' => [], 'discount' => 0],
         };
     }
@@ -74,6 +80,8 @@ class Promotion extends Model
             return ['applies' => false, 'rewards' => [], 'discount' => 0];
         }
 
+        $sets = intdiv($buyQty, $cond['buy_qty']);
+
         $getProduct = Product::find($rwd['get_product_id']);
         if (!$getProduct) {
             return ['applies' => false, 'rewards' => [], 'discount' => 0];
@@ -84,14 +92,14 @@ class Promotion extends Model
             if (!$buyProduct) {
                 return ['applies' => false, 'rewards' => [], 'discount' => 0];
             }
-            $normalTotal = ($cond['buy_qty'] * $buyProduct->price) + ($getProduct->price * $rwd['get_qty']);
-            $fixedCents = (int) $cond['special_price_total'] * 100;
+            $normalTotal = ($cond['buy_qty'] * $sets * $buyProduct->price) + ($getProduct->price * $rwd['get_qty'] * $sets);
+            $fixedCents = (int) $cond['special_price_total'] * $sets;
             $discount = max(0, $normalTotal - $fixedCents);
             return [
                 'applies'  => true,
                 'rewards'  => [
                     'product_id' => $rwd['get_product_id'],
-                    'qty'        => $rwd['get_qty'],
+                    'qty'        => $rwd['get_qty'] * $sets,
                     'discount_pct' => 100,
                 ],
                 'discount' => $discount,
@@ -99,13 +107,13 @@ class Promotion extends Model
         }
 
         $discountPct = $rwd['discount_pct'] ?? 100;
-        $discount = (int) round($getProduct->price * $rwd['get_qty'] * ($discountPct / 100));
+        $discount = (int) round($getProduct->price * $rwd['get_qty'] * ($discountPct / 100) * $sets);
 
         return [
             'applies'  => true,
             'rewards'  => [
                 'product_id' => $rwd['get_product_id'],
-                'qty'        => $rwd['get_qty'],
+                'qty'        => $rwd['get_qty'] * $sets,
                 'discount_pct' => $discountPct,
             ],
             'discount' => $discount,
@@ -143,7 +151,7 @@ class Promotion extends Model
         if (!empty($cond['discount_pct'])) {
             $groupDiscount = (int) round($groupNormalPrice * ($cond['discount_pct'] / 100));
         } else {
-            $groupSpecialCents = (int) $cond['special_price'] * 100;
+            $groupSpecialCents = (int) $cond['special_price'];
             $groupDiscount = max(0, $groupNormalPrice - $groupSpecialCents);
         }
 
@@ -164,26 +172,84 @@ class Promotion extends Model
             return ['applies' => false, 'rewards' => [], 'discount' => 0];
         }
 
-        $cartIds  = collect($cartItems)->pluck('product_id')->toArray();
+        $cart = collect($cartItems);
         $required = $cond['product_ids'];
 
+        $sets = null;
         foreach ($required as $pid) {
-            if (!in_array($pid, $cartIds)) {
+            $qty = $cart->where('product_id', $pid)->sum('qty');
+            if ($qty < 1) {
                 return ['applies' => false, 'rewards' => [], 'discount' => 0];
             }
+            $sets = $sets === null ? $qty : min($sets, $qty);
         }
 
-        $bundleTotal = collect($cartItems)
-            ->whereIn('product_id', $required)
-            ->sum(fn($item) => $item['qty'] * $item['price']);
+        // ponytail: one-set normal price uses first-found variant price
+        $unitNormal = 0;
+        foreach ($required as $pid) {
+            $unitNormal += $cart->firstWhere('product_id', $pid)['price'];
+        }
+
+        $discountableNormal = $unitNormal * $sets;
 
         if (!empty($cond['special_price_total'])) {
-            $fixedCents = (int) $cond['special_price_total'] * 100;
-            $discount = max(0, $bundleTotal - $fixedCents);
+            $fixedCents = (int) $cond['special_price_total'];
+            $discount = max(0, $discountableNormal - $fixedCents * $sets);
         } else {
-            $discount = (int) round($bundleTotal * ($cond['discount_pct'] / 100));
+            $discount = (int) round($discountableNormal * ($cond['discount_pct'] / 100));
         }
 
         return ['applies' => true, 'rewards' => [], 'discount' => $discount];
+    }
+
+    private function evaluateSpecialPrice(array $cartItems): array
+    {
+        $cond = $this->conditions;
+
+        if (empty($cond['product_id']) || empty($cond['special_price'])) {
+            return ['applies' => false, 'rewards' => [], 'discount' => 0];
+        }
+
+        $item = collect($cartItems)->firstWhere('product_id', $cond['product_id']);
+        if (!$item) {
+            return ['applies' => false, 'rewards' => [], 'discount' => 0];
+        }
+
+        $normalTotal = $item['price'] * $item['qty'];
+        $specialTotal = (int) $cond['special_price'] * $item['qty'];
+        $discount = max(0, $normalTotal - $specialTotal);
+
+        return ['applies' => $discount > 0, 'rewards' => [], 'discount' => $discount];
+    }
+
+    private function evaluateCategoryDiscount(array $cartItems): array
+    {
+        $cond = $this->conditions;
+
+        if (empty($cond['category_id']) || empty($cond['discount_pct'])) {
+            return ['applies' => false, 'rewards' => [], 'discount' => 0];
+        }
+
+        $category = Category::find($cond['category_id']);
+        if (!$category) {
+            return ['applies' => false, 'rewards' => [], 'discount' => 0];
+        }
+
+        $allIds = [$category->id];
+        $childIds = [$category->id];
+        while (!empty($childIds)) {
+            $childIds = Category::whereIn('parent_id', $childIds)->pluck('id')->toArray();
+            $allIds = array_merge($allIds, $childIds);
+        }
+        $productIds = Product::whereIn('category_id', $allIds)->pluck('id')->toArray();
+
+        $discount = 0;
+        foreach ($cartItems as $item) {
+            if (in_array($item['product_id'], $productIds)) {
+                $discount += (int) round($item['price'] * $item['qty'] * $cond['discount_pct'] / 100);
+            }
+        }
+
+        return ['applies' => $discount > 0, 'rewards' => [], 'discount' => $discount];
     }
 }

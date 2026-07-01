@@ -366,6 +366,7 @@ class PosController extends Controller
                     $result = $promo->evaluateCart($cartForPromo);
                     if ($result['applies']) {
                         $promoDiscount += $result['discount'];
+                        $promo->increment('used_count');
                         $appliedPromotions[] = $promo->name;
                         if ($promo->is_exclusive) break;
                     }
