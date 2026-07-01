@@ -54,13 +54,16 @@ class ExpenseController extends Controller
         $suppliers = Supplier::orderBy('company_name')->get(['id', 'company_name']);
         $users = User::orderBy('name')->get(['id', 'name']);
 
+        $totalTaxAmount = (int) (clone $base)->sum('tax_amount');
+
         return Inertia::render('admin/gastos', [
-            'expenses'  => $expenses,
-            'suppliers' => $suppliers,
-            'users'     => $users,
-            'summary'   => $summary,
-            'filters'   => $filters,
-            'chart'     => $this->chartData($filters),
+            'expenses'       => $expenses,
+            'suppliers'      => $suppliers,
+            'users'          => $users,
+            'summary'        => $summary,
+            'filters'        => $filters,
+            'chart'          => $this->chartData($filters),
+            'totalTaxAmount' => $totalTaxAmount,
         ]);
     }
 
@@ -128,6 +131,17 @@ class ExpenseController extends Controller
 
         return redirect()->route('admin.gastos.index', $this->filterParams($request))
             ->with('success', 'Egreso eliminado.');
+    }
+
+    public function updateTax(Request $request, Expense $expense): RedirectResponse
+    {
+        $validated = $request->validate([
+            'tax_amount' => 'required|integer|min:0',
+        ]);
+
+        $expense->update(['tax_amount' => $validated['tax_amount']]);
+
+        return back()->with('success', 'Impuesto actualizado.');
     }
 
     public function export()

@@ -11,6 +11,7 @@ import {
     Printer,
     Search,
     ShoppingCart,
+    XCircle,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
@@ -38,7 +39,12 @@ interface SaleRow {
     card_amount: number;
     transfer_amount: number;
     created_at: string;
+    status: string;
+    cancellation_reason: string | null;
+    cancellation_note: string | null;
+    cancelled_at: string | null;
     cashier: { id: number; name: string } | null;
+    cancelled_by: { id: number; name: string } | null;
     items: SaleItem[];
     payments: SalePayment[];
 }
@@ -178,6 +184,47 @@ function productsPreview(s: SaleRow): string {
     return s.items.map((i) => i.product?.name ?? '—').join(', ');
 }
 
+// ─── Cancel Modal ────────────────────────────────────────
+
+const showCancelModal = ref(false);
+const cancelSale = ref<SaleRow | null>(null);
+const cancelReason = ref<string>('customer_return');
+const cancelNote = ref<string>('');
+const cancelling = ref(false);
+
+const reasonOptions = [
+    { value: 'customer_return', label: 'Devolución del cliente' },
+    { value: 'cashier_error', label: 'Error del cajero' },
+];
+
+function openCancelModal(s: SaleRow) {
+    cancelSale.value = s;
+    cancelReason.value = 'customer_return';
+    cancelNote.value = '';
+    showCancelModal.value = true;
+}
+
+function closeCancelModal() {
+    showCancelModal.value = false;
+    cancelSale.value = null;
+}
+
+function confirmCancel() {
+    if (!cancelSale.value || cancelling.value) return;
+    cancelling.value = true;
+    router.patch(
+        route('admin.ventas.cancelar', cancelSale.value.id),
+        { reason: cancelReason.value, note: cancelNote.value },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                cancelling.value = false;
+                closeCancelModal();
+            },
+        },
+    );
+}
+
 // ─── Modal Detail ────────────────────────────────────────
 
 const showDetailModal = ref(false);
@@ -210,6 +257,11 @@ interface TodaySale {
     transfer_amount: number;
     cashier_name: string;
     created_at: string;
+    status: string;
+    cancellation_reason: string | null;
+    cancellation_note: string | null;
+    cancelled_at: string | null;
+    cancelled_by_name: string | null;
 }
 
 function toTodaySale(s: SaleRow): TodaySale {
@@ -236,6 +288,11 @@ function toTodaySale(s: SaleRow): TodaySale {
         transfer_amount: s.transfer_amount,
         cashier_name: s.cashier?.name ?? '—',
         created_at: s.created_at,
+        status: s.status,
+        cancellation_reason: s.cancellation_reason,
+        cancellation_note: s.cancellation_note,
+        cancelled_at: s.cancelled_at,
+        cancelled_by_name: s.cancelled_by?.name ?? null,
     };
 }
 
@@ -257,8 +314,12 @@ function reprintTicket(saleId: number) {
     );
 }
 
+const completedSales = computed(() =>
+    props.sales.data.filter((s) => s.status === 'completed'),
+);
+
 const totalSum = computed(() =>
-    props.sales.data.reduce((sum, s) => sum + s.total, 0),
+    completedSales.value.reduce((sum, s) => sum + s.total, 0),
 );
 </script>
 
@@ -368,7 +429,7 @@ const totalSum = computed(() =>
                     <p
                         class="text-xl font-bold text-content-primary dark:text-white"
                     >
-                        {{ sales.data.length }}
+                        {{ completedSales.length }}
                     </p>
                     <p class="text-[11px] text-content-muted">en esta página</p>
                 </div>
@@ -457,6 +518,12 @@ const totalSum = computed(() =>
                                 class="px-6 py-4 font-mono text-sm font-bold text-content-primary dark:text-white"
                             >
                                 #{{ s.id }}
+                                <span
+                                    v-if="s.status === 'cancelled'"
+                                    class="ml-2 inline-block rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                >
+                                    CANCELADA
+                                </span>
                             </td>
                             <td
                                 class="whitespace-nowrap px-6 py-4 text-sm text-content-secondary"
@@ -523,6 +590,14 @@ const totalSum = computed(() =>
                                     >
                                         <Printer class="h-4 w-4" />
                                     </button>
+                                    <button
+                                        v-if="s.status === 'completed'"
+                                        @click="openCancelModal(s)"
+                                        class="rounded-lg p-1.5 text-content-muted transition-colors hover:bg-gray-100 hover:text-red-500 dark:hover:bg-gray-800"
+                                        title="Cancelar venta"
+                                    >
+                                        <XCircle class="h-4 w-4" />
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -555,6 +630,114 @@ const totalSum = computed(() =>
                 </div>
             </div>
         </div>
+
+        <!-- Modal de cancelación -->
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="showCancelModal && cancelSale"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+                @click.self="closeCancelModal"
+            >
+                <div
+                    class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-surface-dark"
+                >
+                    <h3
+                        class="mb-4 text-lg font-bold text-content-primary dark:text-white"
+                    >
+                        Cancelar Venta #{{ cancelSale.id }}
+                    </h3>
+
+                    <p
+                        class="mb-4 text-sm text-content-muted"
+                    >
+                        Se revertirá el stock de los siguientes productos:
+                    </p>
+                    <ul
+                        class="mb-4 space-y-1 text-sm text-content-secondary"
+                    >
+                        <li
+                            v-for="item in cancelSale.items"
+                            :key="item.id"
+                            class="flex justify-between"
+                        >
+                            <span>{{ item.product?.name ?? '—' }}</span>
+                            <span class="font-mono font-bold"
+                                >x{{ item.quantity }}</span
+                            >
+                        </li>
+                    </ul>
+
+                    <div class="mb-4 space-y-3">
+                        <label
+                            class="block text-sm font-bold text-content-primary dark:text-white"
+                        >
+                            Motivo de cancelación
+                        </label>
+                        <div class="space-y-2">
+                            <label
+                                v-for="opt in reasonOptions"
+                                :key="opt.value"
+                                class="flex items-center gap-3 rounded-xl border border-gray-200 p-3 cursor-pointer transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                                :class="{
+                                    'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20':
+                                        cancelReason === opt.value,
+                                }"
+                            >
+                                <input
+                                    type="radio"
+                                    :value="opt.value"
+                                    v-model="cancelReason"
+                                    class="h-4 w-4 text-red-500"
+                                />
+                                <span
+                                    class="text-sm text-content-primary dark:text-white"
+                                >
+                                    {{ opt.label }}
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label
+                            class="mb-1 block text-sm font-bold text-content-primary dark:text-white"
+                        >
+                            Nota (opcional)
+                        </label>
+                        <textarea
+                            v-model="cancelNote"
+                            placeholder="Detalle adicional..."
+                            maxlength="500"
+                            class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm outline-none transition-shadow focus:border-primary-400 focus:ring-2 focus:ring-primary-200 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                            rows="2"
+                        ></textarea>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button
+                            @click="closeCancelModal"
+                            class="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-bold text-content-muted transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            @click="confirmCancel"
+                            :disabled="cancelling"
+                            class="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-bold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                        >
+                            {{ cancelling ? 'Cancelando...' : 'Confirmar cancelación' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
 
         <!-- Modal de detalle -->
         <SalesHistoryModal

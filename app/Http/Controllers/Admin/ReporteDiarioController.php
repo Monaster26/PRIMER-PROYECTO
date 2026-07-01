@@ -23,9 +23,9 @@ class ReporteDiarioController extends Controller
 
         // Base scopes
         $sessionQuery = CashSession::whereDate('date', $date);
-        $salesQuery   = Sale::whereBetween('created_at', [$start, $end]);
+        $salesQuery   = Sale::whereBetween('created_at', [$start, $end])->where('status', 'completed');
         $movementQuery = CashMovement::whereBetween('created_at', [$start, $end]);
-        $itemsQuery   = SaleItem::whereBetween('sales.created_at', [$start, $end]);
+        $itemsQuery   = SaleItem::whereBetween('sales.created_at', [$start, $end])->where('sales.status', 'completed');
 
         if ($userId) {
             $sessionQuery->where('user_id', $userId);

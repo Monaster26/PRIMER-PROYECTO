@@ -18,7 +18,7 @@ import {
     Wrench,
     X,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
 const props = defineProps<{
     expenses: any;
@@ -41,6 +41,7 @@ const props = defineProps<{
         user_id?: number | string;
     };
     chart: Record<string, { label: string; total: number; color: string }>;
+    totalTaxAmount?: number;
 }>();
 
 const typeLabels: Record<string, string> = {
@@ -192,6 +193,55 @@ function deleteExpense(id: number) {
 const fmt = (v: number) =>
     '$' + v.toLocaleString('es-CO', { minimumFractionDigits: 0 });
 
+// ─── Tax inline edit ───────────────────────────
+const editingTaxId = ref<number | null>(null);
+const editingTaxValue = ref(0);
+const savedTaxId = ref<number | null>(null);
+
+function startEditTax(e: any) {
+    editingTaxId.value = e.id;
+    editingTaxValue.value = e.tax_amount ?? 0;
+    nextTick(() => {
+        const el = document.getElementById('tax-input-' + e.id) as HTMLInputElement;
+        if (el) { el.focus(); el.select(); }
+    });
+}
+
+function saveTax(e: any) {
+    if (editingTaxId.value !== e.id) return;
+    savedTaxId.value = e.id;
+    router.post(
+        route('admin.gastos.update-tax', e.id),
+        { tax_amount: editingTaxValue.value },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                editingTaxId.value = null;
+                setTimeout(() => { savedTaxId.value = null; }, 1500);
+            },
+        },
+    );
+}
+
+function cancelEditTax() {
+    editingTaxId.value = null;
+}
+
+function onTaxKeydown(e: KeyboardEvent, expense: any) {
+    if (e.key === 'Enter') { e.preventDefault(); saveTax(expense); }
+    if (e.key === 'Escape') { cancelEditTax(); }
+}
+
+function taxAmountClass(amount: number): string {
+    return amount > 0
+        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800'
+        : 'bg-gray-50 text-gray-400 border-gray-200 dark:bg-gray-800 dark:text-gray-500 dark:border-gray-700';
+}
+
+const totalTaxAmount = computed(() => props.totalTaxAmount ?? 0);
+
+const hasTax = computed(() => totalTaxAmount.value > 0);
+
 function receiptUrl(path: string | null): string | undefined {
     if (!path) return undefined;
     return '/storage/' + path;
@@ -216,7 +266,7 @@ function receiptUrl(path: string | null): string | undefined {
             </div>
         </template>
 
-        <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
             <div
                 class="flex items-center gap-4 rounded-3xl border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-surface-dark"
             >
@@ -322,6 +372,36 @@ function receiptUrl(path: string | null): string | undefined {
                         class="text-base font-bold text-content-primary dark:text-white"
                     >
                         {{ fmt(summary.operacionales) }}
+                    </p>
+                </div>
+            </div>
+            <div
+                class="flex items-center gap-4 rounded-3xl border bg-white p-4 shadow-sm transition-all duration-200 dark:bg-surface-dark"
+                :class="hasTax
+                    ? 'border-amber-200 dark:border-amber-800'
+                    : 'border-gray-100 dark:border-gray-800'"
+            >
+                <div
+                    class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl transition-colors duration-200"
+                    :class="hasTax
+                        ? 'bg-amber-100 dark:bg-amber-900/30'
+                        : 'bg-gray-50 dark:bg-gray-800'"
+                >
+                    <ReceiptText class="h-5 w-5" :class="hasTax ? 'text-amber-600' : 'text-gray-400'" />
+                </div>
+                <div>
+                    <p
+                        class="text-[10px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400"
+                    >
+                        IVA Total
+                    </p>
+                    <p
+                        class="text-base font-bold transition-colors duration-200"
+                        :class="hasTax
+                            ? 'text-amber-700 dark:text-amber-400'
+                            : 'text-content-primary dark:text-white'"
+                    >
+                        {{ fmt(totalTaxAmount) }}
                     </p>
                 </div>
             </div>
@@ -488,9 +568,13 @@ function receiptUrl(path: string | null): string | undefined {
                             <th class="px-4 py-3 text-right font-bold">
                                 Monto
                             </th>
+                            <th class="px-4 py-3 text-right font-bold">
+                                IVA
+                            </th>
                             <th class="px-4 py-3 font-bold">Responsable</th>
                             <th class="px-4 py-3 font-bold">Observación</th>
                             <th class="px-4 py-3 font-bold">Comprobante</th>
+                            <th class="px-4 py-3 font-bold">Origen</th>
                             <th class="px-4 py-3 text-right font-bold">
                                 Acciones
                             </th>
@@ -501,7 +585,7 @@ function receiptUrl(path: string | null): string | undefined {
                     >
                         <tr v-if="!expenses.data?.length">
                             <td
-                                colspan="10"
+                                colspan="11"
                                 class="px-6 py-12 text-center text-sm text-content-muted dark:text-gray-500"
                             >
                                 No hay egresos registrados.
@@ -554,6 +638,40 @@ function receiptUrl(path: string | null): string | undefined {
                             >
                                 {{ fmt(e.amount) }}
                             </td>
+                            <td class="group/cell px-4 py-3.5 text-right text-sm">
+                                <div v-if="editingTaxId === e.id" class="flex items-center justify-end gap-1">
+                                    <span class="text-[10px] font-bold text-amber-500">$</span>
+                                    <input
+                                        :id="'tax-input-' + e.id"
+                                        v-model.number="editingTaxValue"
+                                        type="text"
+                                        inputmode="numeric"
+                                        class="w-28 rounded-xl border-2 border-amber-300 bg-amber-50 px-3 py-1.5 text-right text-sm font-bold text-amber-800 outline-none ring-4 ring-amber-200/50 transition-all duration-150 focus:border-amber-500 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300 dark:ring-amber-800/30"
+                                        @keydown="onTaxKeydown($event, e)"
+                                        @blur="saveTax(e)"
+                                    />
+                                </div>
+                                <div v-else-if="savedTaxId === e.id" class="flex items-center justify-end gap-1.5">
+                                    <span class="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-600 animate-pulse dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400">
+                                        <Check class="h-3 w-3" /> Guardado
+                                    </span>
+                                </div>
+                                <template v-else>
+                                    <span
+                                        :class="taxAmountClass(e.tax_amount ?? 0)"
+                                        class="inline-flex items-center gap-1 rounded-xl border px-2.5 py-1 text-[11px] font-bold transition-all duration-200 group-hover/cell:shadow-sm"
+                                    >
+                                        {{ fmt(e.tax_amount ?? 0) }}
+                                    </span>
+                                    <button
+                                        @click="startEditTax(e)"
+                                        class="ml-1 inline-flex rounded-lg p-1 text-content-muted opacity-0 transition-all duration-200 group-hover/cell:opacity-100 hover:bg-amber-100 hover:text-amber-600 dark:hover:bg-amber-900/20 dark:hover:text-amber-400 active:scale-90"
+                                        title="Editar impuesto"
+                                    >
+                                        <Pencil class="h-3 w-3" />
+                                    </button>
+                                </template>
+                            </td>
                             <td
                                 class="px-4 py-3.5 text-sm text-content-secondary"
                             >
@@ -577,7 +695,30 @@ function receiptUrl(path: string | null): string | undefined {
                                 <span
                                     v-else
                                     class="text-[11px] text-content-muted"
-                                    >—</span
+                                >—</span
+                                >
+                            </td>
+                            <td class="px-4 py-3.5 text-sm text-content-secondary">
+                                <a
+                                    v-if="e.origin_type === 'invoice'"
+                                    :href="
+                                        route(
+                                            'admin.facturas-pendientes.index',
+                                        ) +
+                                        '?search=' +
+                                        (e.concept || '')
+                                    "
+                                    class="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-600 transition-colors hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400"
+                                    title="Ver factura original"
+                                >
+                                    Factura #{{
+                                        e.origin_id
+                                    }}
+                                </a>
+                                <span
+                                    v-else
+                                    class="text-[11px] text-content-muted"
+                                >—</span
                                 >
                             </td>
                             <td class="px-4 py-3.5 text-right">

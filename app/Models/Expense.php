@@ -20,6 +20,7 @@ class Expense extends Model
         'beneficiary',
         'payment_method',
         'amount',
+        'tax_amount',
         'observation',
         'receipt_file',
         'user_id',
@@ -27,6 +28,8 @@ class Expense extends Model
         'cash_spent',
         'transfer_spent',
         'total_expense',
+        'origin_type',
+        'origin_id',
     ];
 
     protected $casts = [
@@ -35,6 +38,7 @@ class Expense extends Model
         'transfer_spent' => 'integer',
         'total_expense' => 'integer',
         'amount' => 'integer',
+        'tax_amount' => 'integer',
     ];
 
     public const TYPES = [
@@ -73,6 +77,11 @@ class Expense extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function origin(): \Illuminate\Database\Eloquent\Relations\MorphTo
+    {
+        return $this->morphTo('origin', 'origin_type', 'origin_id');
     }
 
     public function scopeOfType(Builder $query, ?string $type): Builder

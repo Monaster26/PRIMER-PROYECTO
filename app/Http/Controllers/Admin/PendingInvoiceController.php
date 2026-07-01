@@ -49,11 +49,11 @@ class PendingInvoiceController extends Controller
         $categories = Category::with('children')->roots()->ordered()->get(['id', 'name', 'slug']);
 
         return Inertia::render('admin/facturas-pendientes', [
-            'invoices'   => $invoices,
-            'suppliers'  => $suppliers,
-            'products'   => $products,
-            'categories' => $categories,
-            'filters'    => $request->only(['status', 'supplier_id', 'date_from', 'date_to', 'search']),
+            'invoices'       => $invoices,
+            'suppliers'      => $suppliers,
+            'products'       => $products,
+            'categories'     => $categories,
+            'filters' => $request->only(['status', 'supplier_id', 'date_from', 'date_to', 'search']),
         ]);
     }
 
@@ -341,10 +341,36 @@ class PendingInvoiceController extends Controller
             return back()->with('error', 'Solo facturas recibidas pueden marcarse como pagadas.');
         }
 
-        $pendingInvoice->update(['status' => 'paid']);
+        $pendingInvoice->load('supplier');
+
+        try {
+            DB::transaction(function () use ($pendingInvoice) {
+                $pendingInvoice->update(['status' => 'paid']);
+
+                app(\App\Actions\CreateExpenseFromPendingInvoice::class)
+                    ->execute($pendingInvoice);
+            });
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return redirect()->route('admin.facturas-pendientes.index')
-            ->with('success', 'Factura marcada como pagada.');
+            ->with('success', 'Factura marcada como pagada. Egreso registrado automáticamente.');
+    }
+
+    public function updateTax(Request $request, PendingInvoice $pendingInvoice): RedirectResponse
+    {
+        if ($pendingInvoice->status === 'paid') {
+            return back()->with('error', 'No se puede modificar el impuesto de una factura pagada.');
+        }
+
+        $validated = $request->validate([
+            'tax_amount' => 'required|integer|min:0',
+        ]);
+
+        $pendingInvoice->update(['tax_amount' => $validated['tax_amount']]);
+
+        return back()->with('success', 'Impuesto actualizado.');
     }
 
     public function destroy(PendingInvoice $pendingInvoice): RedirectResponse

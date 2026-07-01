@@ -365,6 +365,87 @@ class PendingInvoiceTest extends TestCase
             'id'     => $invoice->id,
             'status' => 'paid',
         ]);
+
+        $this->assertDatabaseHas('expenses', [
+            'origin_type' => 'invoice',
+            'origin_id'   => $invoice->id,
+            'amount'      => 200000,
+            'type'        => 'proveedor',
+        ]);
+    }
+
+    public function test_no_se_duplica_egreso_al_marcar_pagada(): void
+    {
+        $invoice = PendingInvoice::create([
+            'supplier_id'  => $this->supplier->id,
+            'issue_date'   => '2026-06-01',
+            'due_date'     => '2026-06-30',
+            'total_amount' => 150000,
+            'status'       => 'received',
+            'received_at'  => now(),
+        ]);
+
+        // primer pago — ok
+        $this->patch(route('admin.facturas-pendientes.mark-paid', $invoice->id))
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('expenses', [
+            'origin_type' => 'invoice',
+            'origin_id'   => $invoice->id,
+        ]);
+
+        $this->assertDatabaseCount('expenses', 1);
+
+        // intentar pagar de nuevo — debe rechazar
+        $this->patch(route('admin.facturas-pendientes.mark-paid', $invoice->id))
+            ->assertSessionHas('error');
+
+        // sigue habiendo un solo egreso
+        $this->assertDatabaseCount('expenses', 1);
+    }
+
+    public function test_actualizar_impuesto(): void
+    {
+        $invoice = PendingInvoice::create([
+            'supplier_id'  => $this->supplier->id,
+            'issue_date'   => '2026-06-01',
+            'due_date'     => '2026-06-30',
+            'total_amount' => 200000,
+            'tax_amount'   => 0,
+            'status'       => 'received',
+            'received_at'  => now(),
+        ]);
+
+        $this->post(route('admin.facturas-pendientes.update-tax', $invoice->id), [
+            'tax_amount' => 32000,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('pending_invoices', [
+            'id'         => $invoice->id,
+            'tax_amount' => 32000,
+        ]);
+    }
+
+    public function test_no_se_puede_actualizar_impuesto_si_pagada(): void
+    {
+        $invoice = PendingInvoice::create([
+            'supplier_id'  => $this->supplier->id,
+            'issue_date'   => '2026-06-01',
+            'due_date'     => '2026-06-30',
+            'total_amount' => 200000,
+            'tax_amount'   => 32000,
+            'status'       => 'paid',
+            'received_at'  => now(),
+        ]);
+
+        $this->post(route('admin.facturas-pendientes.update-tax', $invoice->id), [
+            'tax_amount' => 40000,
+        ])->assertSessionHas('error');
+
+        $this->assertDatabaseHas('pending_invoices', [
+            'id'         => $invoice->id,
+            'tax_amount' => 32000,
+        ]);
     }
 
     public function test_no_se_puede_eliminar_factura_recibida(): void

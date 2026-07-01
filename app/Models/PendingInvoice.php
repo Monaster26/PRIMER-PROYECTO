@@ -15,6 +15,7 @@ class PendingInvoice extends Model
         'due_date',
         'delivery_date',
         'total_amount',
+        'tax_amount',
         'notes',
         'status',
         'received_at',
@@ -28,6 +29,7 @@ class PendingInvoice extends Model
             'delivery_date' => 'date',
             'received_at'   => 'datetime',
             'total_amount'  => 'integer',
+            'tax_amount'    => 'integer',
         ];
     }
 

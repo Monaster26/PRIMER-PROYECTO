@@ -24,6 +24,16 @@ class Sale extends Model
         'coupon_discount',
         'net_total',
         'tax_total',
+        'status',
+        'cancellation_reason',
+        'cancellation_note',
+        'cancelled_at',
+        'cancelled_by',
+        'promotion_ids',
+    ];
+
+    protected $casts = [
+        'promotion_ids' => 'array',
     ];
 
     public function cashier(): BelongsTo
@@ -39,5 +49,10 @@ class Sale extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(SalePayment::class);
+    }
+
+    public function cancelledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
     }
 }

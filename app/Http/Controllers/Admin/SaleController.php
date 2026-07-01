@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 use Inertia\Inertia;
 
 use App\Http\Controllers\Controller;
+use App\Models\CashSession;
 use App\Models\Product;
+use App\Models\Promotion;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\SalePayment;
@@ -17,7 +19,7 @@ class SaleController extends Controller
 {
     public function index()
     {
-        $query = Sale::with('cashier', 'items.product', 'payments');
+        $query = Sale::with('cashier', 'items.product', 'payments', 'cancelledBy');
 
         if ($from = request('from')) {
             $query->whereDate('created_at', '>=', $from);
@@ -119,22 +121,57 @@ class SaleController extends Controller
             ->with('success', "Venta #{$sale->id} registrada.");
     }
 
-    public function destroy(Sale $sale): RedirectResponse
+    public function cancel(Request $request, Sale $sale): RedirectResponse
     {
+        $validated = $request->validate([
+            'reason' => 'required|in:customer_return,cashier_error',
+            'note'   => 'nullable|string|max:500',
+        ]);
+
+        // a) Idempotencia
+        if ($sale->status === 'cancelled') {
+            return back()->with('error', 'Esta venta ya está cancelada.');
+        }
+
+        // b) Verificar que la cash session de la fecha no esté cerrada
+        $sessionClosed = CashSession::where('user_id', $sale->user_id)
+            ->where('opened_at', '<=', $sale->created_at)
+            ->whereNotNull('closed_at')
+            ->exists();
+
+        if ($sessionClosed) {
+            return back()->with('error', 'No se puede cancelar: la caja de esta fecha ya fue cerrada.');
+        }
+
         $sale->load('items.product');
 
+        // c) Revertir stock de cada item
         foreach ($sale->items as $item) {
             StockMovement::record(
                 product: $item->product,
                 quantityChange: $item->quantity,
                 type: 'return_in',
                 reference: $sale,
-                notes: "Reversión de venta #{$sale->id}",
+                notes: "Cancelación venta #{$sale->id}",
             );
         }
 
-        $sale->delete();
+        // d) Revertir used_count de promociones aplicadas (si existen)
+        if (!empty($sale->promotion_ids)) {
+            Promotion::whereIn('id', $sale->promotion_ids)
+                ->where('used_count', '>', 0)
+                ->decrement('used_count');
+        }
 
-        return redirect()->route('admin.ventas.index')->with('success', 'Venta eliminada y stock restaurado.');
+        // e) Marcar como cancelada
+        $sale->update([
+            'status'              => 'cancelled',
+            'cancellation_reason' => $validated['reason'],
+            'cancellation_note'   => $validated['note'] ?? null,
+            'cancelled_at'        => now(),
+            'cancelled_by'        => auth()->id(),
+        ]);
+
+        return back()->with('success', "Venta #{$sale->id} cancelada correctamente.");
     }
 }

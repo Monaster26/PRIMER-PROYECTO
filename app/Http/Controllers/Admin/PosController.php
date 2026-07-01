@@ -361,6 +361,7 @@ class PosController extends Controller
 
                 $promoDiscount = 0;
                 $appliedPromotions = [];
+                $promoIds = [];
 
                 foreach (Promotion::active()->get() as $promo) {
                     $result = $promo->evaluateCart($cartForPromo);
@@ -368,6 +369,7 @@ class PosController extends Controller
                         $promoDiscount += $result['discount'];
                         $promo->increment('used_count');
                         $appliedPromotions[] = $promo->name;
+                        $promoIds[] = $promo->id;
                         if ($promo->is_exclusive) break;
                     }
                 }
@@ -401,6 +403,7 @@ class PosController extends Controller
                     'coupon_id'       => $coupon?->id,
                     'promo_discount'  => $promoDiscount,
                     'coupon_discount' => $couponDiscount,
+                    'promotion_ids'   => $promoIds ?: null,
                 ]);
 
                 if ($coupon) {

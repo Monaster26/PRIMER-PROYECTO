@@ -91,7 +91,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::get('ventas', [SaleController::class, 'index'])->name('ventas.index');
         Route::post('ventas', [SaleController::class, 'store'])->name('ventas.store');
         Route::put('ventas/{sale}', [SaleController::class, 'update'])->name('ventas.update');
-        Route::delete('ventas/{sale}', [SaleController::class, 'destroy'])->name('ventas.destroy');
+        Route::patch('ventas/{sale}/cancelar', [SaleController::class, 'cancel'])->name('ventas.cancelar');
 
         // Proveedores
         Route::resource('proveedores', SupplierController::class)
@@ -109,6 +109,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         // Gastos / Registro de Egresos
         Route::get('gastos/export', [ExpenseController::class, 'export'])->name('gastos.export');
         Route::get('gastos/chart', [ExpenseController::class, 'chartData'])->name('gastos.chart');
+        Route::post('gastos/{expense}/update-tax', [ExpenseController::class, 'updateTax'])->name('gastos.update-tax');
         Route::resource('gastos', ExpenseController::class)
             ->except(['show', 'create', 'edit']);
 
@@ -120,6 +121,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
             ->name('facturas-pendientes.receive');
         Route::patch('facturas-pendientes/{pendingInvoice}/mark-paid', [PendingInvoiceController::class, 'markPaid'])
             ->name('facturas-pendientes.mark-paid');
+        Route::post('facturas-pendientes/{pendingInvoice}/update-tax', [PendingInvoiceController::class, 'updateTax'])
+            ->name('facturas-pendientes.update-tax');
 
         // Pérdidas
         Route::resource('perdida', LossController::class)

@@ -35,17 +35,21 @@ class DashboardController extends Controller
         $lastMonthEnd = now()->subMonth()->endOfMonth();
 
         // Ventas de hoy
-        $todaySales = Sale::whereDate('created_at', $today)->sum('total') / 100;
-        $todaySalesCount = Sale::whereDate('created_at', $today)->count();
-        $todayProfit = SaleItem::join('sales', 'sale_items.sale_id', '=', 'sales.id')
+        $todaySales = Sale::whereDate('created_at', $today)->where('status', 'completed')->sum('total') / 100;
+        $todaySalesCount = Sale::whereDate('created_at', $today)->where('status', 'completed')->count();
+        $todayGrossProfit = SaleItem::join('sales', 'sale_items.sale_id', '=', 'sales.id')
             ->join('products', 'sale_items.product_id', '=', 'products.id')
             ->whereDate('sales.created_at', $today)
-            ->sum(DB::raw('(sale_items.price - products.cost_price) * sale_items.quantity')) / 100;
+            ->where('sales.status', 'completed')
+            ->sum(DB::raw('(sale_items.price - products.cost_price) * sale_items.quantity'));
+        $todayPromoDiscount = Sale::whereDate('created_at', $today)->where('status', 'completed')->sum('promo_discount');
+        $todayCouponDiscount = Sale::whereDate('created_at', $today)->where('status', 'completed')->sum('coupon_discount');
+        $todayProfit = ($todayGrossProfit - $todayPromoDiscount - $todayCouponDiscount) / 100;
         $todayMargin = $todaySales > 0 ? round(($todayProfit / $todaySales) * 100, 1) : 0;
 
         // Ventas del mes actual vs mes anterior
-        $thisMonthSales = Sale::whereBetween('created_at', [$thisMonthStart, now()])->sum('total') / 100;
-        $lastMonthSales = Sale::whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->sum('total') / 100;
+        $thisMonthSales = Sale::whereBetween('created_at', [$thisMonthStart, now()])->where('status', 'completed')->sum('total') / 100;
+        $lastMonthSales = Sale::whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->where('status', 'completed')->sum('total') / 100;
         $salesGrowth = $lastMonthSales > 0
             ? round((($thisMonthSales - $lastMonthSales) / $lastMonthSales) * 100, 1)
             : 0;
@@ -53,6 +57,7 @@ class DashboardController extends Controller
         // Tendencia últimos 30 días
         $salesTrend = Sale::selectRaw('DATE(created_at) as date, SUM(total)/100 as total, COUNT(*) as count')
             ->where('created_at', '>=', now()->subDays(29)->startOfDay())
+            ->where('status', 'completed')
             ->groupBy('date')
             ->orderBy('date')
             ->get();
@@ -61,6 +66,7 @@ class DashboardController extends Controller
         $topProducts = SaleItem::join('sales', 'sale_items.sale_id', '=', 'sales.id')
             ->join('products', 'sale_items.product_id', '=', 'products.id')
             ->whereDate('sales.created_at', $today)
+            ->where('sales.status', 'completed')
             ->groupBy('products.id', 'products.name')
             ->selectRaw('products.name, SUM(sale_items.quantity) as qty, SUM(sale_items.total_line)/100 as total')
             ->orderByDesc('qty')
@@ -69,9 +75,9 @@ class DashboardController extends Controller
 
         // Métodos de pago hoy
         $paymentMethods = [
-            'cash'     => Sale::whereDate('created_at', $today)->sum('cash_amount') / 100,
-            'card'     => Sale::whereDate('created_at', $today)->sum('card_amount') / 100,
-            'transfer' => Sale::whereDate('created_at', $today)->sum('transfer_amount') / 100,
+            'cash'     => Sale::whereDate('created_at', $today)->where('status', 'completed')->sum('cash_amount') / 100,
+            'card'     => Sale::whereDate('created_at', $today)->where('status', 'completed')->sum('card_amount') / 100,
+            'transfer' => Sale::whereDate('created_at', $today)->where('status', 'completed')->sum('transfer_amount') / 100,
         ];
 
         // Estado de caja

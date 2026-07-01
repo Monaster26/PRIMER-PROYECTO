@@ -776,6 +776,11 @@ const statusColor: Record<string, string> = {
     overdue: 'bg-danger/10 text-danger',
 };
 
+const totalAmountFiltered = computed(() => {
+    if (!props.invoices?.data) return 0;
+    return props.invoices.data.reduce((s, inv) => s + (inv.total_amount ?? 0), 0);
+});
+
 function priceVariation(item: any) {
     if (item.is_new_product) return { label: 'Nuevo', cls: 'text-blue-500' };
     if (!item.previous_cost) return { label: 'Nuevo', cls: 'text-blue-500' };
@@ -808,6 +813,36 @@ function priceVariation(item: any) {
                 Cuentas por Pagar
             </h1>
         </template>
+
+        <!-- Summary card -->
+        <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2">
+            <div class="flex items-center gap-4 rounded-3xl border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-surface-dark">
+                <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+                    <CreditCard class="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400">
+                        Total Facturas
+                    </p>
+                    <p class="text-base font-bold text-content-primary dark:text-white">
+                        {{ fmt(totalAmountFiltered) }}
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4 rounded-3xl border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-surface-dark">
+                <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-info/10">
+                    <CreditCard class="h-5 w-5 text-info" />
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-content-muted dark:text-gray-400">
+                        Facturas
+                    </p>
+                    <p class="text-base font-bold text-content-primary dark:text-white">
+                        {{ invoices.data?.length ?? 0 }}
+                    </p>
+                </div>
+            </div>
+        </div>
 
         <!-- Filters -->
         <div
@@ -927,7 +962,7 @@ function priceVariation(item: any) {
                     >
                         <tr v-if="!invoices.data?.length">
                             <td
-                                colspan="8"
+                                colspan="9"
                                 class="px-6 py-12 text-center text-sm text-content-muted dark:text-gray-500"
                             >
                                 No hay facturas registradas.

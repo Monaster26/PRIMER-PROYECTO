@@ -29,6 +29,11 @@ interface TodaySale {
     transfer_amount: number;
     cashier_name: string;
     created_at: string;
+    status: string;
+    cancellation_reason: string | null;
+    cancellation_note: string | null;
+    cancelled_at: string | null;
+    cancelled_by_name: string | null;
 }
 
 const props = defineProps<{
@@ -356,6 +361,40 @@ function handleClose() {
                                                 selectedSale.cashier_name
                                             }}</span
                                         >
+                                    </p>
+                                </div>
+
+                                <!-- Cancellation Info -->
+                                <div
+                                    v-if="selectedSale.status === 'cancelled'"
+                                    class="rounded-lg bg-red-50 p-3 ring-1 ring-red-200 dark:bg-red-900/20 dark:ring-red-800"
+                                >
+                                    <p
+                                        class="text-center text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-400"
+                                    >
+                                        VENTA CANCELADA
+                                    </p>
+                                    <p
+                                        class="mt-1 text-center text-[11px] text-red-600 dark:text-red-400"
+                                    >
+                                        {{
+                                            selectedSale.cancellation_reason ===
+                                            'customer_return'
+                                                ? 'Devolución del cliente'
+                                                : 'Error del cajero'
+                                        }}
+                                    </p>
+                                    <p
+                                        v-if="selectedSale.cancellation_note"
+                                        class="mt-1 text-center text-[10px] italic text-red-500"
+                                    >
+                                        {{ selectedSale.cancellation_note }}
+                                    </p>
+                                    <p
+                                        class="mt-1 text-center text-[10px] text-red-500"
+                                    >
+                                        Cancelado por
+                                        {{ selectedSale.cancelled_by_name ?? '—' }}
                                     </p>
                                 </div>
 

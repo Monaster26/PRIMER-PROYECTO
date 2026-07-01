@@ -26,11 +26,18 @@ class MovementHistoryController extends Controller
                 ->inDateRange(request('from'), request('to'))
                 ->when(request('type'), fn($q, $type) => $q->ofType($type))
                 ->where('quantity_change', '>', 0)
+                ->where('type', '!=', 'return_in')
                 ->sum('quantity_change'),
             'total_exits' => (int) StockMovement::search(request('search'))
                 ->inDateRange(request('from'), request('to'))
                 ->when(request('type'), fn($q, $type) => $q->ofType($type))
-                ->where('quantity_change', '<', 0)
+                ->where(function ($q) {
+                    $q->where('quantity_change', '<', 0)
+                      ->orWhere(function ($q2) {
+                          $q2->where('type', 'return_in')
+                             ->where('quantity_change', '>', 0);
+                      });
+                })
                 ->sum('quantity_change'),
         ];
 
